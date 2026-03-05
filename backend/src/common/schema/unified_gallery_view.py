@@ -49,6 +49,7 @@ class UnifiedGalleryView(Base):
     # Unified arrays for display
     gcs_uris: Mapped[list[str]] = mapped_column(ARRAY(String))
     thumbnail_uris: Mapped[list[str]] = mapped_column(ARRAY(String))
+    deleted_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(timezone=True))
 
     # Metadata contains specific fields for each type
-    metadata_: Mapped[dict] = mapped_column("metadata", JSONB) 
+    metadata_: Mapped[dict] = mapped_column("metadata", JSONB)

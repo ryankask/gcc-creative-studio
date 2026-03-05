@@ -21,18 +21,28 @@
     [ngClass]="[
       aspectRatioClass,
       (!isVideo && !isAudio) ? 'zoomable' : '',
-      isAudio ? '!bg-transparent !shadow-none !h-auto' : ''
+      isAudio ? '!bg-transparent !shadow-none !h-full flex-col' : ''
     ]"
     (click)="(!isVideo && !isAudio) && openPhotoSwipe(selectedIndex)"
   >
+    <!-- Audio Stage Visuals -->
+    <div *ngIf="isAudio" class="audio-stage-layout">
+        <div class="audio-icon-container">
+            <mat-icon class="stage-icon">music_note</mat-icon>
+        </div>
+        <div class="audio-metadata">
+            <h2 class="audio-prompt">{{ mediaItem.prompt || 'Untitled Audio' }}</h2>
+            <p class="audio-type">{{ mediaItem.mimeType }}</p>
+        </div>
+    </div>
     <ng-container *ngIf="!isVideo && !isAudio && selectedUrl">
       <img
         [ngSrc]="selectedUrl"
         [alt]="mediaItem.prompt || $any(mediaItem).originalPrompt"
-        [width]="imageWidth"
-        [height]="imageHeight"
+        fill
         priority
         class="main-media"
+        (load)="onImageLoad($event)"
       />
     </ng-container>
 
@@ -105,30 +115,27 @@
     <!-- Actions Toolbar on the right -->
     <div class="media-actions-toolbar" *ngIf="mediaItem">
 
-      <button
-        *ngIf="showEditButton && !isAudio"
-        type="button"
-        class="action-button"
+      <studio-button
+        *ngIf="showEditButton"
+        variant="primary"
+        shape="circle"
+        size="medium"
         (click)="onEditClick()"
-        title="Edit this media"
+        matTooltip="Edit this media"
       >
-        <img
-          src="assets/images/banana-peel.png"
-          class="menu-image-icon"
-          alt="model icon"
-        />
-        <span>Edit</span>
-      </button>
+        <mat-icon>edit</mat-icon>
+      </studio-button>
 
-      <button
-        *ngIf="showGenerateVideoButton && !isVideo && !isAudio"
-        class="action-button"
+      <studio-button
+        *ngIf="showGenerateVideoButton && !isVideo"
+        variant="primary"
+        shape="circle"
+        size="medium"
         [matMenuTriggerFor]="videoMenu"
-        title="Generate video"
+        matTooltip="Generate video"
       >
         <mat-icon>videocam</mat-icon>
-        <span>Generate Video</span>
-      </button>
+      </studio-button>
       <mat-menu #videoMenu="matMenu">
         <button mat-menu-item (click)="onGenerateVideoClick('start')">
           Use as Start Image
@@ -138,74 +145,86 @@
         </button>
       </mat-menu>
 
-      <button
-        *ngIf="showVtoButton && !isAudio"
-        type="button"
-        class="action-button"
+      <studio-button
+        *ngIf="showVtoButton"
+        variant="primary"
+        shape="circle"
+        size="medium"
         (click)="onSendToVtoClick()"
-        title="Virtual Try-On"
+        matTooltip="Virtual Try-On"
       >
         <mat-icon>checkroom</mat-icon>
-        <span>VTO Edit</span>
-      </button>
+      </studio-button>
 
-      <button
+      <studio-button
         *ngIf="showShareButton"
-        type="button"
-        class="action-button"
+        variant="primary"
+        shape="circle"
+        size="medium"
         (click)="toggleShareMenu()"
-        title="Share"
+        matTooltip="Share"
       >
         <mat-icon>share</mat-icon>
-        <span>Share</span>
-      </button>
+      </studio-button>
 
-      <button
+      <studio-button
         *ngIf="showDownloadButton"
-        type="button"
-        class="action-button"
+        variant="primary"
+        shape="circle"
+        size="medium"
         (click)="openInNewTab()"
-        title="Download"
+        matTooltip="Download"
         [disabled]="isDownloading"
       >
         <mat-spinner *ngIf="isDownloading" [diameter]="20"></mat-spinner>
         <mat-icon *ngIf="!isDownloading">download</mat-icon>
-        <span *ngIf="!isDownloading">Download</span>
-        <span *ngIf="isDownloading">Opening...</span>
-      </button>
+      </studio-button>
 
-      <button
+      <studio-button
         *ngIf="showSeeMoreInfoButton"
-        type="button"
-        class="action-button"
+        variant="primary"
+        shape="circle"
+        size="medium"
         (click)="seeMoreInfo()"
-        title="See more info"
+        matTooltip="See more info"
       >
         <mat-icon>info_outline</mat-icon>
-        <span>See more info</span>
-      </button>
+      </studio-button>
+
+      <studio-button
+        *ngIf="showDeleteButton"
+        variant="primary"
+        shape="circle"
+        size="medium"
+        (click)="onDeleteClick()"
+        matTooltip="Delete"
+      >
+        <mat-icon>delete</mat-icon>
+      </studio-button>
+      
+      <studio-button
+        *ngIf="isVideo"
+        variant="primary"
+        size="medium"
+        (click)="onExtendWithAiClick()"
+        matTooltip="Extend with AI"
+      >
+        <mat-icon>auto_awesome</mat-icon>
+        Extend
+      </studio-button>
+      
+      <studio-button
+        *ngIf="isVideo"
+        variant="primary"
+        size="medium"
+        (click)="onConcatenateClick()"
+        matTooltip="Concatenate Video"
+      >
+        <mat-icon>add_to_photos</mat-icon>
+        Concatenate
+      </studio-button>
     </div>
 
-    <button
-      *ngIf="isVideo"
-      type="button"
-      class="action-button"
-      (click)="onExtendWithAiClick()"
-      title="Extend with AI"
-    >
-      <mat-icon>auto_awesome</mat-icon>
-      <span>Extend with AI</span>
-    </button>
-    <button
-      *ngIf="isVideo"
-      type="button"
-      class="action-button"
-      (click)="onConcatenateClick()"
-      title="Concatenate Video"
-    >
-      <mat-icon>add_to_photos</mat-icon>
-      <span>Concatenate Video</span>
-    </button>
   </div>
 </div>
 
@@ -230,7 +249,7 @@
         </button>
       </li>
       <li class="coming-soon youtube-highlight">
-        <button disabled>
+        <button [disabled]="true">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -367,7 +386,7 @@
         </button>
       </li>
       <li class="coming-soon">
-        <button disabled>
+        <button [disabled]="true">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -385,7 +404,7 @@
         </button>
       </li>
       <li class="coming-soon">
-        <button disabled>
+        <button [disabled]="true">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"

@@ -389,25 +389,11 @@ class WorkflowService:
         """
         results: list[BatchItemResultDto] = []
         
-        # We can parallelize the entire row processing (Ingest + Execute)
-        # Using a semaphore/lock to serialize DB access since we share a session.
-        db_lock = asyncio.Lock()
-        
         async def process_row(item) -> BatchItemResultDto:
             try:
                 # 1. Process Arguments (Ingest GCS URIs)
                 processed_args = {}
                 workspace_id = item.args.get("workspace_id")
-
-                async def ingest_gcs_uri(uri: str, w_id: int):
-                    async with db_lock:
-                        asset = await self.source_asset_service.create_from_gcs_uri(
-                            user=user,
-                            workspace_id=w_id,
-                            gcs_uri=uri
-                        )
-                    # Return structure compatible with ReferenceImage pydantic model
-                    return {"sourceAssetId": asset.id, "previewUrl": uri}
 
                 for key, value in item.args.items():
                     is_gcs_string = isinstance(value, str) and value.startswith("gs://")
@@ -419,20 +405,29 @@ class WorkflowService:
                     )
 
                     if is_gcs_string or is_gcs_list:
-                         try:
-                             if not workspace_id: 
+                        try:
+                            if not workspace_id: 
                                 raise ValueError("No workspace_id provided for GCS ingestion.")
-                             
-                             w_id = int(workspace_id)
-                             
-                             if is_gcs_string:
-                                 processed_args[key] = await ingest_gcs_uri(value, w_id)
-                             else:
-                                 # It's a list
-                                 processed_args[key] = [
-                                     await ingest_gcs_uri(uri, w_id) for uri in value
-                                 ]
-                         except Exception as e:
+                            
+                            w_id = int(workspace_id)
+                            uris = [value] if is_gcs_string else value
+                            
+                            assets = await asyncio.gather(*[
+                                self.source_asset_service.create_from_gcs_uri(
+                                    user=user,
+                                    workspace_id=w_id,
+                                    gcs_uri=uri
+                                ) for uri in uris
+                            ])
+                            
+                            ingested_results = [
+                                {"sourceAssetId": asset.id, "previewUrl": uri}
+                                for asset, uri in zip(assets, uris)
+                            ]
+                            
+                            processed_args[key] = ingested_results[0] if is_gcs_string else ingested_results
+                            
+                        except Exception as e:
                             logger.exception(f"Failed to ingest GCS URI in '{key}': {str(e)} from row {item.row_index}")
                             return BatchItemResultDto(
                                 row_index=item.row_index,

@@ -31,6 +31,7 @@ import { LoadingService } from '../../common/services/loading.service';
 import { MimeTypeEnum } from '../../fun-templates/media-template.model';
 import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
 import { GalleryService } from '../gallery.service';
+import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
 
 @Component({
   selector: 'app-media-detail',
@@ -47,8 +48,42 @@ export class MediaDetailComponent implements OnDestroy {
   public initialSlideIndex = 0;
   promptJson: CreatePromptMediaDto | undefined;
   isPromptExpanded = false;
+  public isIdentityExpanded = false;
   public selectedAssetForLightbox: GalleryItem | null = null;
   public lightboxInitialIndex = 0;
+
+  get identityFields(): { label: string; value: any; type: string }[] {
+    if (!this.mediaItem) return [];
+
+    const isAsset = this.mediaItem.itemType === 'source_asset';
+
+    const fields: { label: string; value: any; type: string }[] = [
+      { label: 'Mime Type', value: this.mediaItem.mimeType, type: 'text' },
+      { label: 'Aspect Ratio', value: this.mediaItem.aspectRatio, type: 'text' },
+      { label: 'Resolution', value: this.mediaItem.resolution, type: 'text' },
+    ];
+
+    if (this.isIdentityExpanded) {
+      fields.push(
+        { label: 'Model', value: this.mediaItem.model, type: 'text' },
+        { label: 'Created At', value: this.mediaItem.createdAt, type: 'date' },
+        { label: 'Created By', value: this.mediaItem.userEmail, type: 'text' },
+        { label: 'Generation Time', value: this.mediaItem.generationTime ? `${this.mediaItem.generationTime.toFixed(2)}s` : undefined, type: 'text' },
+        { label: 'Source Assets', value: this.mediaItem.enrichedSourceAssets?.length ? this.mediaItem.enrichedSourceAssets : undefined, type: 'assets' }
+      );
+
+      if (!isAsset) {
+        const originalPrompt = this.mediaItem.originalPrompt || (this.promptJson ? this.formattedPrompt : this.mediaItem.prompt);
+        fields.push({ label: 'Original Prompt', value: originalPrompt, type: 'prompt' });
+
+        if (this.mediaItem.prompt && this.mediaItem.prompt !== this.mediaItem.originalPrompt) {
+          fields.push({ label: 'Prompt Used', value: this.mediaItem.prompt, type: 'prompt' });
+        }
+      }
+    }
+
+    return fields.filter(f => f.value !== null && f.value !== undefined && f.value !== '' && (Array.isArray(f.value) ? f.value.length > 0 : true));
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -58,31 +93,22 @@ export class MediaDetailComponent implements OnDestroy {
     private _snackBar: MatSnackBar,
     private authService: AuthService,
     private sanitizer: DomSanitizer,
+    private workspaceStateService: WorkspaceStateService,
   ) {
     // Check if user is admin
     this.isAdmin = this.authService.isUserAdmin() ?? false;
-
-    // Get the media item from the router state
-    this.mediaItem =
-      this.router.getCurrentNavigation()?.extras.state?.['mediaItem'];
-
-    if (this.mediaItem) {
-      // If we have the media item, we don't need to load it
-      this.loadingService.hide();
-      this.isLoading = false;
-      this.readInitialIndexFromUrl();
-      this.parsePrompt();
-    } else {
-      // If not, fetch the media item using the ID from the route params
-      this.fetchMediaItem();
-    }
+    
+    // Always trigger fetch to get full source assets, metadata, etc.
+    this.fetchMediaItem();
   }
 
   fetchMediaItem() {
     this.routeSub = this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
-        this.fetchMediaDetails(Number(id));
+        // Check if we are on the asset-detail or gallery route
+        const isAsset = this.router.url.includes('/asset-detail');
+        this.fetchMediaDetails(Number(id), isAsset);
       }
     });
   }
@@ -92,8 +118,12 @@ export class MediaDetailComponent implements OnDestroy {
     this.mediaSub?.unsubscribe();
   }
 
-  fetchMediaDetails(id: number): void {
-    this.mediaSub = this.galleryService.getMedia(id).subscribe({
+  fetchMediaDetails(id: number, isAsset: boolean = false): void {
+    const fetchObs = isAsset 
+      ? this.galleryService.getAsset(id) 
+      : this.galleryService.getMedia(id);
+
+    this.mediaSub = fetchObs.subscribe({
       next: (data: GalleryItem) => {
         this.mediaItem = data;
         this.isLoading = false;
@@ -106,6 +136,7 @@ export class MediaDetailComponent implements OnDestroy {
         console.error('Failed to fetch media details', err);
         this.isLoading = false;
         this.loadingService.hide();
+        handleErrorSnackbar(this._snackBar, err, 'Fetch details');
       },
     });
   }
@@ -206,6 +237,10 @@ export class MediaDetailComponent implements OnDestroy {
 
   togglePromptExpansion(): void {
     this.isPromptExpanded = !this.isPromptExpanded;
+  }
+
+  toggleIdentityExpansion(): void {
+    this.isIdentityExpanded = !this.isIdentityExpanded;
   }
 
   generateWithThisImage(index: number): void {
@@ -376,5 +411,27 @@ export class MediaDetailComponent implements OnDestroy {
 
   public getSafeHtml(html: string): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  public deleteCurrentMedia(): void {
+    if (!this.mediaItem?.id) return;
+
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (workspaceId === null) return;
+
+    const confirmDelete = confirm('Are you sure you want to delete this media item?');
+    if (!confirmDelete) return;
+    this.galleryService.bulkDelete(
+      [{ id: this.mediaItem.id, type: this.mediaItem.itemType }],
+      workspaceId
+    ).subscribe({
+      next: () => {
+        handleSuccessSnackbar(this._snackBar, 'Media deleted successfully');
+        this.router.navigate(['/gallery']);
+      },
+      error: (err) => {
+        handleErrorSnackbar(this._snackBar, err, 'Delete media');
+      }
+    });
   }
 }

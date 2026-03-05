@@ -33,7 +33,6 @@ import {
 import { environment } from '../../environments/environment';
 import {
   MediaItem,
-  JobStatus,
 } from '../common/models/media-item.model';
 import {
   GalleryItem,
@@ -52,7 +51,7 @@ export class GalleryService implements OnDestroy {
   private currentPage = 0;
   private pageSize = 40;
   private allFetchedImages: GalleryItem[] = [];
-  private filters$ = new BehaviorSubject<GallerySearchDto>({ limit: 40 });
+  private filters$ = new BehaviorSubject<GallerySearchDto | null>(null);
   private dataLoadingSubscription: Subscription;
 
   constructor(
@@ -67,6 +66,9 @@ export class GalleryService implements OnDestroy {
         // Use debounceTime to wait for filters to be set and prevent rapid reloads
         debounceTime(50),
         switchMap(([workspaceId, filters]) => {
+          if (!filters) {
+            return of(null);
+          }
           this.isLoading$.next(true);
           this.resetCache();
 
@@ -180,58 +182,34 @@ export class GalleryService implements OnDestroy {
   }
 
   getMedia(id: number): Observable<GalleryItem> {
-    const cached = this.allFetchedImages.find(i => i.id === id && i.itemType === 'media_item');
-    if (cached) {
-      return of(cached);
-    }
-
-  // For now, always fetch details to ensure we have full MediaItem data
-  // Or map from GalleryItem if enough data is present
+    // Always fetch details to ensure we have full MediaItem data
     const detailUrl = `${environment.backendURL}/gallery/item/${id}`;
     return this.http.get<any>(detailUrl).pipe(
-      map(response => this.mapUnifiedItem(response))
+      map(response => this.mapUnifiedItem({ ...response, itemType: 'media_item' }))
     );
   }
 
   getAsset(id: number): Observable<GalleryItem> {
-    const cached = this.allFetchedImages.find(
-      i => i.id === id && i.itemType === 'source_asset'
-    );
-    if (cached) {
-      return of(cached);
-    }
-
     // Always fetch for now to get full details and ensure type safety
     const assetUrl = `${environment.backendURL}/source_assets/${id}`;
     return this.http.get<any>(assetUrl).pipe(
       map(asset => {
-        // Map SourceAssetResponseDto to GalleryItem
-        const metadata = {
-          assetType: asset.assetType || asset.asset_type,
-          original_filename: asset.filename || asset.original_filename,
-          mime_type: asset.mimeType || asset.mime_type,
-        };
-        const item: GalleryItem = {
-          id: asset.id,
-          workspaceId: asset.workspaceId || asset.workspace_id || 0, // Fallback if not provided, though it should be
-          createdAt: asset.created_at || asset.createdAt,
-          status: asset.status,
+        // Normalize the raw asset response into a format mapUnifiedItem expects
+        const item = {
+          ...asset,
           itemType: 'source_asset',
-          mimeType: asset.mimeType || asset.mime_type,
-          prompt: asset.filename || asset.original_filename || 'Asset',
-          gcsUris: [asset.gcsUri || asset.gcs_uri],
-          thumbnailUris: [asset.thumbnailGcsUri || asset.thumbnail_gcs_uri || ''],
-          presignedUrls: [asset.presignedUrl || asset.presigned_url],
-          presignedThumbnailUrls: [asset.presignedThumbnailUrl || asset.presigned_thumbnail_url],
-          metadata: metadata,
+          // SourceAsset might have fields like gcsUri instead of gcsUris
+          gcsUris: asset.gcsUris || (asset.gcsUri ? [asset.gcsUri] : (asset.gcs_uri ? [asset.gcs_uri] : [])),
+          thumbnailUris: asset.thumbnailUris || (asset.thumbnailGcsUri ? [asset.thumbnailGcsUri] : (asset.thumbnail_gcs_uri ? [asset.thumbnail_gcs_uri] : [])),
+          presignedUrls: asset.presignedUrls || (asset.presignedUrl ? [asset.presignedUrl] : (asset.presigned_url ? [asset.presigned_url] : [])),
+          presignedThumbnailUrls: asset.presignedThumbnailUrls || (asset.presignedThumbnailUrl ? [asset.presignedThumbnailUrl] : (asset.presigned_thumbnail_url ? [asset.presigned_thumbnail_url] : [])),
+          metadata: asset.metadata || {
+            assetType: asset.assetType || asset.asset_id || asset.asset_type,
+            original_filename: asset.filename || asset.original_filename,
+            mime_type: asset.mimeType || asset.mime_type
+          }
         };
-        // Normalize arrays if backend only provides single string
-        if (!item.gcsUris?.[0]) item.gcsUris = [];
-        if (!item.thumbnailUris?.[0]) item.thumbnailUris = [];
-        if (!item.presignedUrls?.[0]) item.presignedUrls = [];
-        if (!item.presignedThumbnailUrls?.[0]) item.presignedThumbnailUrls = [];
-
-        return item;
+        return this.mapUnifiedItem(item);
       })
     );
   }
@@ -247,47 +225,49 @@ export class GalleryService implements OnDestroy {
       workspaceId: item.workspaceId,
       userId: item.userId,
       createdAt: item.createdAt,
-      itemType: item.itemType,
+      itemType: item.itemType || 'media_item',
       status: item.status,
-      gcsUris: item.gcsUris || [],
-      thumbnailUris: item.thumbnailUris || [],
-      presignedUrls: item.presignedUrls || [],
-      presignedThumbnailUrls: item.presignedThumbnailUrls || [],
+      gcsUris: item.gcsUris,
+      thumbnailUris: item.thumbnailUris,
+      presignedUrls: item.presignedUrls,
+      presignedThumbnailUrls: item.presignedThumbnailUrls,
       metadata: metadata,
 
       // Mapped display fields
-      mimeType: metadata.mime_type || metadata.mimeType,
-      aspectRatio: metadata.aspect_ratio || metadata.aspectRatio,
-      prompt: metadata.prompt || metadata.original_filename || 'Asset',
+      mimeType: metadata.mime_type || item.mimeType,
+      aspectRatio: metadata.aspect_ratio || item.aspectRatio,
+      prompt: item.prompt || metadata.prompt || metadata.original_filename || 'Asset',
+      originalPrompt: item.originalPrompt || metadata.original_prompt || metadata.original_filename || 'Asset',
 
-      // Detailed fields
-      model: item.model,
-      userEmail: item.userEmail,
-      generationTime: item.generationTime,
-      voiceName: item.voiceName,
-      languageCode: item.languageCode,
-      seed: item.seed,
-      numMedia: item.numMedia,
-      duration: item.duration,
-      resolution: item.resolution,
-      googleSearch: item.googleSearch,
-      groundingMetadata: item.groundingMetadata,
-      rewrittenPrompt: item.rewrittenPrompt,
-      negativePrompt: item.negativePrompt,
-      enrichedSourceAssets: item.enrichedSourceAssets,
-      enrichedSourceMediaItems: item.enrichedSourceMediaItems,
-      style: item.style,
-      lighting: item.lighting,
-      colorAndTone: item.colorAndTone,
-      composition: item.composition,
-      modifiers: item.modifiers,
-      comment: item.comment,
-      critique: item.critique,
-      rawData: item.rawData,
-      audioAnalysis: item.audioAnalysis,
-      error_message: item.error_message,
-      addWatermark: item.addWatermark,
-      sourceImagesGcs: item.sourceImagesGcs,
+      // Detailed fields - checking both top-level and metadata for robustness
+      model: item.model || metadata.model,
+      userEmail: item.userEmail || item.user_email || metadata.user_email,
+      generationTime: item.generationTime || metadata.generation_time,
+      voiceName: item.voiceName || metadata.voice_name,
+      languageCode: item.languageCode || metadata.language_code,
+      seed: item.seed || metadata.seed,
+      numMedia: item.numMedia || metadata.num_media,
+      duration: item.duration || metadata.duration,
+      resolution: item.resolution || metadata.resolution,
+      googleSearch: item.googleSearch ?? metadata.google_search,
+      groundingMetadata: item.groundingMetadata || metadata.grounding_metadata,
+      rewrittenPrompt: item.rewrittenPrompt || metadata.rewritten_prompt,
+      negativePrompt: item.negativePrompt || metadata.negative_prompt,
+      enrichedSourceAssets: item.enrichedSourceAssets || metadata.enriched_source_assets,
+      enrichedSourceMediaItems: item.enrichedSourceMediaItems || metadata.enriched_source_media_items,
+      style: item.style || metadata.style,
+      lighting: item.lighting || metadata.lighting,
+      colorAndTone: item.colorAndTone || metadata.color_and_tone,
+      composition: item.composition || metadata.composition,
+      modifiers: item.modifiers || metadata.modifiers,
+      comment: item.comment || metadata.comment,
+      critique: item.critique || metadata.critique,
+      rawData: item.rawData || metadata.raw_data,
+      audioAnalysis: item.audioAnalysis || metadata.audio_analysis,
+      error_message: item.error_message || metadata.error_message,
+      addWatermark: item.addWatermark ?? metadata.add_watermark,
+      originalGcsUris: item.originalGcsUris || item.original_gcs_uris || [],
+      originalPresignedUrls: item.originalPresignedUrls || item.original_presigned_urls || [],
     };
 
     return galleryItem;
@@ -308,5 +288,35 @@ export class GalleryService implements OnDestroy {
       `${environment.backendURL}/media-templates/from-media-item/${mediaItemId}`,
       {},
     );
+  }
+
+  /**
+   * Bulk deletes media items and source assets.
+   * @param items The items to delete.
+   * @param workspaceId The current workspace ID.
+   */
+  bulkDelete(items: { id: number, type: string }[], workspaceId: number): Observable<{ deleted_count: number }> {
+    const url = `${environment.backendURL}/gallery/bulk-delete`;
+    return this.http.post<{ deleted_count: number }>(url, { items, workspace_id: workspaceId });
+  }
+
+  /**
+   * Downloads multiple media items and source assets as a ZIP file.
+   * @param items The items to download.
+   * @param workspaceId The current workspace ID.
+   */
+  bulkDownload(items: { id: number, type: string }[], workspaceId: number): Observable<Blob> {
+    const url = `${environment.backendURL}/gallery/bulk-download`;
+    return this.http.post(url, { items, workspace_id: workspaceId }, { responseType: 'blob' });
+  }
+
+  /**
+   * Bulk copies media items and source assets to another workspace.
+   * @param items The items to copy.
+   * @param targetWorkspaceId The target workspace ID.
+   */
+  bulkCopy(items: { id: number, type: string }[], targetWorkspaceId: number): Observable<{ copied_count: number }> {
+    const url = `${environment.backendURL}/gallery/bulk-copy`;
+    return this.http.post<{ copied_count: number }>(url, { items, target_workspace_id: targetWorkspaceId });
   }
 }

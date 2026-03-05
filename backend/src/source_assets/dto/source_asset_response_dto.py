@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from typing import Optional
 from src.source_assets.schema.source_asset_model import SourceAssetModel
 
 
@@ -25,3 +26,4 @@ class SourceAssetResponseDto(SourceAssetModel):
     presigned_url: str
     presigned_original_url: str
     presigned_thumbnail_url: str
+    user_email: Optional[str] = None

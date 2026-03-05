@@ -19,6 +19,7 @@ import {
   AfterViewInit,
   Component,
   HostListener,
+  Inject,
   OnInit,
   signal
 } from '@angular/core';
@@ -28,7 +29,7 @@ import { MatIconRegistry } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { finalize, Observable } from 'rxjs';
+import { finalize, first, Observable } from 'rxjs';
 import { AssetTypeEnum } from '../admin/source-assets-management/source-asset.model';
 import { ImageCropperDialogComponent } from '../common/components/image-cropper-dialog/image-cropper-dialog.component';
 import {
@@ -56,6 +57,7 @@ import {
 } from '../services/search/search.service';
 import { VideoStateService } from '../services/video-state.service';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+import { GalleryService } from '../gallery/gallery.service';
 import { handleErrorSnackbar, handleInfoSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
 
 @Component({
@@ -69,9 +71,10 @@ export class VideoComponent implements OnInit, AfterViewInit {
   public readonly JobStatus = JobStatus; // Expose enum to the template
 
   @HostListener('window:keydown.control.enter', ['$event'])
-  handleCtrlEnter(event: KeyboardEvent) {
+  handleCtrlEnter(event: Event) {
+    const keyboardEvent = event as KeyboardEvent;
     if (!this.isLoading) {
-      event.preventDefault();
+      keyboardEvent.preventDefault();
       this.searchTerm();
     }
   }
@@ -196,6 +199,8 @@ export class VideoComponent implements OnInit, AfterViewInit {
     private workspaceStateService: WorkspaceStateService,
     private sourceAssetService: SourceAssetService,
     private videoStateService: VideoStateService,
+    @Inject(GalleryService)
+    private galleryService: GalleryService,
   ) {
     this.activeVideoJob$ = this.service.activeVideoJob$;
 
@@ -791,6 +796,8 @@ export class VideoComponent implements OnInit, AfterViewInit {
       maxWidth: '90vw',
       data: {
         mimeType: this.getMimeTypeForSelector(),
+        showFooter: true,
+        maxSelection: 1
       },
       panelClass: 'image-selector-dialog',
     });
@@ -900,8 +907,8 @@ export class VideoComponent implements OnInit, AfterViewInit {
   // This method is called by both click and drop events
   handleFileUpload(file: File, imageNumber: 1 | 2): void {
     if (file.type.startsWith('image/')) {
-      // If it's an image, open the cropper
-      this.openCropperDialog(file, imageNumber);
+      // If it's an image, upload directly
+      this.uploadImageDirectly(file, imageNumber);
     } else if (file.type.startsWith('video/')) {
       // If it's a video, upload directly
       this.uploadVideoDirectly(file, imageNumber);
@@ -912,6 +919,23 @@ export class VideoComponent implements OnInit, AfterViewInit {
         'File Upload',
       );
     }
+  }
+
+  uploadImageDirectly(file: File, imageNumber: 1 | 2) {
+    this.isLoading = true;
+    this.sourceAssetService
+      .uploadAsset(file, { assetType: AssetTypeEnum.GENERIC_IMAGE })
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: (asset: SourceAssetResponseDto) => {
+          this.processInput(asset, imageNumber);
+          this.updateModeAndNotify();
+          this.clearOtherImage(imageNumber);
+        },
+        error: (error: any) => {
+          handleErrorSnackbar(this._snackBar, error, 'File upload');
+        },
+      });
   }
 
   openCropperDialog(file: File, imageNumber: 1 | 2) {
@@ -939,12 +963,12 @@ export class VideoComponent implements OnInit, AfterViewInit {
       .uploadAsset(file)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
-        next: asset => {
+        next: (asset: SourceAssetResponseDto) => {
           this.processInput(asset, imageNumber);
           this.updateModeAndNotify();
           this.clearOtherImage(imageNumber);
         },
-        error: error => {
+        error: (error: any) => {
           handleErrorSnackbar(this._snackBar, error, 'File upload');
         },
       });
@@ -955,8 +979,8 @@ export class VideoComponent implements OnInit, AfterViewInit {
     const file = event.dataTransfer?.files[0];
     if (file) {
       if (file.type.startsWith('image/')) {
-        // If it's an IMAGE, open the cropper dialog
-        this.openCropperDialog(file, imageNumber);
+        // If it's an IMAGE, upload it directly
+        this.uploadImageDirectly(file, imageNumber);
       } else if (file.type.startsWith('video/')) {
         // If it's a VIDEO, upload it directly
         this.uploadVideoDirectly(file, imageNumber);
@@ -1257,42 +1281,55 @@ export class VideoComponent implements OnInit, AfterViewInit {
   }
 
   openImageSelectorForReference(): void {
-    if (this.referenceImages.length >= 3) return;
+    const config = MODEL_CONFIGS.find(cfg => cfg.value === this.searchRequest.generationModel);
+    const maxReferenceImages = config?.capabilities.maxReferenceImages ?? 3;
+    const remainingSlots = maxReferenceImages - this.referenceImages.length;
+
+    if (remainingSlots <= 0) return;
+
     const dialogRef = this.dialog.open(ImageSelectorComponent, {
       width: '90vw',
       height: '80vh',
       maxWidth: '90vw',
       data: {
         mimeType: 'image/*', // Only allow images for references
+        multiSelect: true,
+        maxSelection: remainingSlots
       },
       panelClass: 'image-selector-dialog',
     });
 
     dialogRef
       .afterClosed()
-      .subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
-        if (result && this.referenceImages.length < 3) {
-          if ('gcsUri' in result) {
-            this.referenceImages.push({
-              sourceAssetId: result.id,
-              previewUrl: result.presignedUrl || '',
-            });
-          } else {
-            const previewUrl =
-              result.mediaItem.presignedUrls?.[result.selectedIndex];
-            if (previewUrl) {
+      .subscribe((result: any) => {
+        if (!result) return;
+
+        const results = Array.isArray(result) ? result : [result];
+        
+        results.forEach(res => {
+          if (this.referenceImages.length < maxReferenceImages) {
+            if ('gcsUri' in res) {
               this.referenceImages.push({
-                previewUrl: previewUrl,
-                sourceMediaItem: {
-                  mediaItemId: result.mediaItem.id,
-                  mediaIndex: result.selectedIndex,
-                  role: 'image_reference_asset', // Role is now set dynamically in searchTerm
-                },
+                sourceAssetId: res.id,
+                previewUrl: res.presignedUrl || '',
               });
+            } else {
+              const previewUrl =
+                res.mediaItem.presignedUrls?.[res.selectedIndex];
+              if (previewUrl) {
+                this.referenceImages.push({
+                  previewUrl: previewUrl,
+                  sourceMediaItem: {
+                    mediaItemId: res.mediaItem.id,
+                    mediaIndex: res.selectedIndex,
+                    role: 'image_reference_asset', // Role is now set dynamically in searchTerm
+                  },
+                });
+              }
             }
           }
-          this.handleReferenceImageAdded();
-        }
+        });
+        this.handleReferenceImageAdded();
       });
   }
 
@@ -1485,5 +1522,30 @@ export class VideoComponent implements OnInit, AfterViewInit {
     console.log('Selected Preset:', preset);
     // You could also append this to the prompt, e.g.:
     // this.promptText.set(this.promptText() + ' ' + preset);
+  }
+
+  deleteGeneratedMedia() {
+    this.activeVideoJob$.pipe(first()).subscribe(job => {
+      if (!job?.id) return;
+
+      const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+      if (workspaceId === null) return;
+
+      const confirmDelete = confirm('Are you sure you want to delete this generation result?');
+      if (!confirmDelete) return;
+
+      this.galleryService.bulkDelete(
+        [{ id: job.id, type: 'media_item' }],
+        workspaceId
+      ).subscribe({
+        next: () => {
+          handleSuccessSnackbar(this._snackBar, 'Video deleted successfully');
+          this.service.clearActiveVideoJob();
+        },
+        error: (err) => {
+          handleErrorSnackbar(this._snackBar, err, 'Delete results');
+        }
+      });
+    });
   }
 }

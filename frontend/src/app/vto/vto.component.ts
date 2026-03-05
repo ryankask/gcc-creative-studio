@@ -19,6 +19,7 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  Inject,
   OnInit,
   ViewChild
 } from '@angular/core';
@@ -46,8 +47,9 @@ import {
 } from '../common/services/source-asset.service';
 import { SearchService } from '../services/search/search.service';
 import { VtoStateService } from '../services/vto-state.service';
+import { GalleryService } from '../gallery/gallery.service';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { handleErrorSnackbar } from '../utils/handleMessageSnackbar';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
 import { VtoInputLink, VtoRequest, VtoSourceMediaItemLink } from './vto.model';
 
 interface Garment {
@@ -144,6 +146,8 @@ export class VtoComponent implements OnInit, AfterViewInit {
     private sourceAssetService: SourceAssetService,
     private searchService: SearchService,
     private vtoStateService: VtoStateService,
+    @Inject(GalleryService)
+    private galleryService: GalleryService,
   ) {
     this.activeVtoJob$ = this.searchService.activeVtoJob$;
     this.matIconRegistry.addSvgIcon(
@@ -339,7 +343,11 @@ export class VtoComponent implements OnInit, AfterViewInit {
       height: '80vh',
       maxWidth: '90vw',
       panelClass: 'image-selector-dialog',
-      data: { mimeType: 'image/*' },
+      data: { 
+        mimeType: 'image/*',
+        showFooter: true,
+        maxSelection: 1
+      },
     });
 
     dialogRef
@@ -583,7 +591,9 @@ export class VtoComponent implements OnInit, AfterViewInit {
       panelClass: 'image-selector-dialog',
       data: {
         assetType: `vto_${type}`,
-        mimeType: 'image/*', // VTO garments are always images
+        mimeType: 'image/*',
+        showFooter: true,
+        maxSelection: 1
       },
     });
 
@@ -687,5 +697,29 @@ export class VtoComponent implements OnInit, AfterViewInit {
   private clearVtoState(): void {
     this.vtoStateService.resetState();
     this.savedStepperIndex = 0;
+  }
+
+  deleteGeneratedMedia() {
+    if (!this.imagenDocuments?.id) return;
+
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (workspaceId === null) return;
+
+    const confirmDelete = confirm('Are you sure you want to delete this try-on result?');
+    if (!confirmDelete) return;
+
+    this.galleryService.bulkDelete(
+      [{ id: this.imagenDocuments.id, type: 'media_item' }],
+      workspaceId
+    ).subscribe({
+      next: () => {
+        handleSuccessSnackbar(this._snackBar, 'Media deleted successfully');
+        this.imagenDocuments = null;
+        this.searchService.clearActiveVtoJob();
+      },
+      error: (err) => {
+        handleErrorSnackbar(this._snackBar, err, 'Delete result');
+      }
+    });
   }
 }

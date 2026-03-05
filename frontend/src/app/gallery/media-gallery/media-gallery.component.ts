@@ -30,17 +30,22 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatCheckboxChange } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription, fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { MediaItemSelection } from '../../common/components/image-selector/image-selector.component';
+import { CopyToWorkspaceDialogComponent } from '../../common/components/copy-to-workspace-dialog/copy-to-workspace-dialog.component';
+import { DropdownOption } from '../../common/components/studio-dropdown/studio-dropdown.component';
 import { MODEL_CONFIGS } from '../../common/config/model-config';
 import { JobStatus, MediaItem } from '../../common/models/media-item.model';
 import { GalleryItem } from '../../common/models/gallery-item.model';
 import { GallerySearchDto } from '../../common/models/search.model';
 import { UserService } from '../../common/services/user.service';
 import { GalleryService } from '../gallery.service';
+import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
 
 @Component({
   selector: 'app-media-gallery',
@@ -60,24 +65,29 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     | null = null;
   @Input() statusFilter: string | null = JobStatus.COMPLETED;
 
-  @Input() showOnlyMyMedia = false;
   @Input() isSelectionMode = false;
+  @Input() isSelectorMode = false;
+  @Input() maxSelection: number | null = null;
   @Output() mediaSelected = new EventEmitter<GalleryItem>();
 
   images: GalleryItem[] = [];
   filteredImages: GalleryItem[] = [];
-  groups: { title: string; columns: GalleryItem[][] }[] = [];
+  groups: { title: string; items: GalleryItem[] }[] = [];
+
+  selectedItems: Set<string> = new Set();
 
   public allImagesLoaded = false;
 
   public isLoading = true;
+  public isDeleting = false;
+  public isDownloading = false;
+  public isCopying = false;
   private imagesSubscription: Subscription | undefined;
   private allImagesLoadedSubscription: Subscription | undefined;
   private loadingSubscription: Subscription | undefined;
   private resizeSubscription: Subscription | undefined;
   private _hostVisibilityObserver!: IntersectionObserver;
   private _scrollObserver!: IntersectionObserver;
-  private numColumns = 4;
   public userEmailFilter = '';
   public mediaTypeFilter = '';
   public generationModelFilter = '';
@@ -85,6 +95,21 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     value: config.value,
     viewValue: config.viewValue.replace('\n', ''), // Remove newlines for dropdown
   }));
+
+  public mediaTypeOptions: DropdownOption[] = [
+    { value: '', label: 'All Types' },
+    { value: 'image/*', label: 'Image' },
+    { value: 'video/*', label: 'Video' },
+    { value: 'audio/*', label: 'Audio' },
+  ];
+
+  public get modelOptions(): DropdownOption[] {
+    return [
+      { value: '', label: 'All Models' },
+      ...this.generationModels.map(m => ({ value: m.value, label: m.viewValue }))
+    ];
+  }
+
   private autoSlideIntervals: { [id: string]: any } = {};
 
   isBrowser: boolean;
@@ -96,6 +121,9 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     private userService: UserService,
     private elementRef: ElementRef,
     private ngZone: NgZone,
+    private workspaceStateService: WorkspaceStateService,
+    private snackBar: MatSnackBar,
+    public dialog: MatDialog,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -149,10 +177,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
       });
 
     if (this.isBrowser) {
-        this.handleResize();
-        this.resizeSubscription = fromEvent(window, 'resize')
-        .pipe(debounceTime(200))
-        .subscribe(() => this.handleResize());
+        this.searchTerm();
     }
   }
 
@@ -177,7 +202,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public trackByImage(index: number, image: GalleryItem): number | string {
-    return `${image.itemType}_${image.id}`;
+    return `${image.itemType}:${image.id}`;
   }
 
   public trackByGroup(index: number, group: { title: string }): string {
@@ -190,35 +215,124 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  selectMedia(media: GalleryItem, event: Event): void {
-    // Deprecated: Handled by GalleryCardComponent
-  }
-
-  public onShowOnlyMyMediaChange(event: MatCheckboxChange): void {
-    if (event.checked) {
-      const userDetails = this.userService.getUserDetails();
-      if (userDetails?.email) this.userEmailFilter = userDetails.email;
-    } else this.userEmailFilter = '';
-  }
-
-  private handleResize(): void {
-    const width = window.innerWidth;
-    let newNumColumns;
-    if (width < 768) {
-      // md breakpoint
-      newNumColumns = 2;
-    } else if (width < 1024) {
-      // lg breakpoint
-      newNumColumns = 3;
+  toggleSelection(item: GalleryItem, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const id = `${item.itemType}:${item.id}`;
+    if (this.selectedItems.has(id)) {
+      this.selectedItems.delete(id);
+      this.mediaSelected.emit(item);
     } else {
-      newNumColumns = 4;
-    }
-
-    if (newNumColumns !== this.numColumns) {
-      this.numColumns = newNumColumns;
-      this.updateGroups();
+      // If maxSelection is 1, clear previous and select new
+      if (this.maxSelection === 1) {
+        this.selectedItems.clear();
+      } else if (this.maxSelection && this.selectedItems.size >= this.maxSelection) {
+        return;
+      }
+      this.selectedItems.add(id);
+      this.mediaSelected.emit(item);
     }
   }
+
+  isItemSelected(item: GalleryItem): boolean {
+    return this.selectedItems.has(`${item.itemType}:${item.id}`);
+  }
+
+  deleteSelected(): void {
+    if (this.selectedItems.size === 0 || this.isDeleting) return;
+    const itemsToDelete = Array.from(this.selectedItems).map(id => {
+      const [type, itemId] = id.split(':');
+      return { id: parseInt(itemId), type };
+    });
+    
+    if (confirm(`Are you sure you want to delete ${itemsToDelete.length} items?`)) {
+      this.isDeleting = true;
+      const workspaceId = this.workspaceStateService.getActiveWorkspaceId() || 0;
+      this.galleryService.bulkDelete(itemsToDelete, workspaceId).subscribe({
+        next: () => {
+          // Remove deleted items from local state
+          this.images = this.images.filter(img => 
+            !this.selectedItems.has(`${img.itemType}:${img.id}`)
+          );
+          this.selectedItems.clear();
+          this.updateGroups();
+          this.isDeleting = false;
+        },
+        error: (err) => {
+          console.error('Error deleting items:', err);
+          this.isDeleting = false;
+        }
+      });
+    }
+  }
+
+  copySelected(): void {
+    if (this.selectedItems.size === 0) return;
+
+    const dialogRef = this.dialog.open(CopyToWorkspaceDialogComponent, {
+      width: '450px',
+      data: { itemCount: this.selectedItems.size }
+    });
+
+    dialogRef.afterClosed().subscribe((targetWorkspaceId: number | null) => {
+      if (targetWorkspaceId) {
+        this.performCopy(targetWorkspaceId);
+      }
+    });
+  }
+
+  private performCopy(targetWorkspaceId: number): void {
+    const itemsToCopy = Array.from(this.selectedItems).map(id => {
+      const [type, itemId] = id.split(':');
+      return { id: parseInt(itemId), type };
+    });
+
+    this.isCopying = true;
+    this.galleryService.bulkCopy(itemsToCopy, targetWorkspaceId).subscribe({
+      next: (result) => {
+        this.snackBar.open(`${result.copied_count} items copied successfully`, 'Close', { duration: 3000 });
+        this.selectedItems.clear();
+        this.isCopying = false;
+      },
+      error: (err) => {
+        console.error('Error copying items:', err);
+        this.snackBar.open('Failed to copy items', 'Close', { duration: 3000 });
+        this.isCopying = false;
+      }
+    });
+  }
+
+  downloadSelected(): void {
+    if (this.selectedItems.size === 0 || this.isDownloading) return;
+    this.isDownloading = true;
+    const itemsToDownload = Array.from(this.selectedItems).map(id => {
+      const [type, itemId] = id.split(':');
+      return { id: parseInt(itemId), type };
+    });
+
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId() || 0;
+    this.galleryService.bulkDownload(itemsToDownload, workspaceId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `gallery_export_${new Date().getTime()}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        this.isDownloading = false;
+      },
+      error: (err) => {
+        console.error('Error downloading items:', err);
+        this.isDownloading = false;
+      }
+    });
+  }
+
+
 
   private updateGroups(): void {
     // 1. Group images
@@ -282,15 +396,35 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
       groupsMap.get(groupName)?.push(image);
     });
 
-    // 2. Create columns for each group
+    // 2. Assign items to each group
     this.groups = groupOrder.map(title => {
       const items = groupsMap.get(title) || [];
-      const columns = Array.from({ length: this.numColumns }, () => [] as GalleryItem[]);
-      items.forEach((item, index) => {
-        columns[index % this.numColumns].push(item);
-      });
-      return { title, columns };
+      return { title, items };
     });
+  }
+
+  isWide(media: GalleryItem): boolean {
+    const rawRatio = media.aspectRatio;
+    if (!rawRatio) {
+      return media.mimeType?.startsWith('audio/') || false;
+    }
+    const parts = rawRatio.split(':').map(Number);
+    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1]) || parts[1] === 0) {
+      return false;
+    }
+    const ratio = parts[0] / parts[1];
+    return ratio >= 2; 
+  }
+
+  isTall(media: GalleryItem): boolean {
+    const rawRatio = media.aspectRatio;
+    if (!rawRatio) return false;
+    const parts = rawRatio.split(':').map(Number);
+    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1]) || parts[1] === 0) {
+      return false;
+    }
+    const ratio = parts[0] / parts[1];
+    return ratio <= 0.5;
   }
 
   private filterImages() {
@@ -306,6 +440,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
   public searchTerm(): void {
     // Reset local component state for a new search to show the main loader
     this.images = [];
+    this.selectedItems.clear();
 
     const filters: GallerySearchDto = { limit: 40 };
     if (this.userEmailFilter) {

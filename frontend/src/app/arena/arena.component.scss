@@ -15,7 +15,11 @@
  */
 
 .home-margin {
-  margin: 2rem 1rem 10rem 1rem;
+  --max-container-width: 1400px;
+  max-width: var(--max-container-width);
+  margin-top: calc(10vh + 0px);
+  margin-left: max(calc(5vw + 4.5rem), calc(50% - var(--max-container-width) / 2));
+  margin-bottom: 5vh;
 }
 
 .video-container {
@@ -45,11 +49,6 @@
 }
 
 // X-Large devices (large desktops, 1200px and up)
-@media (min-width: 1200px) {
-  .home-margin {
-    margin: 2rem auto;
-  }
-}
 
 // XX-Large devices (larger desktops, 1400px and up)
 @media (min-width: 1400px) {

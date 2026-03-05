@@ -47,6 +47,9 @@ class UnifiedGalleryRepository(BaseRepository[UnifiedGalleryView, UnifiedGallery
         
         # Filter by workspace (mandatory)
         query = query.where(self.model.workspace_id == search_dto.workspace_id)
+
+        # Filter out soft-deleted items
+        query = query.where(self.model.deleted_at == None)
         
         # Filter by status
         if search_dto.status:
@@ -60,24 +63,23 @@ class UnifiedGalleryRepository(BaseRepository[UnifiedGalleryView, UnifiedGallery
         # Filter by metadata using JSONB operators
         # 1. Mime Type
         if search_dto.mime_type:
-            # metadata->>'mime_type'
+            # Use .astext (->>) to get the unquoted string value from JSONB
             mime_val = search_dto.mime_type.value if hasattr(search_dto.mime_type, 'value') else search_dto.mime_type
             if '*' in mime_val:
-                 # Helper for wildcard matching if needed, e.g. 'image/*'
                  # PostgreSQL: metadata->>'mime_type' LIKE 'image/%'
                  prefix = mime_val.replace('*', '%')
                  query = query.where(
-                     cast(self.model.metadata_['mime_type'], String).like(prefix)
+                     self.model.metadata_['mime_type'].astext.like(prefix)
                  )
             else:
                 query = query.where(
-                    cast(self.model.metadata_['mime_type'], String) == mime_val
+                    self.model.metadata_['mime_type'].astext == mime_val
                 )
 
         # 2. Model
         if search_dto.model:
              query = query.where(
-                 cast(self.model.metadata_['model'], String) == search_dto.model.value
+                 self.model.metadata_['model'].astext == search_dto.model.value
              )
 
 

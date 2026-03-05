@@ -50,6 +50,7 @@ from src.source_assets.schema.source_asset_model import (
     SourceAssetModel,
 )
 from src.users.user_model import UserModel, UserRoleEnum
+from src.users.repository.user_repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +61,13 @@ class SourceAssetService:
     def __init__(
         self,
         repo: SourceAssetRepository= Depends(),
+        user_repo: UserRepository = Depends(),
         gcs_service: GcsService = Depends(),
         iam_signer: IamSignerCredentials = Depends(),
         imagen_service: ImagenService = Depends(),
     ):
         self.repo = repo
+        self.user_repo = user_repo
         self.gcs_service = gcs_service
         self.iam_signer = iam_signer
         self.imagen_service = imagen_service  # Service to perform the upscale
@@ -117,6 +120,7 @@ class SourceAssetService:
         supported_ratios = {
             e: float(e.value.split(":")[0]) / float(e.value.split(":")[1])
             for e in AspectRatioEnum
+            if ":" in e.value
         }
 
         closest_enum = min(
@@ -126,16 +130,16 @@ class SourceAssetService:
 
         # Check if the closest match is within a small tolerance (e.g., 2%)
         if abs(supported_ratios[closest_enum] - actual_ratio) > 0.02:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                f"Uploaded file has an unsupported aspect ratio (approx. {width}x{height}). Please use a supported format.",
+            logger.info(
+                f"Falling back to 'OTHER' ratio for {width}x{height} (actual ratio: {actual_ratio:.3f})"
             )
+            return AspectRatioEnum.OTHER
 
         logger.info(f"Deduced aspect ratio as {closest_enum.value}")
         return closest_enum
 
     async def _create_asset_response(
-        self, asset: SourceAssetModel
+        self, asset: SourceAssetModel, user_email: Optional[str] = None
     ) -> SourceAssetResponseDto:
         """Generates presigned URLs for the asset and its thumbnail."""
         tasks = [
@@ -178,6 +182,7 @@ class SourceAssetService:
             presigned_url=presigned_url,
             presigned_original_url=presigned_original_url,
             presigned_thumbnail_url=presigned_thumbnail_url,
+            user_email=user_email,
         )
 
     
@@ -489,7 +494,7 @@ class SourceAssetService:
                 detail=f"Failed to process image: {e}",
             )
 
-    async def delete_asset(self, asset_id: int) -> bool:
+    async def delete_asset(self, asset_id: int, current_user_id: Optional[int] = None) -> bool:
         """
         Deletes an asset from Firestore and its corresponding file from GCS.
         This is an admin-only operation.
@@ -505,25 +510,15 @@ class SourceAssetService:
             )
             return False
 
-        # 2. Delete the file from GCS. We wrap this in a try/except block
-        # to ensure that even if the GCS file is already gone, we still
-        # attempt to delete the database record.
-        try:
-            logger.info(
-                f"Deleting asset file from GCS: {asset_to_delete.gcs_uri}"
-            )
-            self.gcs_service.delete_blob_from_uri(asset_to_delete.gcs_uri)
-        except Exception as e:
-            logger.error(
-                f"Could not delete asset from GCS at {asset_to_delete.gcs_uri}, but proceeding to delete from database. Error: {e}",
-                exc_info=True,
-            )
+        # 2. Skip deleting the file from GCS for soft delete
+        # This allows for potential restoration of the asset in the future.
+        # logger.info(f"Skipping GCS file deletion for soft delete: {asset_to_delete.gcs_uri}")
 
-        # 3. Delete the document from Firestore
+        # 3. Mark the document as deleted in the database
         logger.info(
-            f"Deleting asset document from Firestore with ID: {asset_id}"
+            f"Soft deleting asset document from database with ID: {asset_id} by user: {current_user_id}"
         )
-        return await self.repo.delete(asset_id)
+        return await self.repo.soft_delete(asset_id, deleted_by=current_user_id)
 
     async def list_assets_for_user(
         self,
@@ -612,7 +607,13 @@ class SourceAssetService:
         if not (is_admin or is_owner or is_system):
             return None
 
-        return await self._create_asset_response(asset)
+        # Fetch the owner's email to display in the frontend
+        owner_email = None
+        owner = await self.user_repo.get_by_id(asset.user_id)
+        if owner:
+            owner_email = owner.email
+
+        return await self._create_asset_response(asset, user_email=owner_email)
 
     async def create_from_gcs_uri(
         self,
@@ -694,22 +695,10 @@ class SourceAssetService:
             else:
                 # --- Image Upload & Upscale Logic ---
                 # Skip strict aspect ratio validation here for batch processing.
-                # We will auto-crop to 1:1 (Square) so we can enforce that ratio.
+                # We allow any aspect ratio, falling back to 'other' if needed.
 
                 # Convert image to PNG for standardization before storing.
                 pil_image = PILImage.open(io.BytesIO(contents))
-                
-                # Auto-crop to square (1:1) if needed, as requested for batch inputs.
-                if pil_image.width != pil_image.height:
-                     logger.info(f"Auto-cropping batch image from {pil_image.width}x{pil_image.height} to square.")
-                     min_dim = min(pil_image.width, pil_image.height)
-                     # crop((left, top, right, bottom))
-                     left = (pil_image.width - min_dim) / 2
-                     top = (pil_image.height - min_dim) / 2
-                     right = (pil_image.width + min_dim) / 2
-                     bottom = (pil_image.height + min_dim) / 2
-                     pil_image = pil_image.crop((left, top, right, bottom))
-
                 png_contents: bytes
 
                 if pil_image.format != "PNG":
@@ -722,7 +711,7 @@ class SourceAssetService:
                 else:
                     png_contents = contents
 
-                # Check aspect ratio is correct after the crop
+                # Determine aspect ratio (fallback to 'other' if non-standard)
                 final_aspect_ratio = await self._get_and_validate_aspect_ratio(
                     contents=png_contents,
                     is_video=is_video,

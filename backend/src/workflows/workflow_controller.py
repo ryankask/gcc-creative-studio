@@ -48,7 +48,6 @@ async def search_workflows(
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(RoleChecker(allowed_roles=[UserRoleEnum.ADMIN]))]
 )
 async def create_workflow(
     workflow_data: WorkflowCreateDto,
@@ -66,7 +65,6 @@ async def create_workflow(
 @router.put(
     "/{workflow_id}",
     response_model=WorkflowModel,
-    dependencies=[Depends(RoleChecker(allowed_roles=[UserRoleEnum.ADMIN]))]
 )
 async def update_workflow(
     workflow_id: str,
@@ -119,7 +117,6 @@ async def get_workflow(
     "/{workflow_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a Workflow",
-    dependencies=[Depends(RoleChecker(allowed_roles=[UserRoleEnum.ADMIN]))],
 )
 async def delete_workflow(
     workflow_id: str,

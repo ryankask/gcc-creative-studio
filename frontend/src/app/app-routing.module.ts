@@ -22,7 +22,6 @@ import { AudioComponent } from './audio/audio.component';
 import { AuthGuardService } from './common/services/auth.guard.service';
 import { FunTemplatesComponent } from './fun-templates/fun-templates.component';
 import { MediaDetailComponent } from './gallery/media-detail/media-detail.component';
-import { AssetDetailComponent } from './gallery/asset-detail/asset-detail.component';
 import { MediaGalleryComponent } from './gallery/media-gallery/media-gallery.component';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
@@ -57,10 +56,12 @@ const routes: Routes = [
   {
     path: 'gallery/:id',
     component: MediaDetailComponent,
+    canActivate: [AuthGuardService],
   },
   {
     path: 'asset-detail/:id',
-    component: AssetDetailComponent,
+    component: MediaDetailComponent,
+    canActivate: [AuthGuardService],
   },
   // Optional: Redirect the base URL to the gallery
   {
@@ -78,9 +79,9 @@ const routes: Routes = [
     canActivate: [AuthGuardService],
     children: [
       { path: '', component: WorkflowListComponent, pathMatch: 'full' },
-      { path: 'new', component: WorkflowEditorComponent, canActivate: [AdminAuthGuard] },
+      { path: 'new', component: WorkflowEditorComponent, canActivate: [AuthGuardService] },
       // Match the parameter names used in your WorkflowEditorComponent
-      { path: 'edit/:workflowId', component: WorkflowEditorComponent, canActivate: [AdminAuthGuard] },
+      { path: 'edit/:workflowId', component: WorkflowEditorComponent, canActivate: [AuthGuardService] },
       { path: ':id/executions', component: ExecutionHistoryComponent },
     ],
   },

@@ -45,7 +45,7 @@ import {
   ReferenceImage,
   SourceMediaItemLink,
 } from '../common/models/search.model';
-import { SourceAssetResponseDto } from '../common/services/source-asset.service';
+import { SourceAssetResponseDto, SourceAssetService } from '../common/services/source-asset.service';
 import {
   EnrichedSourceAsset,
   GenerationParameters,
@@ -53,6 +53,7 @@ import {
 import { ImageStateService } from '../services/image-state.service';
 import { SearchService } from '../services/search/search.service';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+import { GalleryService } from '../gallery/gallery.service';
 import { handleErrorSnackbar, handleInfoSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
 
 @Component({
@@ -72,9 +73,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   activeWorkspaceId$: Observable<number | null>;
 
   @HostListener('window:keydown.control.enter', ['$event'])
-  handleCtrlEnter(event: KeyboardEvent) {
+  handleCtrlEnter(event: Event) {
+    const keyboardEvent = event as KeyboardEvent;
     if (!this.isLoading) {
-      event.preventDefault();
+      keyboardEvent.preventDefault();
       this.searchTerm();
     }
   }
@@ -278,6 +280,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     @Inject(WorkspaceStateService)
     private workspaceStateService: WorkspaceStateService,
     private imageStateService: ImageStateService,
+    @Inject(GalleryService)
+    private galleryService: GalleryService,
+    private sourceAssetService: SourceAssetService,
   ) {
     this.matIconRegistry
       .addSvgIcon(
@@ -957,22 +962,36 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   };
 
   openImageSelector(index?: number) {
+    const maxRefs = this.selectedGenerationModelObject?.capabilities.maxReferenceImages ?? 10;
+    const remainingSlots = maxRefs - this.referenceImages.length;
+
+    // If we are adding a new image (no index) and we are full, prevent opening
+    if (index === undefined && remainingSlots <= 0) {
+      handleInfoSnackbar(this._snackBar, `You can only add up to ${maxRefs} reference images for this model.`);
+      return;
+    }
+
     const dialogRef = this.dialog.open(ImageSelectorComponent, {
       width: '90vw',
       height: '80vh',
       maxWidth: '90vw',
       data: {
         mimeType: 'image/*',
+        multiSelect: true,
+        maxSelection: index !== undefined ? 1 : remainingSlots
       },
       panelClass: 'image-selector-dialog',
     });
 
     dialogRef
       .afterClosed()
-      .subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
-        if (result) {
-          this.processInput(result, index);
-        }
+      .subscribe((result: any) => {
+        if (!result) return;
+
+        const results = Array.isArray(result) ? result : [result];
+        results.forEach((res, i) => {
+          this.processInput(res, index !== undefined ? index + i : undefined);
+        });
       });
   }
 
@@ -1060,7 +1079,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (files && files.length > 0) {
       // Handle multiple files if dropped
       for (let i = 0; i < files.length; i++) {
-        this.openCropperDialog(files[i], index !== undefined ? index + i : undefined);
+        const file = files[i];
+        if (file.type.startsWith('image/')) {
+          this.sourceAssetService
+            .uploadAsset(file, { assetType: AssetTypeEnum.GENERIC_IMAGE })
+            .subscribe((result: SourceAssetResponseDto) => {
+              if (result && result.id) {
+                this.processInput(result, index !== undefined ? index + i : undefined);
+              }
+            });
+        }
       }
     }
   }
@@ -1141,5 +1169,30 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.currentMode = 'Ingredients to Image';
     }
     this.saveState();
+  }
+
+  deleteGeneratedMedia() {
+    if (!this.imagenDocuments?.id) return;
+
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (workspaceId === null) return;
+
+    const confirmDelete = confirm('Are you sure you want to delete this generation result?');
+    if (!confirmDelete) return;
+
+    this.galleryService.bulkDelete(
+      [{ id: this.imagenDocuments.id, type: 'media_item' }],
+      workspaceId
+    ).subscribe({
+      next: () => {
+        handleSuccessSnackbar(this._snackBar, 'Generation results deleted successfully');
+        this.imagenDocuments = null;
+        this.showDefaultDocuments = true;
+        this.service.clearActiveImageJob();
+      },
+      error: (err) => {
+        handleErrorSnackbar(this._snackBar, err, 'Delete results');
+      }
+    });
   }
 }

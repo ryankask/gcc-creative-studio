@@ -13,10 +13,13 @@
 # limitations under the License.
 
 import asyncio
+import io
 import logging
+import zipfile
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from src.auth.iam_signer_credentials_service import IamSignerCredentials
 from src.common.dto.pagination_response_dto import PaginationResponseDto
@@ -51,6 +54,10 @@ from src.galleries.repository.unified_gallery_repository import UnifiedGalleryRe
 from src.workspaces.repository.workspace_repository import WorkspaceRepository
 from src.workspaces.schema.workspace_model import WorkspaceScopeEnum
 from src.workspaces.workspace_auth_guard import WorkspaceAuth
+from src.galleries.dto.bulk_delete_dto import BulkDeleteDto 
+from src.galleries.dto.bulk_download_dto import BulkDownloadDto
+from src.galleries.dto.bulk_copy_dto import BulkCopyDto
+from src.common.storage_service import GcsService
 
 logger = logging.getLogger(__name__)
 
@@ -368,4 +375,181 @@ class GalleryService:
         )
 
         return await self._create_gallery_response(item)
+
+    async def bulk_delete(
+        self, bulk_delete_dto: BulkDeleteDto, current_user: UserModel
+    ) -> dict:
+        """
+        Deletes multiple gallery items after authorizing the workspace access.
+        """
+        # 1. Authorize workspace access
+        await self.workspace_auth.authorize(
+            workspace_id=bulk_delete_dto.workspace_id,
+            user=current_user,
+        )
+
+        deleted_count = 0
+        for item in bulk_delete_dto.items:
+            try:
+                if item.type == "media_item":
+                    # Check if user owns it or is admin
+                    media_item = await self.media_repo.get_by_id(item.id)
+                    if not media_item:
+                        continue
+                        
+                    is_admin = UserRoleEnum.ADMIN in current_user.roles
+                    if media_item.user_id != current_user.id and not is_admin:
+                        logger.warning(f"User {current_user.id} unauthorized to delete media {item.id}")
+                        continue
+
+                    await self.media_repo.soft_delete(item.id, deleted_by=current_user.id)
+                    deleted_count += 1
+                elif item.type == "source_asset":
+                    asset = await self.source_asset_repo.get_by_id(item.id)
+                    if not asset:
+                        continue
+                        
+                    is_admin = UserRoleEnum.ADMIN in current_user.roles
+                    if asset.user_id != current_user.id and not is_admin:
+                         logger.warning(f"User {current_user.id} unauthorized to delete asset {item.id}")
+                         continue
+
+                    await self.source_asset_repo.soft_delete(item.id, deleted_by=current_user.id)
+                    deleted_count += 1
+            except Exception as e:
+                logger.error(f"Error deleting {item.type} {item.id}: {e}")
+
+        return {"deleted_count": deleted_count}
+
+    async def bulk_download(
+        self, bulk_download_dto: BulkDownloadDto, current_user: UserModel
+    ) -> StreamingResponse:
+        """
+        Creates a ZIP archive of the selected media items and streams it to the client.
+        """
+        # 1. Authorize workspace access
+        await self.workspace_auth.authorize(
+            workspace_id=bulk_download_dto.workspace_id,
+            user=current_user,
+        )
+
+        zip_buffer = io.BytesIO()
+        gcs_service = GcsService()
+
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            for item in bulk_download_dto.items:
+                try:
+                    gcs_uri = None
+                    filename = None
+                    
+                    if item.type == "media_item":
+                        media_item = await self.media_repo.get_by_id(item.id)
+                        if media_item and media_item.gcs_uris:
+                            gcs_uri = media_item.gcs_uris[0]
+                            # Use mime_type to determine extension
+                            ext = "bin"
+                            mime_type = getattr(media_item, "mime_type", None)
+                            if mime_type:
+                                mime_str = str(mime_type)
+                                if "image/png" in mime_str: ext = "png"
+                                elif "image/jpeg" in mime_str: ext = "jpg"
+                                elif "video/mp4" in mime_str: ext = "mp4"
+                                elif "audio/mpeg" in mime_str: ext = "mp3"
+                                elif "audio/wav" in mime_str: ext = "wav"
+                                elif "/" in mime_str:
+                                    ext = mime_str.split("/")[-1]
+                            
+                            if ext == "bin" and "." in gcs_uri:
+                                ext = gcs_uri.split(".")[-1]
+                                
+                            filename = f"media_{item.id}.{ext}"
+                    elif item.type == "source_asset":
+                        asset = await self.source_asset_repo.get_by_id(item.id)
+                        if asset and asset.gcs_uri:
+                            gcs_uri = asset.gcs_uri
+                            ext = gcs_uri.split('.')[-1] if '.' in gcs_uri else 'bin'
+                            filename = f"asset_{item.id}.{ext}"
+
+                    if gcs_uri and filename:
+                        content = gcs_service.download_bytes_from_gcs(gcs_uri)
+                        if content:
+                            zip_file.writestr(filename, content)
+                except Exception as e:
+                    logger.error(f"Error adding {item.type} {item.id} to ZIP: {e}")
+
+        zip_buffer.seek(0)
+        
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": "attachment; filename=gallery_export.zip"}
+        )
+
+    async def bulk_copy(
+        self, bulk_copy_dto: BulkCopyDto, current_user: UserModel
+    ) -> dict:
+        """
+        Copies multiple gallery items to a target workspace.
+        """
+        # 1. Authorize target workspace access
+        await self.workspace_auth.authorize(
+            workspace_id=bulk_copy_dto.target_workspace_id,
+            user=current_user,
+        )
+
+        copied_count = 0
+        for item in bulk_copy_dto.items:
+            try:
+                if item.type == "media_item":
+                    media_item = await self.media_repo.get_by_id(item.id)
+                    if not media_item:
+                        continue
+                    
+                    # Authorize source workspace access (where the item is currently)
+                    await self.workspace_auth.authorize(
+                        workspace_id=media_item.workspace_id,
+                        user=current_user,
+                    )
+
+                    # Create a new MediaItem instance with updated workspace_id
+                    # exclude 'id', 'created_at', 'updated_at', 'deleted_at', 'deleted_by'
+                    new_item_data = media_item.model_dump(
+                        exclude={"id", "created_at", "updated_at", "deleted_at", "deleted_by", "workspace_id"}
+                    )
+                    new_item_data["workspace_id"] = bulk_copy_dto.target_workspace_id
+                    
+                    # Ensure user_id and user_email are set to the current user copying
+                    new_item_data["user_id"] = current_user.id
+                    new_item_data["user_email"] = current_user.email
+                    
+                    await self.media_repo.create(new_item_data)
+                    copied_count += 1
+
+                elif item.type == "source_asset":
+                    asset = await self.source_asset_repo.get_by_id(item.id)
+                    if not asset:
+                        continue
+                    
+                    # Authorize source workspace access
+                    await self.workspace_auth.authorize(
+                        workspace_id=asset.workspace_id,
+                        user=current_user,
+                    )
+
+                    # Create a new SourceAsset instance with updated workspace_id
+                    new_asset_data = asset.model_dump(
+                        exclude={"id", "created_at", "updated_at", "deleted_at", "deleted_by", "workspace_id"}
+                    )
+                    new_asset_data["workspace_id"] = bulk_copy_dto.target_workspace_id
+                    
+                    # Ensure user_id is set to the current user copying
+                    new_asset_data["user_id"] = current_user.id
+                    
+                    await self.source_asset_repo.create(new_asset_data)
+                    copied_count += 1
+
+            except Exception as e:
+                logger.error(f"Error copying {item.type} {item.id}: {e}")
+
+        return {"copied_count": copied_count}
     

@@ -21,7 +21,7 @@ import { AssetTypeEnum } from '../../../admin/source-assets-management/source-as
 import { ImageCropperDialogComponent } from '../../../common/components/image-cropper-dialog/image-cropper-dialog.component';
 import { ImageSelectorComponent, MediaItemSelection } from '../../../common/components/image-selector/image-selector.component';
 import { ReferenceImage } from '../../../common/models/search.model';
-import { SourceAssetResponseDto } from '../../../common/services/source-asset.service';
+import { SourceAssetResponseDto, SourceAssetService } from '../../../common/services/source-asset.service';
 import { WorkflowStep } from '../../workflow.models';
 
 @Component({
@@ -39,6 +39,7 @@ export class RunWorkflowModalComponent implements OnInit {
         private fb: FormBuilder,
         private dialogRef: MatDialogRef<RunWorkflowModalComponent>,
         private dialog: MatDialog,
+        private sourceAssetService: SourceAssetService,
         @Inject(MAT_DIALOG_DATA) public data: { userInputStep: WorkflowStep }
     ) {
         this.userInputStep = data.userInputStep;
@@ -78,7 +79,9 @@ export class RunWorkflowModalComponent implements OnInit {
             height: '80vh',
             maxWidth: '90vw',
             data: {
-                mimeType: 'image/*', // Only allow images for references
+                mimeType: 'image/*',
+                showFooter: true,
+                maxSelection: 1
             },
             panelClass: 'image-selector-dialog',
         });
@@ -123,24 +126,17 @@ export class RunWorkflowModalComponent implements OnInit {
         if (this.referenceImages[inputName]) return;
         const file = event.dataTransfer?.files[0];
         if (file && file.type.startsWith('image/')) {
-            // For a direct drop, go straight to the cropper
-            const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
-                data: {
-                    imageFile: file,
-                    assetType: AssetTypeEnum.GENERIC_IMAGE,
-                },
-                width: '600px',
-            });
-
-            dialogRef.afterClosed().subscribe((result: SourceAssetResponseDto) => {
-                if (result && result.id) {
-                    this.referenceImages[inputName] = {
-                        sourceAssetId: result.id,
-                        previewUrl: result.presignedUrl || '',
-                    };
-                    this.updateInputControlWithError(inputName);
-                }
-            });
+            // Upload directly
+            this.sourceAssetService.uploadAsset(file, { assetType: AssetTypeEnum.GENERIC_IMAGE })
+                .subscribe((result: SourceAssetResponseDto) => {
+                    if (result && result.id) {
+                        this.referenceImages[inputName] = {
+                            sourceAssetId: result.id,
+                            previewUrl: result.presignedUrl || '',
+                        };
+                        this.updateInputControlWithError(inputName);
+                    }
+                });
         }
     }
 

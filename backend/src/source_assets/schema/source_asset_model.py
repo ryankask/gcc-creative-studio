@@ -78,6 +78,12 @@ class SourceAsset(Base):
         onupdate=func.now(),
         server_default=func.now()
     )
+    deleted_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    deleted_by: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
 
 
 class SourceAssetModel(BaseDocument):
@@ -104,3 +110,5 @@ class SourceAssetModel(BaseDocument):
     scope: AssetScopeEnum = AssetScopeEnum.PRIVATE
     asset_type: AssetTypeEnum = AssetTypeEnum.GENERIC_IMAGE
     thumbnail_gcs_uri: Optional[str] = None  # In case of uploading a video
+    deleted_at: Optional[datetime.datetime] = None
+    deleted_by: Optional[int] = None

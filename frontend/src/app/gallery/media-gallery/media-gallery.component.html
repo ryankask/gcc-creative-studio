@@ -14,12 +14,11 @@
  limitations under the License.
 -->
 
-<div class="lg:container lg:mx-auto">
-  <div class="home-margin grid grid-cols-1">
-    <div class="video-container mb-8">
+<div [class.media-gallery-container]="!isSelectorMode" class="grid grid-cols-1">
+    <div class="video-container mb-8" *ngIf="!isSelectorMode">
       <!-- Text for Tablet and beyond -->
       <div
-        class="hidden md:flex justify-center items-center w-full h-full absolute flex-col"
+        class="hidden flex justify-center items-center w-full h-full absolute"
       >
         <h1
           class="text-center justify-center text-white text-2xl font-bold !m-0 !z-[50]"
@@ -83,6 +82,104 @@
       </div>
     </div>
 
+    <ng-container *ngIf="!isSelectionMode && !isSelectorMode">
+      <div
+        class="flex flex-wrap justify-end items-center gap-4 p-4 rounded-lg mt-4 w-full"
+      >
+
+        <!-- Media Type Filter -->
+        <div class="flex flex-col w-48" *ngIf="!filterByType">
+          <studio-dropdown
+            class="w-full"
+            size="small"
+            [options]="mediaTypeOptions"
+            [(value)]="mediaTypeFilter"
+            (valueChange)="searchTerm()"
+            placeholder="Media Type"
+            menuTitle="Media Type"
+          ></studio-dropdown>
+        </div>
+
+        <!-- Generation Model Filter -->
+        <div class="flex flex-col w-48">
+          <studio-dropdown
+             class="w-full"
+             size="small"
+            [options]="modelOptions"
+            [(value)]="generationModelFilter"
+            (valueChange)="searchTerm()"
+            placeholder="Generation Model"
+            menuTitle="Generation Model"
+          ></studio-dropdown>
+        </div>
+
+        <!-- Search Filter (Replaced Search Button) -->
+        <div class="flex flex-col self-center">
+          <studio-search-filter
+            [(value)]="userEmailFilter"
+            placeholder="User Email"
+            size="small"
+            (search)="searchTerm()"
+          ></studio-search-filter>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div 
+        *ngIf="selectedItems.size > 0"
+        class="flex justify-end items-center gap-4 px-4 py-2 mt-2 w-full animate-fade-in"
+      >
+        <span class="text-white/60 text-sm mr-auto">{{ selectedItems.size }} items selected</span>
+        
+        <studio-button
+          variant="primary"
+          size="small"
+          shape="circle"
+          (click)="copySelected()"
+          title="Copy selected"
+          [disabled]="selectedItems.size === 0 || isCopying || isDownloading || isDeleting"
+        >
+          <mat-icon *ngIf="!isCopying">content_copy</mat-icon>
+          <mat-progress-spinner
+            *ngIf="isCopying"
+            mode="indeterminate"
+            diameter="18"
+          ></mat-progress-spinner>
+        </studio-button>
+        <studio-button
+          variant="primary"
+          size="small"
+          shape="circle"
+          (click)="downloadSelected()"
+          title="Download selected"
+          [disabled]="isDownloading || isDeleting || isCopying"
+        >
+          <mat-icon *ngIf="!isDownloading">download</mat-icon>
+          <mat-progress-spinner
+            *ngIf="isDownloading"
+            mode="indeterminate"
+            diameter="18"
+          ></mat-progress-spinner>
+        </studio-button>
+
+        <studio-button
+          variant="primary"
+          size="small"
+          shape="circle"
+          (click)="deleteSelected()"
+          title="Delete selected"
+          [disabled]="isDeleting || isDownloading || isCopying"
+        >
+          <mat-icon *ngIf="!isDeleting">delete</mat-icon>
+          <mat-progress-spinner
+            *ngIf="isDeleting"
+            mode="indeterminate"
+            diameter="18"
+          ></mat-progress-spinner>
+        </studio-button>
+      </div>
+    </ng-container>
+
     <!-- A loading indicator that shows while data is being fetched -->
     <div
       *ngIf="isLoading && images.length === 0"
@@ -95,92 +192,27 @@
       <p class="pt-5 text-white">Loading media...</p>
     </div>
 
-    <ng-container *ngIf="!isSelectionMode">
-      <div
-        *ngIf="!isLoading"
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 justify-evenly align-center p-4 rounded-lg mt-4"
-      >
-        <!-- Email Filter -->
-        <div class="flex flex-col">
-          <mat-form-field class="w-full">
-            <mat-label>User Email</mat-label>
-            <input
-              matInput
-              [(ngModel)]="userEmailFilter"
-              placeholder="Filter by email"
-              [disabled]="showOnlyMyMedia"
-            />
-          </mat-form-field>
-          <mat-checkbox
-            [(ngModel)]="showOnlyMyMedia"
-            (change)="onShowOnlyMyMediaChange($event)"
-            class="!text-white -mt-2"
-          >
-            Show only my media
-          </mat-checkbox>
-        </div>
-
-        <!-- Media Type Filter -->
-        <div class="flex flex-col" *ngIf="!filterByType">
-          <mat-form-field class="w-full h-auto">
-            <mat-label>Media Type</mat-label>
-            <mat-select [(ngModel)]="mediaTypeFilter">
-              <mat-option>None</mat-option>
-              <mat-option value="image/*">Image</mat-option>
-              <mat-option value="video/*">Video</mat-option>
-              <mat-option value="audio/*">Audio</mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
-
-        <!-- Generation Model Filter -->
-        <div class="flex flex-col">
-          <mat-form-field class="w-full h-auto">
-            <mat-label>Generation Model</mat-label>
-            <mat-select [(ngModel)]="generationModelFilter">
-              <mat-option>None</mat-option>
-              <mat-option
-                *ngFor="let model of generationModels"
-                [value]="model.value"
-              >
-                {{ model.viewValue }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
-
-        <!-- Search Button -->
-        <studio-button variant="primary" size="large" (click)="searchTerm()">
-          <mat-icon svgIcon="gemini-spark-icon"></mat-icon>
-          <span class="font-bold">Search</span>
-        </studio-button>
-      </div>
-    </ng-container>
-
     <div class="flex flex-col gap-8 mt-8" *ngIf="groups.length > 0">
       <div *ngFor="let group of groups; trackBy: trackByGroup">
-        <h2 class="text-white text-2xl mb-4 pl-2">{{ group.title }}</h2>
-        <div class="flex flex-row gap-4">
+        <h2 class="text-white text-lg mb-4 pl-2">{{ group.title }}</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 grid-flow-dense">
           <div
-            *ngFor="let column of group.columns"
-            class="flex flex-1 flex-col gap-4"
+            *ngFor="let media of group.items; trackBy: trackByImage"
+            [class.col-span-2]="isWide(media)"
           >
-            <div
-              *ngFor="let media of column; trackBy: trackByImage"
-              class="w-full"
-            >
-              <app-gallery-card
-                [item]="media"
-                [isSelectionMode]="isSelectionMode"
-                (mediaItemSelected)="mediaItemSelected.emit($event)"
-                (mediaSelected)="mediaSelected.emit($event)"
-              ></app-gallery-card>
-            </div>
+            <app-gallery-card
+              [item]="media"
+              [isSelectionMode]="isSelectionMode"
+              [isSelected]="isItemSelected(media)"
+              [anyItemSelected]="selectedItems.size > 0"
+              (mediaItemSelected)="mediaItemSelected.emit($event)"
+              (mediaSelected)="mediaSelected.emit($event)"
+              (click)="toggleSelection(media, $event)"
+            ></app-gallery-card>
           </div>
         </div>
       </div>
-
-      <div>
+    </div>
         <!-- Load more button -->
         <div
           *ngIf="!isLoading && !allImagesLoaded && images.length > 0"
@@ -221,8 +253,5 @@
             No {{ filterByType.split('/')[0] }} media items found in the
             gallery.
           </p>
-        </div>
-      </div>
     </div>
-  </div>
 </div>

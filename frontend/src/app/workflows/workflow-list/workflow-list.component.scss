@@ -63,93 +63,11 @@
 
 
 
-/* Filter Button */
-.filter-btn {
-  color: #C4C7C5;
-  
-  &:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
-/* Workflow List Container */
-.workflows-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px; /* Spacing between cards */
-}
-
 .workflows-filter {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-}
-
-.search-container {
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  padding: 2px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 36px; /* Initial width (button only + padding) */
-  overflow: hidden;
-
-  &.open {
-    width: 300px; /* Expanded width */
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .search-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: #F8F9FA;
-    font-family: 'Google Sans', sans-serif;
-    font-size: 13px;
-    padding: 0;
-    outline: none;
-    opacity: 0; /* Hidden initially */
-    width: 0;
-    transition: all 0.2s ease;
-
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.4);
-    }
-  }
-
-  &.open .search-input {
-    opacity: 1;
-    width: 100%;
-    padding: 0 0 0 12px;
-  }
-
-  .filter-btn {
-    color: #C4C7C5;
-    background: transparent;
-    min-width: 30px;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      line-height: 18px;
-    }
-    
-    &:hover {
-      color: white;
-      background: rgba(255, 255, 255, 0.1);
-    }
-  }
+  margin-bottom: 12px;
 }
 
 .workflow-card {

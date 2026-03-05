@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {AppInjector} from '../app-injector';
-import {NotificationService} from '../common/services/notification.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { AppInjector } from '../app-injector';
+import { NotificationService } from '../common/services/notification.service';
 
 export const handleErrorSnackbar: (
   snackBar: MatSnackBar,
@@ -27,7 +27,7 @@ export const handleErrorSnackbar: (
   snackBar: MatSnackBar,
   error: any,
   context: string,
-  duration: number = 20000,
+  duration: number = 5000,
 ) => {
   console.error(`${context} error:`, error);
   const errorMessage =
@@ -36,25 +36,25 @@ export const handleErrorSnackbar: (
     error?.message ||
     'Something went wrong';
 
-  try {
-    const notificationService = AppInjector.get(NotificationService);
-    notificationService.show(
-      errorMessage,
-      'error',
-      'cross-in-circle-white',
-      undefined,
-      duration,
-    );
-  } catch (e) {
-    console.error('NotificationService not available', e);
-  }
-};
+    try {
+      const notificationService = AppInjector.get(NotificationService);
+      notificationService.show(
+        errorMessage,
+        'error',
+        'cross-in-circle-white',
+        undefined,
+        duration,
+      );
+    } catch (e) {
+      console.error('NotificationService not available', e);
+    }
+  };
 
 export const handleSuccessSnackbar: (
   snackBar: MatSnackBar,
   msg: any,
   duration?: number,
-) => void = (snackBar: MatSnackBar, msg: any, duration?: number) => {
+) => void = (snackBar: MatSnackBar, msg: any, duration: number = 5000) => {
   try {
     const notificationService = AppInjector.get(NotificationService);
     notificationService.show(
@@ -73,7 +73,7 @@ export const handleInfoSnackbar: (
   snackBar: MatSnackBar,
   msg: any,
   duration?: number,
-) => void = (snackBar: MatSnackBar, msg: any, duration: number = 10000) => {
+) => void = (snackBar: MatSnackBar, msg: any, duration: number = 5000) => {
   try {
     const notificationService = AppInjector.get(NotificationService);
     notificationService.show(msg, 'info', undefined, 'info', duration);

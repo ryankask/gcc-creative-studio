@@ -143,7 +143,9 @@ export class UpscaleComponent implements OnInit, OnDestroy {
       data: {
         mimeType: 'image/*',
         assetType: this.assetType,
-        enableUpscale: false // Disable auto-upscale to allow preview first
+        enableUpscale: false,
+        showFooter: true,
+        maxSelection: 1
       }
     });
 

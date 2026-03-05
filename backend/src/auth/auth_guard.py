@@ -106,35 +106,22 @@ async def get_current_user(
                 detail="Could not create or retrieve user profile.",
             )
 
-        if not user_doc.picture:
+        if not user_doc.picture and picture:
+            logger.info(f"Updating picture for user: {email}")
             user_doc.picture = picture
-            # We need to update the user. Since user_doc is a Pydantic model, we can't just save it.
-            # We should use the service to update it.
-            # Assuming user_service has an update method or we can call repo via service.
-            # But user_service.user_repo is available.
-            # However, user_doc.id is now an int (or str representation of int).
-            # user_service.update_user_role doesn't update picture.
-            # Let's check if we can update picture.
-            # For now, let's skip updating picture here or add a method to service.
-            # But wait, user_service.user_repo.update takes id and dict.
-            # We can use that if we really need to.
-            # But better to add update_user to service.
-            # For now, I'll just skip updating picture to avoid complexity if it's not critical,
-            # or try to use the repo if accessible.
-            # user_service.user_repo is public.
             if user_doc.id:
                  await user_service.user_repo.update(user_doc.id, {"picture": picture})
 
         return user_doc
 
     except auth.ExpiredIdTokenError:
-        logger.error(f"[get_current_user - auth.ExpiredIdTokenError]")
+        logger.error(f"[get_current_user - auth.ExpiredIdTokenError] for {email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication token has expired.",
         )
     except auth.InvalidIdTokenError as e:
-        logger.error(f"[get_current_user - auth.InvalidIdTokenError]: {e}")
+        logger.error(f"[get_current_user - auth.InvalidIdTokenError] for {email}: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication token: {e}",

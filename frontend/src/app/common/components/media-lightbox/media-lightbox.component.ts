@@ -48,9 +48,23 @@ export class MediaLightboxComponent
   @Input() showSeeMoreInfoButton = false;
   @Input() showShareButton = true;
   @Input() showDownloadButton = true;
-  @Input() showEditButton = false;
-  @Input() showGenerateVideoButton = false;
-  @Input() showVtoButton = false;
+  @Input() showDeleteButton = false;
+
+  get isImage(): boolean {
+    return this.mediaItem?.mimeType?.startsWith('image/') ?? false;
+  }
+
+  get showEditButton(): boolean {
+    return this.isImage;
+  }
+
+  get showGenerateVideoButton(): boolean {
+    return this.isImage;
+  }
+
+  get showVtoButton(): boolean {
+    return this.isImage;
+  }
   @Output() editClicked = new EventEmitter<number>();
   @Output() generateVideoClicked = new EventEmitter<{
     role: 'start' | 'end';
@@ -65,6 +79,7 @@ export class MediaLightboxComponent
     mediaItem: MediaItem;
     selectedIndex: number;
   }>();
+  @Output() deleteClicked = new EventEmitter<number>();
 
   selectedIndex = 0;
   selectedUrl: string | undefined;
@@ -137,14 +152,22 @@ export class MediaLightboxComponent
   }
 
   private initializePhotoSwipe(): void {
-    if (this.mediaItem?.presignedUrls && !this.isVideo) {
+    if (this.mediaItem?.presignedUrls && !this.isVideo && !this.isAudio) {
       this.lightbox = new PhotoSwipeLightbox({
-        dataSource: this.mediaItem.presignedUrls.map(url => ({
-          src: url,
-          width: this.imageWidth,
-          height: this.imageHeight,
-          alt: (this.mediaItem as any).originalPrompt || this.mediaItem?.prompt,
-        })),
+        dataSource: this.mediaItem.presignedUrls.map((url, index) => {
+          // If this is the currently selected image and we have its natural dimensions, use them.
+          // Otherwise, fall back to calculated defaults.
+          const isSelected = index === this.selectedIndex;
+          const width = isSelected ? this.imageWidth : 1920; 
+          const height = isSelected ? this.imageHeight : 1080;
+
+          return {
+            src: url,
+            width,
+            height,
+            alt: (this.mediaItem as any).originalPrompt || this.mediaItem?.prompt,
+          };
+        }),
         pswpModule: () => import('photoswipe'),
       });
 
@@ -165,11 +188,30 @@ export class MediaLightboxComponent
     }
   }
 
+  onImageLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img && img.naturalWidth && img.naturalHeight) {
+      this.imageWidth = img.naturalWidth;
+      this.imageHeight = img.naturalHeight;
+      
+      // Update the lightbox data source with genuine dimensions if it exists
+      if (this.lightbox) {
+        // We re-initialize to ensure PhotoSwipe picks up the new dimensions
+        // for the data source.
+        this.initializePhotoSwipe();
+      }
+    }
+  }
+
   private updateImageDimensions(): void {
+    // We no longer enforce dimensions here as we'll use 'fill' mode
+    // but we can keep some defaults for PhotoSwipe if needed.
     if (this.mediaItem) {
-      const aspectRatioStr = this.mediaItem.aspectRatio || '1:1';
+      const aspectRatioStr = this.mediaItem.aspectRatio || (this.mediaItem as any).aspect || '1:1';
       const [w, h] = aspectRatioStr.split(':').map(Number);
-      this.imageHeight = (h / w) * this.imageWidth;
+      if (w && h) {
+        this.imageHeight = (h / w) * this.imageWidth;
+      }
     }
   }
 
@@ -349,19 +391,19 @@ export class MediaLightboxComponent
   get aspectRatioClass(): string {
     // For Audio, we just want a nice container, aspect-video works well for the player shape
     if (this.isAudio) return 'aspect-video h-auto';
-
-    const ratio = this.mediaItem?.aspectRatio || (this.mediaItem as any).aspect;
-    switch (ratio) {
-      case '1:1':
-        return 'aspect-square';
-      case '16:9':
-        return 'aspect-video';
-      case null:
-      case undefined:
-        return 'aspect-square';
-      default:
-        return `aspect-[${ratio.replace(':', '/')}]`;
+    
+    // For Videos, we can still use the aspect ratio if available
+    if (this.isVideo) {
+      const ratio = this.mediaItem?.aspectRatio || (this.mediaItem as any).aspect;
+      if (ratio === '1:1') return 'aspect-square';
+      if (ratio === '16:9') return 'aspect-video';
+      if (ratio && ratio.includes(':')) return `aspect-[${ratio.replace(':', '/')}]`;
+      return 'aspect-video'; // Default for video
     }
+
+    // For Images, we don't want to enforce an aspect ratio on the container
+    // as it causes stretching. We'll let the image's natural ratio prevail.
+    return '';
   }
 
   // --- AUDIO PLAYER LOGIC ---
@@ -453,5 +495,9 @@ export class MediaLightboxComponent
         selectedIndex: this.selectedIndex,
       });
     }
+  }
+
+  onDeleteClick() {
+    this.deleteClicked.emit(this.selectedIndex);
   }
 }

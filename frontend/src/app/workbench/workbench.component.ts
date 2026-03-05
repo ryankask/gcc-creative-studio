@@ -398,6 +398,8 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
       maxWidth: '90vw',
       data: {
         mimeType: mimeType,
+        showFooter: true,
+        maxSelection: 1
       },
       panelClass: 'image-selector-dialog',
     });

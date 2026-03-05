@@ -1,3 +1,8 @@
+:host {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .btn-glass-primary {
   // 1. Define the Border Width
   // We use transparent so the gradient behind it shines through.
@@ -39,8 +44,12 @@
     }
     
     // Ensure icon doesn't shrink
-    mat-icon {
+    mat-icon,
+    img {
         flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
     }
   }
 
@@ -117,8 +126,12 @@
     }
 
     // Ensure icon doesn't shrink
-    mat-icon {
+    mat-icon,
+    img {
         flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
     }
   }
 

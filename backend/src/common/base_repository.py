@@ -72,10 +72,14 @@ class BaseRepositoryMixin(Generic[ModelType, SchemaType, IDType]):
         self.db = db
 
     async def get_by_id(self, item_id: IDType) -> Optional[SchemaType]:
-        """Retrieves a single document by its ID."""
-        result = await self.db.execute(
-            select(self.model).where(self.model.id == item_id)
-        )
+        """Retrieves a single document by its ID, excluding soft-deleted ones."""
+        query = select(self.model).where(self.model.id == item_id)
+        
+        # Filter out soft-deleted items if the model supports it
+        if hasattr(self.model, "deleted_at"):
+            query = query.where(self.model.deleted_at == None)
+            
+        result = await self.db.execute(query)
         item = result.scalar_one_or_none()
         if not item:
             return None
@@ -106,9 +110,11 @@ class BaseRepositoryMixin(Generic[ModelType, SchemaType, IDType]):
         Performs a partial update on a document.
         """
         # Fetch the item first
-        result = await self.db.execute(
-            select(self.model).where(self.model.id == item_id)
-        )
+        query = select(self.model).where(self.model.id == item_id)
+        if hasattr(self.model, "deleted_at"):
+            query = query.where(self.model.deleted_at == None)
+            
+        result = await self.db.execute(query)
         db_item = result.scalar_one_or_none()
         if not db_item:
             return None
@@ -134,7 +140,7 @@ class BaseRepositoryMixin(Generic[ModelType, SchemaType, IDType]):
 
     async def delete(self, item_id: IDType) -> bool:
         """
-        Deletes a document by its ID.
+        Deletes a document by its ID (HARD DELETE).
         Returns True if deletion was successful (item existed), False otherwise.
         """
         # Check existence first or just delete and check rowcount
@@ -144,12 +150,37 @@ class BaseRepositoryMixin(Generic[ModelType, SchemaType, IDType]):
         await self.db.commit()
         return result.rowcount > 0 # type: ignore
 
-    async def find_all(self, limit: int = 100, offset: int = 0) -> List[SchemaType]:
+    async def soft_delete(self, item_id: IDType, deleted_by: Optional[int] = None) -> bool:
         """
-        Finds all documents with pagination.
+        Marks a document as deleted by setting deleted_at and deleted_by.
+        Returns True if deletion was successful, False otherwise.
         """
         result = await self.db.execute(
-            select(self.model).limit(limit).offset(offset)
+            select(self.model).where(self.model.id == item_id)
+        )
+        db_item = result.scalar_one_or_none()
+        if not db_item:
+            return False
+
+        if hasattr(db_item, "deleted_at"):
+            db_item.deleted_at = datetime.datetime.now(datetime.timezone.utc)
+        
+        if hasattr(db_item, "deleted_by") and deleted_by is not None:
+            db_item.deleted_by = deleted_by
+
+        await self.db.commit()
+        return True
+
+    async def find_all(self, limit: int = 100, offset: int = 0) -> List[SchemaType]:
+        """
+        Finds all documents with pagination, excluding soft-deleted ones.
+        """
+        query = select(self.model)
+        if hasattr(self.model, "deleted_at"):
+            query = query.where(self.model.deleted_at == None)
+            
+        result = await self.db.execute(
+            query.limit(limit).offset(offset)
         )
         items = result.scalars().all()
         return [self.schema.model_validate(item) for item in items]

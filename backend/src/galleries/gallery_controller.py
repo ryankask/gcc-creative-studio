@@ -22,6 +22,9 @@ from src.galleries.dto.gallery_search_dto import GallerySearchDto
 from src.galleries.gallery_service import GalleryService
 from src.users.user_model import UserModel, UserRoleEnum
 from src.workspaces.repository.workspace_repository import WorkspaceRepository
+from src.galleries.dto.bulk_delete_dto import BulkDeleteDto
+from src.galleries.dto.bulk_download_dto import BulkDownloadDto
+from src.galleries.dto.bulk_copy_dto import BulkCopyDto
 from src.workspaces.workspace_auth_guard import WorkspaceAuth
 
 router = APIRouter(
@@ -88,3 +91,44 @@ async def get_single_gallery_item(
             detail="Media item not found",
         )
     return item
+
+@router.post("/bulk-delete")
+async def bulk_delete_items(
+    bulk_delete_dto: BulkDeleteDto,
+    current_user: UserModel = Depends(get_current_user),
+    service: GalleryService = Depends(),
+):
+    """
+    Bulk delete media items and source assets.
+    """
+    return await service.bulk_delete(
+        bulk_delete_dto=bulk_delete_dto, current_user=current_user
+    )
+
+
+@router.post("/bulk-download")
+async def bulk_download_items(
+    bulk_download_dto: BulkDownloadDto,
+    current_user: UserModel = Depends(get_current_user),
+    service: GalleryService = Depends(),
+):
+    """
+    Bulk download media items and source assets as a ZIP file.
+    """
+    return await service.bulk_download(
+        bulk_download_dto=bulk_download_dto, current_user=current_user
+    )
+
+
+@router.post("/bulk-copy")
+async def bulk_copy_items(
+    bulk_copy_dto: BulkCopyDto,
+    current_user: UserModel = Depends(get_current_user),
+    service: GalleryService = Depends(),
+):
+    """
+    Bulk copy media items and source assets to another workspace.
+    """
+    return await service.bulk_copy(
+        bulk_copy_dto=bulk_copy_dto, current_user=current_user
+    )

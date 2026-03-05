@@ -15,13 +15,13 @@
  */
 
 import { Component, Input, OnInit } from '@angular/core';
-import { AbstractControl } from '@angular/forms';
+import { AbstractControl, FormBuilder } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { AssetTypeEnum } from '../../../../../../admin/source-assets-management/source-asset.model';
 import { ImageCropperDialogComponent } from '../../../../../../common/components/image-cropper-dialog/image-cropper-dialog.component';
 import { ImageSelectorComponent, MediaItemSelection } from '../../../../../../common/components/image-selector/image-selector.component';
 import { ReferenceImage } from '../../../../../../common/models/search.model';
-import { SourceAssetResponseDto } from '../../../../../../common/services/source-asset.service';
+import { SourceAssetResponseDto, SourceAssetService } from '../../../../../../common/services/source-asset.service';
 import { StepOutputReference } from '../../../../../workflow.models';
 
 @Component({
@@ -55,7 +55,11 @@ export class StepMediaInputComponent implements OnInit {
     return Array.isArray(val) ? val : [val];
   }
 
-  constructor(public dialog: MatDialog) { }
+  constructor(
+    private fb: FormBuilder,
+    private dialog: MatDialog,
+    private sourceAssetService: SourceAssetService,
+  ) { }
 
   ngOnInit(): void {
   }
@@ -74,7 +78,8 @@ export class StepMediaInputComponent implements OnInit {
   }
 
   openImageSelectorForReference(): void {
-    if (this.items.length >= this.maxItems) return;
+    const remainingSlots = this.maxItems - this.items.length;
+    if (remainingSlots <= 0) return;
 
     let mimeType: string = 'image/*';
     if (this.type === 'video') mimeType = 'video/mp4';
@@ -86,38 +91,57 @@ export class StepMediaInputComponent implements OnInit {
       data: {
         mimeType: mimeType,
         assetType: this.type === 'video' ? AssetTypeEnum.GENERIC_VIDEO : AssetTypeEnum.GENERIC_IMAGE,
+        multiSelect: this.maxItems > 1,
+        maxSelection: remainingSlots,
+        showFooter: true
       },
       panelClass: 'image-selector-dialog',
     });
 
-    dialogRef.afterClosed().subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
-      if (result && this.items.length < this.maxItems) {
-        let newImage: ReferenceImage | null = null;
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (!result) return;
 
-        if ('gcsUri' in result) {
-          newImage = {
-            sourceAssetId: result.id,
-            previewUrl: result.presignedUrl || '',
-          };
-        } else {
-          const previewUrl = result.mediaItem.presignedUrls?.[result.selectedIndex];
-          if (previewUrl) {
-            newImage = {
-              previewUrl: previewUrl,
-              sourceMediaItem: {
-                mediaItemId: result.mediaItem.id,
-                mediaIndex: result.selectedIndex,
-                role: 'image_reference_asset',
-              },
+      const results = Array.isArray(result) ? result : [result];
+      const newItems: (ReferenceImage | StepOutputReference)[] = [];
+
+      results.forEach(res => {
+        if (this.items.length + newItems.length < this.maxItems) {
+          let newItem: ReferenceImage | null = null;
+
+          if ('gcsUri' in res) {
+            newItem = {
+              sourceAssetId: res.id,
+              previewUrl: res.presignedUrl || '',
             };
+          } else {
+            const previewUrl = res.mediaItem.presignedUrls?.[res.selectedIndex];
+            if (previewUrl) {
+              newItem = {
+                previewUrl: previewUrl,
+                sourceMediaItem: {
+                  mediaItemId: res.mediaItem.id,
+                  mediaIndex: res.selectedIndex,
+                  role: 'image_reference_asset',
+                },
+              };
+            }
+          }
+
+          if (newItem) {
+            newItems.push(newItem);
           }
         }
+      });
 
-        if (newImage) {
-          this.addItem(newImage);
-        }
+      if (newItems.length > 0) {
+        this.addItems(newItems);
       }
     });
+  }
+
+  private addItems(newItems: (ReferenceImage | StepOutputReference)[]) {
+    const currentItems = [...this.items, ...newItems];
+    this.updateValue(currentItems);
   }
 
   onReferenceImageDrop(event: DragEvent) {
@@ -130,22 +154,16 @@ export class StepMediaInputComponent implements OnInit {
 
     const file = event.dataTransfer?.files[0];
     if (file && file.type.startsWith('image/')) {
-      const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
-        data: {
-          imageFile: file,
-          assetType: AssetTypeEnum.GENERIC_IMAGE,
-        },
-        width: '600px',
-      });
-
-      dialogRef.afterClosed().subscribe((result: SourceAssetResponseDto) => {
-        if (result && result.id) {
-          this.addItem({
-            sourceAssetId: result.id,
-            previewUrl: result.presignedUrl || '',
-          });
-        }
-      });
+      this.sourceAssetService
+        .uploadAsset(file, { aspectRatio: 'other', assetType: AssetTypeEnum.GENERIC_IMAGE })
+        .subscribe((result: SourceAssetResponseDto) => {
+          if (result && result.id) {
+            this.addItem({
+              sourceAssetId: result.id,
+              previewUrl: result.presignedUrl || '',
+            });
+          }
+        });
     }
   }
 

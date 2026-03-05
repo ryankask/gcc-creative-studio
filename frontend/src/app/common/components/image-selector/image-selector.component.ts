@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ViewChild } from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialog,
   MatDialogRef,
 } from '@angular/material/dialog';
 import { finalize, Observable } from 'rxjs';
-import { AssetTypeEnum } from '../../../admin/source-assets-management/source-asset.model';
-import { MediaItem } from '../../models/media-item.model';
 import {
   SourceAssetResponseDto,
   SourceAssetService,
 } from '../../services/source-asset.service';
+import { AssetTypeEnum } from '../../../admin/source-assets-management/source-asset.model';
+import { MediaItem } from '../../models/media-item.model';
+import { MediaGalleryComponent } from '../../../gallery/media-gallery/media-gallery.component';
 import { ImageCropperDialogComponent } from '../image-cropper-dialog/image-cropper-dialog.component';
 
 export interface MediaItemSelection {
@@ -41,39 +42,62 @@ export interface MediaItemSelection {
 })
 export class ImageSelectorComponent {
   isUploading = false;
+  isDragging = false;
+  selectedMediaItems = new Map<string, any>();
+  shouldCrop = false;
+
+  @ViewChild(MediaGalleryComponent) mediaGallery!: MediaGalleryComponent;
 
   constructor(
     public dialogRef: MatDialogRef<ImageSelectorComponent>,
     private sourceAssetService: SourceAssetService,
-    private dialog: MatDialog, // Inject MatDialog to open the new dialog
+    private dialog: MatDialog,
     @Inject(MAT_DIALOG_DATA)
     public data: {
       mimeType: 'image/*' | 'image/png' | 'video/mp4' | 'video/*' | 'audio/*' | 'audio/mpeg' | null;
       assetType: AssetTypeEnum;
       enableUpscale?: boolean;
+      multiSelect?: boolean;
+      showFooter?: boolean;
+      maxSelection?: number;
     },
-  ) { }
+  ) {
+    this.dialogRef.addPanelClass('image-selector-dialog');
+  }
 
   // This method is called by the file input or drop event inside this component
   handleFileSelect(file: File): void {
     if (file.type.startsWith('image/')) {
-      // If it's an image, open the cropper dialog
-      const cropperDialogRef = this.dialog.open(ImageCropperDialogComponent, {
-        data: {
-          imageFile: file,
-          assetType: this.data.assetType,
-          enableUpscale: this.data.enableUpscale
-        },
-        width: '600px',
-      });
-
-      cropperDialogRef
-        .afterClosed()
-        .subscribe((asset: SourceAssetResponseDto) => {
-          if (asset) {
-            this.dialogRef.close(asset);
-          }
+      if (this.shouldCrop) {
+        // If shouldCrop is true, open the cropper dialog
+        const cropperDialogRef = this.dialog.open(ImageCropperDialogComponent, {
+          data: {
+            imageFile: file,
+            assetType: this.data.assetType,
+            enableUpscale: this.data.enableUpscale,
+          },
+          width: '600px',
         });
+
+        cropperDialogRef
+          .afterClosed()
+          .subscribe((asset: SourceAssetResponseDto) => {
+            if (asset) {
+              this.dialogRef.close(asset);
+            }
+          });
+      } else {
+        // If shouldCrop is false, upload directly
+        this.isUploading = true;
+        this.sourceAssetService
+          .uploadAsset(file, { assetType: this.data.assetType })
+          .pipe(finalize(() => (this.isUploading = false)))
+          .subscribe(asset => {
+            if (asset) {
+              this.dialogRef.close(asset);
+            }
+          });
+      }
     } else if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
       // If it's a video or audio, upload it directly from here
       this.isUploading = true;
@@ -116,6 +140,7 @@ export class ImageSelectorComponent {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    this.isDragging = false;
     if (event.dataTransfer?.files[0]) {
       this.handleFileSelect(event.dataTransfer.files[0]);
     }
@@ -137,8 +162,82 @@ export class ImageSelectorComponent {
     }
   }
 
+  onMediaSelected(item: any): void {
+    const id = `${item.itemType}:${item.id}`;
+    if (this.selectedMediaItems.has(id)) {
+      this.selectedMediaItems.delete(id);
+    } else {
+      if (this.data.maxSelection === 1) {
+        this.selectedMediaItems.clear();
+      } else if (this.data.maxSelection && this.selectedMediaItems.size >= this.data.maxSelection) {
+        return;
+      }
+      this.selectedMediaItems.set(id, item);
+    }
+  }
+
   onMediaItemSelected(selection: MediaItemSelection): void {
-    this.dialogRef.close(selection);
+    if (this.data.multiSelect || this.data.showFooter) {
+      // In multi-select mode or when footer is shown, we don't close on single item selection
+      // Instead, we just let MediaGalleryComponent handle the toggle and wait for Select btn
+      return;
+    }
+    const item = selection.mediaItem as any;
+    if (item.itemType === 'source_asset') {
+      // Map back to SourceAssetResponseDto for backwards compatibility
+      const asset: SourceAssetResponseDto = {
+        id: item.id,
+        userId: String(item.userId || ''),
+        gcsUri: item.gcsUris?.[0] || '',
+        originalFilename: item.prompt || '',
+        mimeType: item.mimeType || '',
+        aspectRatio: item.aspectRatio || '',
+        fileHash: '',
+        createdAt: item.createdAt,
+        updatedAt: item.createdAt,
+        presignedUrl: item.presignedUrls?.[0] || '',
+        presignedThumbnailUrl: item.presignedThumbnailUrls?.[0],
+        presignedOriginalUrl: item.originalPresignedUrls?.[0] || '',
+      };
+      this.dialogRef.close(asset);
+    } else {
+      this.dialogRef.close(selection);
+    }
+  }
+
+  closeWithSelection(): void {
+    const totalSelected = this.selectedMediaItems.size;
+    if (totalSelected === 0) return;
+
+    const results = Array.from(this.selectedMediaItems.values()).map((item) => {
+      if (item.itemType === 'source_asset') {
+        return {
+          id: item.id,
+          userId: String(item.userId || ''),
+          gcsUri: item.gcsUris?.[0] || '',
+          originalFilename: item.prompt || '',
+          mimeType: item.mimeType || '',
+          aspectRatio: item.aspectRatio || '',
+          fileHash: '',
+          createdAt: item.createdAt,
+          updatedAt: item.createdAt,
+          presignedUrl: item.presignedUrls?.[0] || '',
+          presignedThumbnailUrl: item.presignedThumbnailUrls?.[0],
+          presignedOriginalUrl: item.originalPresignedUrls?.[0] || '',
+        } as SourceAssetResponseDto;
+      }
+      return {
+        mediaItem: item as MediaItem,
+        selectedIndex: 0,
+      } as MediaItemSelection;
+    });
+
+    // If multiSelect is false but we somehow got here, return just the first item
+    if (!this.data.multiSelect && results.length > 0) {
+      this.dialogRef.close(results[0]);
+    } else {
+      this.dialogRef.close(results);
+    }
   }
 
   onAssetSelected(asset: SourceAssetResponseDto): void {
@@ -148,6 +247,13 @@ export class ImageSelectorComponent {
   onDragOver(event: DragEvent) {
     event.preventDefault();
     event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
   }
 
   /**

@@ -74,7 +74,7 @@ import { AppComponent } from './app.component';
 import { ArenaComponent } from './arena/arena.component';
 import { AudioComponent } from './audio/audio.component';
 import { AuthInterceptor } from './auth.interceptor';
-import { ConfirmationDialogComponent } from './common/components/confirmation-dialog/confirmation-dialog.component';
+
 import { FlowPromptBoxComponent } from "./common/components/flow-prompt-box/flow-prompt-box.component";
 import { ImageCropperDialogComponent } from './common/components/image-cropper-dialog/image-cropper-dialog.component';
 import { ImageSelectorComponent } from './common/components/image-selector/image-selector.component';
@@ -85,7 +85,6 @@ import { AddVoiceDialogComponent } from './components/add-voice-dialog/add-voice
 import { FooterComponent } from './footer/footer.component';
 import { FunTemplatesComponent } from './fun-templates/fun-templates.component';
 import { MediaDetailComponent } from './gallery/media-detail/media-detail.component';
-import { AssetDetailComponent } from './gallery/asset-detail/asset-detail.component';
 import { MediaGalleryComponent } from './gallery/media-gallery/media-gallery.component';
 import { HeaderComponent } from './header/header.component';
 import { HomeComponent } from './home/home.component';
@@ -114,13 +113,12 @@ import { UpscaleComponent } from './upscale/upscale.component';
     FooterComponent,
     HomeComponent,
     LoginComponent,
-    ConfirmationDialogComponent,
+
     FunTemplatesComponent,
     VideoComponent,
     ArenaComponent,
     MediaGalleryComponent,
     MediaDetailComponent,
-    AssetDetailComponent,
     MediaLightboxComponent,
     VtoComponent,
     ImageSelectorComponent,

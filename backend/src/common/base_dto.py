@@ -167,6 +167,7 @@ class AspectRatioEnum(str, Enum):
     RATIO_4_1 = "4:1"
     RATIO_1_8 = "1:8"
     RATIO_8_1 = "8:1"
+    OTHER = "other"
     
 
 

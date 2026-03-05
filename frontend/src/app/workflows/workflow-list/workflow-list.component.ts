@@ -117,18 +117,9 @@ export class WorkflowListComponent implements OnInit, OnDestroy, AfterViewInit {
     // This will be implemented once pagination is handled in the component
   }
 
-  toggleFilter(): void {
-    this.isFilterOpen = !this.isFilterOpen;
-    if (!this.isFilterOpen) {
-      this.currentFilter = '';
-      this.filterSubject.next('');
-    }
-  }
-
-  onFilterChange(event: Event): void {
-    const filterValue = (event.target as HTMLInputElement).value;
-    this.currentFilter = filterValue;
-    this.filterSubject.next(filterValue);
+  onFilterValueChange(value: string): void {
+    this.currentFilter = value;
+    this.filterSubject.next(value);
   }
 
   createNewWorkflow(): void {

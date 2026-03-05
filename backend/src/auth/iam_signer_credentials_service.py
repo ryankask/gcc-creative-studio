@@ -15,6 +15,7 @@
 import datetime
 import logging
 from os import getenv
+from typing import Dict, Tuple
 
 from google.auth import credentials
 from google.cloud import iam_credentials_v1, storage
@@ -33,6 +34,11 @@ class IamSignerCredentials(credentials.Signing):
     permissions.
     """
 
+    # In-memory cache for presigned URLs (persists across dependency injections)
+    # Key: (gcs_uri, expiration_hours, method)
+    # Value: (url, expiry_timestamp)
+    _url_cache: Dict[Tuple[str, int, str], Tuple[str, datetime.datetime]] = {}
+
     def __init__(self):
         # 1. Create the custom credentials object for signing.
         self.service_account_email = getenv("SIGNING_SA_EMAIL", "")
@@ -40,6 +46,24 @@ class IamSignerCredentials(credentials.Signing):
         self._sa_path = (
             f"projects/-/serviceAccounts/{self.service_account_email}"
         )
+
+    def _get_cached_url(self, gcs_uri: str, expiration_hours: int, method: str = "GET") -> str | None:
+        """Retrieves a valid cached URL if available."""
+        cache_key = (gcs_uri, expiration_hours, method)
+        if cache_key in self._url_cache:
+            url, expiry = self._url_cache[cache_key]
+            # Add a 5-minute buffer before actual expiration
+            if datetime.datetime.now() < (expiry - datetime.timedelta(minutes=5)):
+                return url
+            else:
+                del self._url_cache[cache_key]
+        return None
+
+    def _set_cached_url(self, gcs_uri: str, expiration_hours: int, url: str, method: str = "GET"):
+        """Caches a newly generated URL."""
+        cache_key = (gcs_uri, expiration_hours, method)
+        expiry = datetime.datetime.now() + datetime.timedelta(hours=expiration_hours)
+        self._url_cache[cache_key] = (url, expiry)
 
     def generate_presigned_url(
         self, gcs_uri: str | None, expiration_hours: int = 1
@@ -60,9 +84,12 @@ class IamSignerCredentials(credentials.Signing):
         if not gcs_uri or (gcs_uri and not gcs_uri.startswith("gs://")):
             return gcs_uri or ""
 
+        # Check cache first
+        cached_url = self._get_cached_url(gcs_uri, expiration_hours)
+        if cached_url:
+            return cached_url
+
         # Get the service account email from an environment variable.
-        # This is the account that will be used to sign the URL. It must have 'roles/storage.objectViewer' on the bucket.
-        # The principal running this code (e.g., your user account) needs 'roles/iam.serviceAccountTokenCreator' on this SA.
         if not self.service_account_email:
             return gcs_uri
 
@@ -74,13 +101,16 @@ class IamSignerCredentials(credentials.Signing):
             blob = bucket.blob(blob_name)
 
             # 3. Generate the signed URL, passing the custom credentials.
-            # The storage library will call our signing_credentials.sign_bytes() method.
+            logger.info(f"Generating presigned URL for {gcs_uri} (not in cache)")
             url = blob.generate_signed_url(
                 version="v4",
                 expiration=datetime.timedelta(hours=expiration_hours),
                 method="GET",
                 credentials=self,
             )
+            
+            # Cache the result
+            self._set_cached_url(gcs_uri, expiration_hours, url)
             return url
         except Exception as e:
             logger.error(f"Error generating presigned URL for {gcs_uri}: {e}")

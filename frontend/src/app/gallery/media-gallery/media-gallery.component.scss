@@ -17,8 +17,14 @@
  * limitations under the License.
  */
 
-.home-margin {
-  margin: 2rem 1rem 10rem 1rem;
+.media-gallery-container {
+  --max-container-width: 1400px;
+  background-color: transparent;
+  padding: 20px 40px;
+  max-width: var(--max-container-width);
+  margin: 0 auto;
+  margin-top: calc(10vh + 0px);
+  margin-left: max(calc(5vw + 4.5rem), calc(50% - var(--max-container-width) / 2));
 }
 
 .video-container {
@@ -34,41 +40,4 @@
 
 ::ng-deep .mdc-label {
   color: white !important;
-}
-
-// SMALL DEVICES...
-
-// Small devices (landscape phones, 576px and up)
-@media (min-width: 576px) {
-}
-
-// Medium devices (tablets, 768px and up)
-@media (min-width: 768px) {
-  .video-container {
-    height: 25vh;
-  }
-}
-
-// Large devices (desktops, 992px and up)
-@media (min-width: 992px) {
-}
-
-// X-Large devices (large desktops, 1200px and up)
-@media (min-width: 1200px) {
-  .home-margin {
-    margin: 2rem auto;
-  }
-}
-
-// XX-Large devices (larger desktops, 1400px and up)
-@media (min-width: 1400px) {
-}
-
-// 4K Displays (Ultra HD) (Projectors or Higher Resolution Screens, 2160px and up)
-@media screen and (min-width: 2160px) {
-  .video-container {
-    video {
-      margin-top: -10%;
-    }
-  }
 }

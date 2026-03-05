@@ -28,14 +28,17 @@ export interface GalleryItem {
   mimeType?: string;
   aspectRatio?: string;
   prompt?: string;
+  originalPrompt?: string;
 
   // Unified arrays
-  gcsUris: string[];
-  thumbnailUris: string[];
+  gcsUris?: string[];
+  originalGcsUris?: string[];
+  thumbnailUris?: string[];
 
   // Presigned URLs (injected by service)
-  presignedUrls: string[];
-  presignedThumbnailUrls: string[];
+  presignedUrls?: string[];
+  originalPresignedUrls?: string[];
+  presignedThumbnailUrls?: string[];
 
   // Detailed fields (optional, populated when available)
   model?: string;
@@ -64,7 +67,6 @@ export interface GalleryItem {
   audioAnalysis?: any;
   error_message?: string;
   addWatermark?: boolean;
-  sourceImagesGcs?: string[];
 
   // Metadata (loosely typed as it varies by itemType)
   metadata: Record<string, any>;

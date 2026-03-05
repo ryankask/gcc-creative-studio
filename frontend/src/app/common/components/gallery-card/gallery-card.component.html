@@ -3,22 +3,15 @@
   (mouseenter)="onMouseEnter()"
   (mouseleave)="onMouseLeave()"
 >
-  <a
-    [routerLink]="
-      isSelectionMode
-        ? null
-        : item.itemType === 'source_asset'
-          ? ['/asset-detail', item.id]
-          : ['/gallery', item.id]
-    "
-    [state]="{mediaItem: item}"
+  <div
+    (dblclick)="onDblClick($event)"
     (click)="selectMedia($event)"
     class="card-link"
     [class.selection-mode]="isSelectionMode"
   >
     <ng-container *ngIf="item.mimeType?.startsWith('image/')">
       <img
-        *ngFor="let url of item.presignedUrls; let i = index"
+        *ngFor="let url of displayUrls; let i = index"
         class="media-element"
         loading="lazy"
         [src]="url"
@@ -30,7 +23,7 @@
       <!-- A "spacer" div that defines the aspect ratio of the container -->
       <div
         class="spacer"
-        [style.aspect-ratio]="(item.aspectRatio || '1:1').replace(':', ' / ')"
+        [style.padding-bottom]="displayPaddingBottom"
       ></div>
     </ng-container>
 
@@ -38,7 +31,7 @@
       <!-- Show video on hover -->
       <ng-container *ngIf="hoveredVideoId === item.id">
         <video
-          *ngFor="let url of item.presignedUrls; let i = index"
+          *ngFor="let url of displayUrls; let i = index"
           class="media-element"
           [class.active]="currentImageIndex === i"
           [class.inactive]="currentImageIndex !== i"
@@ -56,7 +49,7 @@
       <!-- Show thumbnail by default -->
       <ng-container *ngIf="hoveredVideoId !== item.id">
         <img
-          *ngFor="let url of item.presignedThumbnailUrls; let i = index"
+          *ngFor="let url of displayUrls; let i = index"
           class="media-element"
           loading="lazy"
           [src]="url"
@@ -84,7 +77,7 @@
       <!-- A "spacer" div that defines the aspect ratio of the container -->
       <div
         class="spacer"
-        [style.aspect-ratio]="(item.aspectRatio || '16:9').replace(':', ' / ')"
+        [style.padding-bottom]="displayPaddingBottom"
       ></div>
     </ng-container>
 
@@ -96,7 +89,7 @@
       </div>
       <div
         class="spacer"
-        [style.aspect-ratio]="(item.aspectRatio || '1:1').replace(':', ' / ')"
+        [style.padding-bottom]="displayPaddingBottom"
       ></div>
     </ng-container>
 
@@ -105,10 +98,17 @@
       [itemType]="item.itemType"
       [mimeType]="item.mimeType"
     ></app-gallery-item-overlay>
-  </a>
+    <div
+    class="selection-indicator"
+    [class.selected]="isSelected"
+    (click)="onSelectionClick($event)"
+  >
+    <mat-icon *ngIf="isSelected">check</mat-icon>
+  </div>
+  </div>
 
   <!-- Carousel Controls: Only show if there's more than one image -->
-  <ng-container *ngIf="item.presignedUrls && item.presignedUrls.length > 1">
+  <ng-container *ngIf="displayUrls && displayUrls.length > 1">
     <!-- Previous Button -->
     <button (click)="prevImageItem($event)" class="carousel-control prev">
       <svg
@@ -142,7 +142,7 @@
     <!-- Dots Indicator -->
     <div class="dots-indicator">
       <span
-        *ngFor="let url of item.presignedUrls; let i = index"
+        *ngFor="let url of displayUrls; let i = index"
         class="dot"
         [class.active]="currentImageIndex === i"
         [class.inactive]="currentImageIndex !== i"

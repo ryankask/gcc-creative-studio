@@ -67,7 +67,6 @@ export interface MediaItem {
 
   // URI and URL fields
   gcsUris: string[];
-  sourceImagesGcs?: string[];
   presignedUrls?: string[];
   originalPresignedUrls?: string[];
   presignedThumbnailUrls?: string[];
