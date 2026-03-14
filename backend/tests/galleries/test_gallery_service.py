@@ -24,6 +24,7 @@ def service():
     mock_iam_signer = MagicMock()
     mock_workspace_auth = AsyncMock()
     mock_imagen_service = AsyncMock()
+    mock_gcs_service = MagicMock()
 
     service = GalleryService(
         media_repo=mock_media_repo,
@@ -33,7 +34,8 @@ def service():
         workspace_repo=mock_workspace_repo,
         iam_signer_credentials=mock_iam_signer,
         workspace_auth=workspace_auth if 'workspace_auth' in locals() else mock_workspace_auth,
-        imagen_service=mock_imagen_service
+        imagen_service=mock_imagen_service,
+        gcs_service=mock_gcs_service
     )
     
     # Attach mocks for ease of use in tests
@@ -44,6 +46,7 @@ def service():
     service.mock_workspace_repo = mock_workspace_repo
     service.mock_iam_signer = mock_iam_signer
     service.mock_workspace_auth = mock_workspace_auth
+    service.mock_gcs_service = mock_gcs_service
     
     return service
 
@@ -168,10 +171,10 @@ async def test_bulk_delete_success(service):
     current_user = UserModel(id=1, email="user@test.com", name="User", roles=[UserRoleEnum.USER])
 
 
-    mock_media = MagicMock(user_id=1)
+    mock_media = MagicMock(user_id=1, workspace_id=99)
     service.mock_media_repo.get_by_id.return_value = mock_media
     
-    mock_asset = MagicMock(user_id=1)
+    mock_asset = MagicMock(user_id=1, workspace_id=99)
     service.mock_source_asset_repo.get_by_id.return_value = mock_asset
 
     result = await service.bulk_delete(bulk_dto, current_user)
@@ -230,15 +233,13 @@ async def test_bulk_download_success(service):
     mock_media.mime_type = "image/png"
     service.mock_media_repo.get_by_id.return_value = mock_media
 
-    with patch("src.galleries.gallery_service.GcsService") as mock_gcs_class:
-        mock_gcs = MagicMock()
-        mock_gcs_class.return_value = mock_gcs
-        mock_gcs.download_bytes_from_gcs.return_value = b"fake-content"
+    service.mock_gcs_service.download_bytes_from_gcs.return_value = b"fake-content"
+    service.mock_workspace_auth.authorize.return_value = None
 
-        response = await service.bulk_download(bulk_dto, current_user)
+    response = await service.bulk_download(bulk_dto, current_user)
 
-        assert response.status_code == 200
-        assert "application/x-zip-compressed" in response.headers["Content-Type"]
+    assert response.status_code == 200
+    assert "application/zip" in response.headers["Content-Type"]
 
 
 @pytest.mark.anyio

@@ -39,7 +39,7 @@ class MediaRepository(BaseRepository[MediaItem, MediaItemModel]):
         """
         Performs a generic, paginated query on the media_library table.
         """
-        query = select(self.model).where(self.model.deleted_at == None)
+        query = select(self.model).where(self.model.deleted_at.is_(None))
 
         if search_dto.user_email:
             query = query.where(self.model.user_email == search_dto.user_email)

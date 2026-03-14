@@ -15,6 +15,7 @@
 import asyncio
 import io
 import logging
+import tempfile
 import zipfile
 from typing import Optional
 
@@ -77,6 +78,7 @@ class GalleryService:
         iam_signer_credentials: IamSignerCredentials = Depends(),
         workspace_auth: WorkspaceAuth = Depends(),
         imagen_service: ImagenService = Depends(),
+        gcs_service: GcsService = Depends(),
     ):
         """Initializes the service with its dependencies."""
         self.media_repo = media_repo
@@ -87,6 +89,7 @@ class GalleryService:
         self.iam_signer_credentials = iam_signer_credentials
         self.workspace_auth = workspace_auth
         self.imagen_service = imagen_service 
+        self.gcs_service = gcs_service
 
     async def _enrich_source_asset_link(
         self, link: SourceAssetLink
@@ -397,6 +400,10 @@ class GalleryService:
                     if not media_item:
                         continue
                         
+                    if media_item.workspace_id != bulk_delete_dto.workspace_id:
+                        logger.warning(f"Refusing to delete media_item {item.id} outside requested workspace bounds.")
+                        continue
+                        
                     is_admin = UserRoleEnum.ADMIN in current_user.roles
                     is_owner = getattr(media_item, "user_id", None) == current_user.id
                     if not is_admin and not is_owner:
@@ -408,6 +415,10 @@ class GalleryService:
                 elif item.type == "source_asset":
                     asset = await self.source_asset_repo.get_by_id(item.id)
                     if not asset:
+                        continue
+                        
+                    if asset.workspace_id != bulk_delete_dto.workspace_id:
+                        logger.warning(f"Refusing to delete source_asset {item.id} outside requested workspace bounds.")
                         continue
                         
                     is_admin = UserRoleEnum.ADMIN in current_user.roles
@@ -458,57 +469,91 @@ class GalleryService:
             user=current_user,
         )
 
-        zip_buffer = io.BytesIO()
-        gcs_service = GcsService()
-
-        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-            for item in bulk_download_dto.items:
-                try:
-                    gcs_uri = None
-                    filename = None
-                    
-                    if item.type == "media_item":
-                        media_item = await self.media_repo.get_by_id(item.id)
-                        if media_item and media_item.gcs_uris:
-                            gcs_uri = media_item.gcs_uris[0]
-                            # Use mime_type to determine extension
-                            ext = "bin"
-                            mime_type = getattr(media_item, "mime_type", None)
-                            if mime_type:
-                                mime_str = str(mime_type)
-                                if "image/png" in mime_str: ext = "png"
-                                elif "image/jpeg" in mime_str: ext = "jpg"
-                                elif "video/mp4" in mime_str: ext = "mp4"
-                                elif "audio/mpeg" in mime_str: ext = "mp3"
-                                elif "audio/wav" in mime_str: ext = "wav"
-                                elif "/" in mime_str:
-                                    ext = mime_str.split("/")[-1]
-                            
-                            if ext == "bin" and "." in gcs_uri:
-                                ext = gcs_uri.split(".")[-1]
-                                
-                            filename = f"media_{item.id}.{ext}"
-                    elif item.type == "source_asset":
-                        asset = await self.source_asset_repo.get_by_id(item.id)
-                        if asset and asset.gcs_uri:
-                            gcs_uri = asset.gcs_uri
-                            ext = gcs_uri.split('.')[-1] if '.' in gcs_uri else 'bin'
-                            filename = f"asset_{item.id}.{ext}"
-
-                    if gcs_uri and filename:
-                        content = gcs_service.download_bytes_from_gcs(gcs_uri)
-                        if content:
-                            zip_file.writestr(filename, content)
-                except Exception as e:
-                    logger.error(f"Error adding {item.type} {item.id} to ZIP: {e}")
-
-        zip_buffer.seek(0)
+        # Create a temporary file to hold the ZIP archive to avoid OOM
+        temp_file = tempfile.TemporaryFile()
         
-        return StreamingResponse(
-            zip_buffer,
-            media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": "attachment; filename=gallery_export.zip"}
-        )
+        try:
+            with zipfile.ZipFile(temp_file, "w", zipfile.ZIP_DEFLATED, False) as zip_file:
+                for item in bulk_download_dto.items:
+                    try:
+                        gcs_uri = None
+                        filename = None
+                        
+                        if item.type == "media_item":
+                            media_item = await self.media_repo.get_by_id(item.id)
+                            if not media_item:
+                                continue
+                            
+                            # Authorize workspace access for this item
+                            await self.workspace_auth.authorize(
+                                workspace_id=media_item.workspace_id,
+                                user=current_user,
+                            )
+                            if media_item.gcs_uris:
+                                gcs_uri = media_item.gcs_uris[0]
+                                # Use mime_type to determine extension
+                                ext = "bin"
+                                mime_type = getattr(media_item, "mime_type", None)
+                                if mime_type:
+                                    mime_str = str(mime_type)
+                                    if "image/png" in mime_str: ext = "png"
+                                    elif "image/jpeg" in mime_str: ext = "jpg"
+                                    elif "video/mp4" in mime_str: ext = "mp4"
+                                    elif "audio/mpeg" in mime_str: ext = "mp3"
+                                    elif "audio/wav" in mime_str: ext = "wav"
+                                    elif "/" in mime_str:
+                                        ext = mime_str.split("/")[-1]
+                                
+                                if ext == "bin" and "." in gcs_uri:
+                                    ext = gcs_uri.split(".")[-1]
+                                    
+                                filename = f"media_{item.id}.{ext}"
+                        elif item.type == "source_asset":
+                            asset = await self.source_asset_repo.get_by_id(item.id)
+                            if not asset:
+                                continue
+                                
+                            # Authorize workspace access for this asset
+                            await self.workspace_auth.authorize(
+                                workspace_id=asset.workspace_id,
+                                user=current_user,
+                            )
+                            if asset.gcs_uri:
+                                gcs_uri = asset.gcs_uri
+                                ext = gcs_uri.split('.')[-1] if '.' in gcs_uri else 'bin'
+                                filename = f"asset_{item.id}.{ext}"
+    
+                        if gcs_uri and filename:
+                            # Use asyncio.to_thread for blocking GCS downloads
+                            content = await asyncio.to_thread(self.gcs_service.download_bytes_from_gcs, gcs_uri)
+                            if content:
+                                zip_file.writestr(filename, content)
+                    except Exception as e:
+                        logger.error(f"Error adding {item.type} {item.id} to ZIP: {e}")
+    
+            # Seek to beginning for streaming
+            temp_file.seek(0)
+            
+            async def iter_file():
+                try:
+                    while True:
+                        # Use asyncio.to_thread to read from disk without blocking the event loop
+                        chunk = await asyncio.to_thread(temp_file.read, 8192)
+                        if not chunk:
+                            break
+                        yield chunk
+                finally:
+                    temp_file.close() # Delete TemporaryFile
+
+            return StreamingResponse(
+                iter_file(),
+                media_type="application/zip",
+                headers={"Content-Disposition": f"attachment; filename=workspace_{bulk_download_dto.workspace_id}_bulk_download.zip"}
+            )
+            
+        except Exception as e:
+            temp_file.close()
+            raise e
 
     async def bulk_copy(
         self, bulk_copy_dto: BulkCopyDto, current_user: UserModel

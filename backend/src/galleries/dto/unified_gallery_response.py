@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+from pydantic import field_validator
 
 
 class UnifiedGalleryItemResponse(BaseModel):
@@ -34,7 +35,6 @@ class UnifiedGalleryItemResponse(BaseModel):
     # Map from 'metadata_' in SQLAlchemy model to 'metadata' in Pydantic
     metadata: Dict[str, Any] = Field(default_factory=dict, validation_alias="metadata_")
 
-    from pydantic import field_validator
 
     @field_validator("metadata", mode="after")
     @classmethod

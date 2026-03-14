@@ -25,6 +25,13 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../"))
 # Set environment for tests
 os.environ["ENVIRONMENT"] = "local"
 
+import google.auth
+google.auth.default = MagicMock(return_value=(MagicMock(), "dummy-project-id"))
+
+# Mock ProjectsClient to prevent live API calls during startup validation check
+from google.cloud import resourcemanager_v3
+resourcemanager_v3.ProjectsClient = MagicMock()
+
 
 # 1. Patch database migrations BEFORE importing app to avoid lifespan triggering them
 @pytest.fixture(scope="session", autouse=True)
