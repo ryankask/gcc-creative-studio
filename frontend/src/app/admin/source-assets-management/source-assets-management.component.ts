@@ -24,7 +24,10 @@ import {firstValueFrom} from 'rxjs';
 import {SourceAssetsService as SourceAssetAdminService} from './source-assets.service';
 import {AssetScopeEnum, AssetTypeEnum} from './source-asset.model';
 import {SourceAssetFormComponent} from './source-asset-form/source-asset-form.component';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
 import {SourceAssetResponseDto} from '../../common/services/source-asset.service';
 import {SourceAssetUploadFormComponent} from './source-asset-upload-form/source-asset-upload-form.component';
 import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
@@ -85,12 +88,8 @@ export class SourceAssetsManagementComponent implements OnInit {
 
     try {
       const finalResponse = await firstValueFrom(
-        this.sourceAssetService.searchSourceAssets(
-          filters,
-          this.limit,
-          offset,
-        ),
-        { defaultValue: { data: [], count: 0 } as any }
+        this.sourceAssetService.searchSourceAssets(filters, this.limit, offset),
+        {defaultValue: {data: [], count: 0} as any},
       );
 
       this.dataSource.data = finalResponse.data;
@@ -113,7 +112,7 @@ export class SourceAssetsManagementComponent implements OnInit {
     if (this.dataSource.paginator) {
       this.dataSource.paginator.firstPage();
     }
-    this.fetchPage(0);
+    void this.fetchPage(0);
   }
 
   createAsset(): void {
@@ -127,7 +126,10 @@ export class SourceAssetsManagementComponent implements OnInit {
       .subscribe((result: SourceAssetResponseDto | null) => {
         if (result) {
           this.fetchAssets();
-          handleSuccessSnackbar(this.snackBar, `Asset "${result.originalFilename}" uploaded successfully`);
+          handleSuccessSnackbar(
+            this.snackBar,
+            `Asset "${result.originalFilename}" uploaded successfully`,
+          );
         }
       });
   }
@@ -165,7 +167,7 @@ export class SourceAssetsManagementComponent implements OnInit {
       },
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(result => {
       if (result && asset.id) {
         this.sourceAssetService.deleteSourceAsset(asset.id).subscribe({
           next: () => {
@@ -187,6 +189,6 @@ export class SourceAssetsManagementComponent implements OnInit {
       this.resetPaginationAndFetch();
       return;
     }
-    this.fetchPage(event.pageIndex);
+    void this.fetchPage(event.pageIndex);
   }
 }

@@ -26,14 +26,17 @@ import {
   ViewChild,
 } from '@angular/core';
 import {MediaItem} from '../../models/media-item.model';
-import { GalleryItem } from '../../models/gallery-item.model';
+import {GalleryItem} from '../../models/gallery-item.model';
 import PhotoSwipeLightbox from 'photoswipe/lightbox';
 import {Clipboard} from '@angular/cdk/clipboard';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {ActivatedRoute, Router} from '@angular/router';
 import {EventEmitter} from '@angular/core';
 import {Location} from '@angular/common';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../../utils/handleMessageSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../../utils/handleMessageSnackbar';
 
 @Component({
   selector: 'app-media-lightbox',
@@ -158,14 +161,15 @@ export class MediaLightboxComponent
           // If this is the currently selected image and we have its natural dimensions, use them.
           // Otherwise, fall back to calculated defaults.
           const isSelected = index === this.selectedIndex;
-          const width = isSelected ? this.imageWidth : 1920; 
+          const width = isSelected ? this.imageWidth : 1920;
           const height = isSelected ? this.imageHeight : 1080;
 
           return {
             src: url,
             width,
             height,
-            alt: (this.mediaItem as any).originalPrompt || this.mediaItem?.prompt,
+            alt:
+              (this.mediaItem as any).originalPrompt || this.mediaItem?.prompt,
           };
         }),
         pswpModule: () => import('photoswipe'),
@@ -193,7 +197,7 @@ export class MediaLightboxComponent
     if (img && img.naturalWidth && img.naturalHeight) {
       this.imageWidth = img.naturalWidth;
       this.imageHeight = img.naturalHeight;
-      
+
       // Update the lightbox data source with genuine dimensions if it exists
       if (this.lightbox) {
         // We re-initialize to ensure PhotoSwipe picks up the new dimensions
@@ -207,7 +211,8 @@ export class MediaLightboxComponent
     // We no longer enforce dimensions here as we'll use 'fill' mode
     // but we can keep some defaults for PhotoSwipe if needed.
     if (this.mediaItem) {
-      const aspectRatioStr = this.mediaItem.aspectRatio || (this.mediaItem as any).aspect || '1:1';
+      const aspectRatioStr =
+        this.mediaItem.aspectRatio || (this.mediaItem as any).aspect || '1:1';
       const [w, h] = aspectRatioStr.split(':').map(Number);
       if (w && h) {
         this.imageHeight = (h / w) * this.imageWidth;
@@ -271,7 +276,9 @@ export class MediaLightboxComponent
   ): string {
     const url = encodeURIComponent(this.currentImageUrl);
     const text = encodeURIComponent(
-      (this.mediaItem as any).originalPrompt || this.mediaItem?.prompt || 'Check out this image!',
+      (this.mediaItem as any).originalPrompt ||
+        this.mediaItem?.prompt ||
+        'Check out this image!',
     );
     switch (platform) {
       case 'facebook':
@@ -293,7 +300,11 @@ export class MediaLightboxComponent
 
   copyLink(): void {
     if (!this.mediaItem?.id) {
-      handleErrorSnackbar(this.snackBar, { message: 'Cannot generate link: Media item has no ID.' }, 'Copy Link');
+      handleErrorSnackbar(
+        this.snackBar,
+        {message: 'Cannot generate link: Media item has no ID.'},
+        'Copy Link',
+      );
       return;
     }
 
@@ -391,13 +402,15 @@ export class MediaLightboxComponent
   get aspectRatioClass(): string {
     // For Audio, we just want a nice container, aspect-video works well for the player shape
     if (this.isAudio) return 'aspect-video h-auto';
-    
+
     // For Videos, we can still use the aspect ratio if available
     if (this.isVideo) {
-      const ratio = this.mediaItem?.aspectRatio || (this.mediaItem as any).aspect;
+      const ratio =
+        this.mediaItem?.aspectRatio || (this.mediaItem as any).aspect;
       if (ratio === '1:1') return 'aspect-square';
       if (ratio === '16:9') return 'aspect-video';
-      if (ratio && ratio.includes(':')) return `aspect-[${ratio.replace(':', '/')}]`;
+      if (ratio && ratio.includes(':'))
+        return `aspect-[${ratio.replace(':', '/')}]`;
       return 'aspect-video'; // Default for video
     }
 
@@ -412,7 +425,7 @@ export class MediaLightboxComponent
     if (!audio) return;
 
     if (audio.paused) {
-      audio.play();
+      void audio.play();
       this.isPlaying = true;
     } else {
       audio.pause();

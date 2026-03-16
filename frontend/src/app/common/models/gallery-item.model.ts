@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { PaginatedResponse } from './paginated-response.model';
+import {PaginatedResponse} from './paginated-response.model';
 
 export interface BaseGalleryItem {
   id: number;
@@ -39,9 +39,9 @@ export interface BaseGalleryItem {
   presignedUrls?: string[];
   originalPresignedUrls?: string[];
   presignedThumbnailUrls?: string[];
-  
+
   error_message?: string;
-  
+
   // Flat fields for backwards compatibility with older components
   enrichedSourceAssets?: any[];
   enrichedSourceMediaItems?: any[];

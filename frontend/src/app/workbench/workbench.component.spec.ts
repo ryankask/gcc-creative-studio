@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { WorkbenchComponent } from './workbench.component';
+import {WorkbenchComponent} from './workbench.component';
 
 describe('WorkbenchComponent', () => {
   let component: WorkbenchComponent;
@@ -24,9 +24,8 @@ describe('WorkbenchComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [WorkbenchComponent]
-    })
-    .compileComponents();
+      declarations: [WorkbenchComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(WorkbenchComponent);
     component = fixture.componentInstance;

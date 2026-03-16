@@ -14,26 +14,32 @@
  * limitations under the License.
  */
 
-import { Component, Input, OnInit } from '@angular/core';
-import { AbstractControl, FormBuilder } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
-import { AssetTypeEnum } from '../../../../../../admin/source-assets-management/source-asset.model';
-import { ImageCropperDialogComponent } from '../../../../../../common/components/image-cropper-dialog/image-cropper-dialog.component';
-import { ImageSelectorComponent, MediaItemSelection } from '../../../../../../common/components/image-selector/image-selector.component';
-import { ReferenceImage } from '../../../../../../common/models/search.model';
-import { SourceAssetResponseDto, SourceAssetService } from '../../../../../../common/services/source-asset.service';
-import { StepOutputReference } from '../../../../../workflow.models';
+import {Component, Input, OnInit} from '@angular/core';
+import {AbstractControl, FormBuilder} from '@angular/forms';
+import {MatDialog} from '@angular/material/dialog';
+import {AssetTypeEnum} from '../../../../../../admin/source-assets-management/source-asset.model';
+import {ImageCropperDialogComponent} from '../../../../../../common/components/image-cropper-dialog/image-cropper-dialog.component';
+import {
+  ImageSelectorComponent,
+  MediaItemSelection,
+} from '../../../../../../common/components/image-selector/image-selector.component';
+import {ReferenceImage} from '../../../../../../common/models/search.model';
+import {
+  SourceAssetResponseDto,
+  SourceAssetService,
+} from '../../../../../../common/services/source-asset.service';
+import {StepOutputReference} from '../../../../../workflow.models';
 
 @Component({
   selector: 'app-step-media-input',
   templateUrl: './step-media-input.component.html',
-  styleUrls: ['./step-media-input.component.scss']
+  styleUrls: ['./step-media-input.component.scss'],
 })
 export class StepMediaInputComponent implements OnInit {
   @Input() control!: AbstractControl;
   @Input() inputName!: string;
   @Input() type: 'image' | 'video' = 'image';
-  @Input() maxItems: number = 1;
+  @Input() maxItems = 1;
   @Input() compatibleOutputs: any[] = [];
   @Input() showValidationErrors = false;
 
@@ -48,7 +54,7 @@ export class StepMediaInputComponent implements OnInit {
     // Fixed -> handled as single item usually, but for Image input it uses `referenceImages[input.name]` which is an array.
     // So standardized: Always work with array for internal display.
     // If control value is null, return empty array.
-    // Wait, if it's FIXED mode and we only allow 1, the control value might be just the object? 
+    // Wait, if it's FIXED mode and we only allow 1, the control value might be just the object?
     // In GenericStepComponent, `referenceImages` was the source of truth for display, and `updateInputControlWithError` synced it to control.
     // We should probably maintain a local `referenceImages` array and sync to control.
     if (!val) return [];
@@ -59,10 +65,9 @@ export class StepMediaInputComponent implements OnInit {
     private fb: FormBuilder,
     private dialog: MatDialog,
     private sourceAssetService: SourceAssetService,
-  ) { }
+  ) {}
 
-  ngOnInit(): void {
-  }
+  ngOnInit(): void {}
 
   get isMixedMode(): boolean {
     return this.maxItems > 1; // Or check if control value is array?
@@ -73,7 +78,9 @@ export class StepMediaInputComponent implements OnInit {
   }
 
   getLinkedOutputLabel(item: StepOutputReference): string {
-    const found = this.compatibleOutputs.find(o => o.value.step === item.step && o.value.output === item.output);
+    const found = this.compatibleOutputs.find(
+      o => o.value.step === item.step && o.value.output === item.output,
+    );
     return found ? found.label : `${item.step}.${item.output}`;
   }
 
@@ -81,7 +88,7 @@ export class StepMediaInputComponent implements OnInit {
     const remainingSlots = this.maxItems - this.items.length;
     if (remainingSlots <= 0) return;
 
-    let mimeType: string = 'image/*';
+    let mimeType = 'image/*';
     if (this.type === 'video') mimeType = 'video/mp4';
 
     const dialogRef = this.dialog.open(ImageSelectorComponent, {
@@ -90,10 +97,13 @@ export class StepMediaInputComponent implements OnInit {
       maxWidth: '90vw',
       data: {
         mimeType: mimeType,
-        assetType: this.type === 'video' ? AssetTypeEnum.GENERIC_VIDEO : AssetTypeEnum.GENERIC_IMAGE,
+        assetType:
+          this.type === 'video'
+            ? AssetTypeEnum.GENERIC_VIDEO
+            : AssetTypeEnum.GENERIC_IMAGE,
         multiSelect: this.maxItems > 1,
         maxSelection: remainingSlots,
-        showFooter: true
+        showFooter: true,
       },
       panelClass: 'image-selector-dialog',
     });
@@ -155,7 +165,10 @@ export class StepMediaInputComponent implements OnInit {
     const file = event.dataTransfer?.files[0];
     if (file && file.type.startsWith('image/')) {
       this.sourceAssetService
-        .uploadAsset(file, { aspectRatio: 'other', assetType: AssetTypeEnum.GENERIC_IMAGE })
+        .uploadAsset(file, {
+          aspectRatio: 'other',
+          assetType: AssetTypeEnum.GENERIC_IMAGE,
+        })
         .subscribe((result: SourceAssetResponseDto) => {
           if (result && result.id) {
             this.addItem({

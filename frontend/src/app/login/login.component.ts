@@ -20,7 +20,7 @@ import {Router} from '@angular/router';
 import {AuthService} from './../common/services/auth.service';
 import {UserModel} from './../common/models/user.model';
 import {MatSnackBar} from '@angular/material/snack-bar';
-import { handleErrorSnackbar } from '../utils/handleMessageSnackbar';
+import {handleErrorSnackbar} from '../utils/handleMessageSnackbar';
 import {environment} from '../../environments/environment';
 import {isPlatformBrowser} from '@angular/common';
 
@@ -48,7 +48,7 @@ export class LoginComponent {
     private router: Router,
     public ngZone: NgZone,
     private _snackBar: MatSnackBar,
-    @Inject(PLATFORM_ID) platformId: Object
+    @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.provider.setCustomParameters({
@@ -128,10 +128,7 @@ export class LoginComponent {
     }
   }
 
-  private handleLoginError(
-    error: any,
-    postErrorAction?: () => void,
-  ) {
+  private handleLoginError(error: any, postErrorAction?: () => void) {
     this.loader = false;
     handleErrorSnackbar(this._snackBar, error, 'Login Error');
     if (postErrorAction) {
@@ -141,7 +138,7 @@ export class LoginComponent {
 
   redirect(user: UserModel) {
     if (this.isBrowser) {
-        localStorage.setItem('USER_DETAILS', JSON.stringify(user));
+      localStorage.setItem('USER_DETAILS', JSON.stringify(user));
     }
     this.loader = false;
     void this.router.navigate([HOME_ROUTE]);

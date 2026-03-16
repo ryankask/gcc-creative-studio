@@ -53,7 +53,7 @@ export class UserService {
     limit: number,
     filter: string,
     offset?: number,
-    includeDeleted: boolean = false,
+    includeDeleted = false,
   ): Observable<PaginatedResponse> {
     let params = new HttpParams()
       .set('limit', limit.toString())

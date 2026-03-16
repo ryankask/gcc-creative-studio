@@ -14,37 +14,36 @@
  * limitations under the License.
  */
 
+import {MODEL_CONFIGS} from '../../../../common/config/model-config';
+import {StepConfig} from '../generic-step/step.model';
 
-import { MODEL_CONFIGS } from '../../../../common/config/model-config';
-import { StepConfig } from '../generic-step/step.model';
-
-const model_options = MODEL_CONFIGS
-  .filter(model => model.type === 'AUDIO')
-  .map(model => ({
+const model_options = MODEL_CONFIGS.filter(model => model.type === 'AUDIO').map(
+  model => ({
     value: model.value,
-    label: model.viewValue
-  }));
+    label: model.viewValue,
+  }),
+);
 
 const VOICE_OPTIONS = [
-  { value: 'Puck', label: 'Puck' },
-  { value: 'Charon', label: 'Charon' },
-  { value: 'Kore', label: 'Kore' },
-  { value: 'Fenrir', label: 'Fenrir' },
-  { value: 'Aoede', label: 'Aoede' },
-  { value: 'Leda', label: 'Leda' },
-  { value: 'Orus', label: 'Orus' },
-  { value: 'Zephyr', label: 'Zephyr' },
+  {value: 'Puck', label: 'Puck'},
+  {value: 'Charon', label: 'Charon'},
+  {value: 'Kore', label: 'Kore'},
+  {value: 'Fenrir', label: 'Fenrir'},
+  {value: 'Aoede', label: 'Aoede'},
+  {value: 'Leda', label: 'Leda'},
+  {value: 'Orus', label: 'Orus'},
+  {value: 'Zephyr', label: 'Zephyr'},
   // Add more if needed, these are sample valid ones
 ];
 
 const LANGUAGE_OPTIONS = [
-  { value: 'en-US', label: 'English (US)' },
-  { value: 'es-ES', label: 'Spanish (Spain)' },
-  { value: 'fr-FR', label: 'French (France)' },
-  { value: 'de-DE', label: 'German (Germany)' },
-  { value: 'it-IT', label: 'Italian (Italy)' },
-  { value: 'ja-JP', label: 'Japanese (Japan)' },
-  { value: 'pt-BR', label: 'Portuguese (Brazil)' },
+  {value: 'en-US', label: 'English (US)'},
+  {value: 'es-ES', label: 'Spanish (Spain)'},
+  {value: 'fr-FR', label: 'French (France)'},
+  {value: 'de-DE', label: 'German (Germany)'},
+  {value: 'it-IT', label: 'Italian (Italy)'},
+  {value: 'ja-JP', label: 'Japanese (Japan)'},
+  {value: 'pt-BR', label: 'Portuguese (Brazil)'},
 ];
 
 export const GENERATE_AUDIO_STEP_CONFIG: StepConfig = {

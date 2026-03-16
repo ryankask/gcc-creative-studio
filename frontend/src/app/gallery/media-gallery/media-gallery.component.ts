@@ -28,24 +28,24 @@ import {
   Inject,
   PLATFORM_ID,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { MatCheckboxChange } from '@angular/material/checkbox';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatIconRegistry } from '@angular/material/icon';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { Subscription, fromEvent } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
-import { MediaItemSelection } from '../../common/components/image-selector/image-selector.component';
-import { CopyToWorkspaceDialogComponent } from '../../common/components/copy-to-workspace-dialog/copy-to-workspace-dialog.component';
-import { DropdownOption } from '../../common/components/studio-dropdown/studio-dropdown.component';
-import { MODEL_CONFIGS } from '../../common/config/model-config';
-import { JobStatus, MediaItem } from '../../common/models/media-item.model';
-import { GalleryItem } from '../../common/models/gallery-item.model';
-import { GallerySearchDto } from '../../common/models/search.model';
-import { UserService } from '../../common/services/user.service';
-import { GalleryService } from '../gallery.service';
-import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
+import {isPlatformBrowser} from '@angular/common';
+import {MatCheckboxChange} from '@angular/material/checkbox';
+import {MatDialog} from '@angular/material/dialog';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatIconRegistry} from '@angular/material/icon';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {Subscription, fromEvent} from 'rxjs';
+import {debounceTime} from 'rxjs/operators';
+import {MediaItemSelection} from '../../common/components/image-selector/image-selector.component';
+import {CopyToWorkspaceDialogComponent} from '../../common/components/copy-to-workspace-dialog/copy-to-workspace-dialog.component';
+import {DropdownOption} from '../../common/components/studio-dropdown/studio-dropdown.component';
+import {MODEL_CONFIGS} from '../../common/config/model-config';
+import {JobStatus, MediaItem} from '../../common/models/media-item.model';
+import {GalleryItem} from '../../common/models/gallery-item.model';
+import {GallerySearchDto} from '../../common/models/search.model';
+import {UserService} from '../../common/services/user.service';
+import {GalleryService} from '../gallery.service';
+import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
 
 @Component({
   selector: 'app-media-gallery',
@@ -72,7 +72,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
 
   images: GalleryItem[] = [];
   filteredImages: GalleryItem[] = [];
-  groups: { title: string; items: GalleryItem[] }[] = [];
+  groups: {title: string; items: GalleryItem[]}[] = [];
 
   selectedItems: Set<string> = new Set();
 
@@ -97,20 +97,20 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
   }));
 
   public mediaTypeOptions: DropdownOption[] = [
-    { value: '', label: 'All Types' },
-    { value: 'image/*', label: 'Image' },
-    { value: 'video/*', label: 'Video' },
-    { value: 'audio/*', label: 'Audio' },
+    {value: '', label: 'All Types'},
+    {value: 'image/*', label: 'Image'},
+    {value: 'video/*', label: 'Video'},
+    {value: 'audio/*', label: 'Audio'},
   ];
 
   public get modelOptions(): DropdownOption[] {
     return [
-      { value: '', label: 'All Models' },
-      ...this.generationModels.map(m => ({ value: m.value, label: m.viewValue }))
+      {value: '', label: 'All Models'},
+      ...this.generationModels.map(m => ({value: m.value, label: m.viewValue})),
     ];
   }
 
-  private autoSlideIntervals: { [id: string]: any } = {};
+  private autoSlideIntervals: {[id: string]: any} = {};
 
   isBrowser: boolean;
 
@@ -124,7 +124,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     private workspaceStateService: WorkspaceStateService,
     private snackBar: MatSnackBar,
     public dialog: MatDialog,
-    @Inject(PLATFORM_ID) platformId: Object
+    @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.matIconRegistry
@@ -177,7 +177,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
       });
 
     if (this.isBrowser) {
-        this.searchTerm();
+      this.searchTerm();
     }
   }
 
@@ -185,15 +185,14 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.isBrowser) return;
   }
 
-
   ngOnDestroy(): void {
     if (this.isBrowser) {
-        // Force pause any lingering audio elements to prevent them from playing after component destruction
-        const audios = this.elementRef.nativeElement.querySelectorAll('audio');
-        audios.forEach((a: HTMLAudioElement) => {
+      // Force pause any lingering audio elements to prevent them from playing after component destruction
+      const audios = this.elementRef.nativeElement.querySelectorAll('audio');
+      audios.forEach((a: HTMLAudioElement) => {
         a.pause();
         a.src = '';
-        });
+      });
     }
 
     this.resizeSubscription?.unsubscribe();
@@ -205,7 +204,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     return `${image.itemType}:${image.id}`;
   }
 
-  public trackByGroup(index: number, group: { title: string }): string {
+  public trackByGroup(index: number, group: {title: string}): string {
     return group.title;
   }
 
@@ -228,7 +227,10 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
       // If maxSelection is 1, clear previous and select new
       if (this.maxSelection === 1) {
         this.selectedItems.clear();
-      } else if (this.maxSelection && this.selectedItems.size >= this.maxSelection) {
+      } else if (
+        this.maxSelection &&
+        this.selectedItems.size >= this.maxSelection
+      ) {
         return;
       }
       this.selectedItems.add(id);
@@ -256,7 +258,9 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   get isAllSelected(): boolean {
-    return this.images.length > 0 && this.selectedItems.size === this.images.length;
+    return (
+      this.images.length > 0 && this.selectedItems.size === this.images.length
+    );
   }
 
   isItemSelected(item: GalleryItem): boolean {
@@ -267,26 +271,29 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedItems.size === 0 || this.isDeleting) return;
     const itemsToDelete = Array.from(this.selectedItems).map(id => {
       const [type, itemId] = id.split(':');
-      return { id: parseInt(itemId), type };
+      return {id: parseInt(itemId), type};
     });
-    
-    if (confirm(`Are you sure you want to delete ${itemsToDelete.length} items?`)) {
+
+    if (
+      confirm(`Are you sure you want to delete ${itemsToDelete.length} items?`)
+    ) {
       this.isDeleting = true;
-      const workspaceId = this.workspaceStateService.getActiveWorkspaceId() || 0;
+      const workspaceId =
+        this.workspaceStateService.getActiveWorkspaceId() || 0;
       this.galleryService.bulkDelete(itemsToDelete, workspaceId).subscribe({
         next: () => {
           // Remove deleted items from local state
-          this.images = this.images.filter(img => 
-            !this.selectedItems.has(`${img.itemType}:${img.id}`)
+          this.images = this.images.filter(
+            img => !this.selectedItems.has(`${img.itemType}:${img.id}`),
           );
           this.selectedItems.clear();
           this.updateGroups();
           this.isDeleting = false;
         },
-        error: (err) => {
+        error: err => {
           console.error('Error deleting items:', err);
           this.isDeleting = false;
-        }
+        },
       });
     }
   }
@@ -296,7 +303,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const dialogRef = this.dialog.open(CopyToWorkspaceDialogComponent, {
       width: '450px',
-      data: { itemCount: this.selectedItems.size }
+      data: {itemCount: this.selectedItems.size},
     });
 
     dialogRef.afterClosed().subscribe((targetWorkspaceId: number | null) => {
@@ -309,21 +316,25 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
   private performCopy(targetWorkspaceId: number): void {
     const itemsToCopy = Array.from(this.selectedItems).map(id => {
       const [type, itemId] = id.split(':');
-      return { id: parseInt(itemId), type };
+      return {id: parseInt(itemId), type};
     });
 
     this.isCopying = true;
     this.galleryService.bulkCopy(itemsToCopy, targetWorkspaceId).subscribe({
-      next: (result) => {
-        this.snackBar.open(`${result.copied_count} items copied successfully`, 'Close', { duration: 3000 });
+      next: result => {
+        this.snackBar.open(
+          `${result.copied_count} items copied successfully`,
+          'Close',
+          {duration: 3000},
+        );
         this.selectedItems.clear();
         this.isCopying = false;
       },
-      error: (err) => {
+      error: err => {
         console.error('Error copying items:', err);
-        this.snackBar.open('Failed to copy items', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to copy items', 'Close', {duration: 3000});
         this.isCopying = false;
-      }
+      },
     });
   }
 
@@ -332,12 +343,12 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isDownloading = true;
     const itemsToDownload = Array.from(this.selectedItems).map(id => {
       const [type, itemId] = id.split(':');
-      return { id: parseInt(itemId), type };
+      return {id: parseInt(itemId), type};
     });
 
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId() || 0;
     this.galleryService.bulkDownload(itemsToDownload, workspaceId).subscribe({
-      next: (blob) => {
+      next: blob => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -348,14 +359,12 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
         window.URL.revokeObjectURL(url);
         this.isDownloading = false;
       },
-      error: (err) => {
+      error: err => {
         console.error('Error downloading items:', err);
         this.isDownloading = false;
-      }
+      },
     });
   }
-
-
 
   private updateGroups(): void {
     // 1. Group images
@@ -380,7 +389,11 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!image.createdAt) return;
       const date = new Date(image.createdAt);
       // Reset time for comparison
-      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const dateOnly = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+      );
 
       let groupName = '';
 
@@ -397,8 +410,11 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(endOfWeek.getDate() + 6);
 
-        const startOption: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-        const endOption: Intl.DateTimeFormatOptions = { day: 'numeric' };
+        const startOption: Intl.DateTimeFormatOptions = {
+          month: 'short',
+          day: 'numeric',
+        };
+        const endOption: Intl.DateTimeFormatOptions = {day: 'numeric'};
 
         // If end of week is in different month, show both months
         if (startOfWeek.getMonth() !== endOfWeek.getMonth()) {
@@ -408,7 +424,10 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       } else {
         // Monthly for older
-        const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
+        const options: Intl.DateTimeFormatOptions = {
+          month: 'long',
+          year: 'numeric',
+        };
         groupName = dateOnly.toLocaleDateString('en-US', options);
       }
 
@@ -422,7 +441,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     // 2. Assign items to each group
     this.groups = groupOrder.map(title => {
       const items = groupsMap.get(title) || [];
-      return { title, items };
+      return {title, items};
     });
   }
 
@@ -432,18 +451,28 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
       return media.mimeType?.startsWith('audio/') || false;
     }
     const parts = rawRatio.split(':').map(Number);
-    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1]) || parts[1] === 0) {
+    if (
+      parts.length !== 2 ||
+      isNaN(parts[0]) ||
+      isNaN(parts[1]) ||
+      parts[1] === 0
+    ) {
       return false;
     }
     const ratio = parts[0] / parts[1];
-    return ratio >= 2; 
+    return ratio >= 2;
   }
 
   isTall(media: GalleryItem): boolean {
     const rawRatio = media.aspectRatio;
     if (!rawRatio) return false;
     const parts = rawRatio.split(':').map(Number);
-    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1]) || parts[1] === 0) {
+    if (
+      parts.length !== 2 ||
+      isNaN(parts[0]) ||
+      isNaN(parts[1]) ||
+      parts[1] === 0
+    ) {
       return false;
     }
     const ratio = parts[0] / parts[1];
@@ -465,7 +494,7 @@ export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     this.images = [];
     this.selectedItems.clear();
 
-    const filters: GallerySearchDto = { limit: 40 };
+    const filters: GallerySearchDto = {limit: 40};
     if (this.userEmailFilter) {
       filters['userEmail'] = this.userEmailFilter;
     }

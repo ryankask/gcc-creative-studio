@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { Component, Input, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
-import { NodeTypes } from '../../workflow.models';
-import { STEP_CONFIGS_MAP } from '../step-configs.map';
+import {Component, Input, OnInit} from '@angular/core';
+import {Router} from '@angular/router';
+import {NodeTypes} from '../../workflow.models';
+import {STEP_CONFIGS_MAP} from '../step-configs.map';
 
 @Component({
   selector: 'app-step-execution-details',
   templateUrl: './step-execution-details.component.html',
-  styleUrls: ['./step-execution-details.component.scss']
+  styleUrls: ['./step-execution-details.component.scss'],
 })
 export class StepExecutionDetailsComponent implements OnInit {
-  @Input() stepId: string = '';
-  @Input() stepType: string = '';
+  @Input() stepId = '';
+  @Input() stepType = '';
   @Input() inputs: any = {};
   @Input() outputs: any = {};
   @Input() mediaUrlMap: Map<string, string> = new Map();
@@ -34,11 +34,9 @@ export class StepExecutionDetailsComponent implements OnInit {
   loadedMedia = new Set<string>();
   NodeTypes = NodeTypes;
 
+  constructor(private router: Router) {}
 
-  constructor(private router: Router) { }
-
-  ngOnInit(): void {
-  }
+  ngOnInit(): void {}
 
   getMediaUrl(value: any): string {
     const key = this.getKeyFromValue(value);
@@ -48,7 +46,10 @@ export class StepExecutionDetailsComponent implements OnInit {
 
     if (value && typeof value === 'object' && value.previewUrl) {
       return value.previewUrl;
-    } else if (typeof value === 'string' && (value.startsWith('http') || value.startsWith('data:'))) {
+    } else if (
+      typeof value === 'string' &&
+      (value.startsWith('http') || value.startsWith('data:'))
+    ) {
       return value;
     }
 
@@ -71,8 +72,8 @@ export class StepExecutionDetailsComponent implements OnInit {
     // For now assuming ID is enough if it's in the map.
     const key = this.getKeyFromValue(value);
     if (key && this.mediaUrlMap.has(key)) {
-    // Only navigate if it's a media item (heuristic: if key starts with media:)
-    // Or just try to navigate if we have an ID.
+      // Only navigate if it's a media item (heuristic: if key starts with media:)
+      // Or just try to navigate if we have an ID.
       const urlTree = this.router.createUrlTree(['/gallery', id]);
       const url = this.router.serializeUrl(urlTree);
       window.open(url, '_blank');
@@ -97,8 +98,11 @@ export class StepExecutionDetailsComponent implements OnInit {
     if (typeof value === 'number') {
       return value;
     } else if (value && typeof value === 'object') {
-      const id = value.sourceAssetId ?? value.source_asset_id ?? value.sourceMediaItem?.mediaItemId;
-      return (id !== undefined && id !== null) ? id : null;
+      const id =
+        value.sourceAssetId ??
+        value.source_asset_id ??
+        value.sourceMediaItem?.mediaItemId;
+      return id !== undefined && id !== null ? id : null;
     }
     return null;
   }
@@ -137,7 +141,9 @@ export class StepExecutionDetailsComponent implements OnInit {
     if (!config) return false;
 
     if (outputName) {
-      const output = config.outputs.find((o: any) => o.name === String(outputName));
+      const output = config.outputs.find(
+        (o: any) => o.name === String(outputName),
+      );
       return output?.type === 'image';
     }
 
@@ -149,7 +155,9 @@ export class StepExecutionDetailsComponent implements OnInit {
     if (!config) return false;
 
     if (outputName) {
-      const output = config.outputs.find((o: any) => o.name === String(outputName));
+      const output = config.outputs.find(
+        (o: any) => o.name === String(outputName),
+      );
       return output?.type === 'text';
     }
     return config.outputs.some((o: any) => o.type === 'text');
@@ -160,7 +168,9 @@ export class StepExecutionDetailsComponent implements OnInit {
     if (!config) return false;
 
     if (outputName) {
-      const output = config.outputs.find((o: any) => o.name === String(outputName));
+      const output = config.outputs.find(
+        (o: any) => o.name === String(outputName),
+      );
       return output?.type === 'video';
     }
     return config.outputs.some((o: any) => o.type === 'video');
@@ -171,7 +181,9 @@ export class StepExecutionDetailsComponent implements OnInit {
     if (!config) return false;
 
     if (outputName) {
-      const output = config.outputs.find((o: any) => o.name === String(outputName));
+      const output = config.outputs.find(
+        (o: any) => o.name === String(outputName),
+      );
       return output?.type === 'audio';
     }
     return config.outputs.some((o: any) => o.type === 'audio');

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import {HttpClient} from '@angular/common/http';
+import {Injectable} from '@angular/core';
+import {MatSnackBar} from '@angular/material/snack-bar';
 import {
   BehaviorSubject,
   catchError,
@@ -26,11 +26,11 @@ import {
   Subscription,
   switchMap,
   tap,
-  timer
+  timer,
 } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { JobStatus, MediaItem } from '../../common/models/media-item.model';
-import { ImagenRequest, VeoRequest } from '../../common/models/search.model';
+import {environment} from '../../../environments/environment';
+import {JobStatus, MediaItem} from '../../common/models/media-item.model';
+import {ImagenRequest, VeoRequest} from '../../common/models/search.model';
 import {
   handleErrorSnackbar,
   handleSuccessSnackbar,
@@ -74,7 +74,7 @@ export class SearchService {
   constructor(
     private http: HttpClient,
     private _snackBar: MatSnackBar,
-  ) { }
+  ) {}
 
   searchImagen(searchRequest: ImagenRequest) {
     const searchURL = `${environment.backendURL}/images/generate-images`;
@@ -117,7 +117,7 @@ export class SearchService {
             } else {
               handleErrorSnackbar(
                 this._snackBar,
-                { message: latestItem.errorMessage || latestItem.error_message },
+                {message: latestItem.errorMessage || latestItem.error_message},
                 `Image generation failed: ${latestItem.errorMessage || latestItem.error_message}`,
               );
             }
@@ -204,7 +204,7 @@ export class SearchService {
             } else {
               handleErrorSnackbar(
                 this._snackBar,
-                { message: latestItem.errorMessage || latestItem.error_message },
+                {message: latestItem.errorMessage || latestItem.error_message},
                 `Video generation failed: ${latestItem.errorMessage || latestItem.error_message}`,
               );
             }
@@ -238,8 +238,8 @@ export class SearchService {
   rewritePrompt(payload: {
     targetType: 'image' | 'video';
     userPrompt: string;
-  }): Observable<{ prompt: string }> {
-    return this.http.post<{ prompt: string }>(
+  }): Observable<{prompt: string}> {
+    return this.http.post<{prompt: string}>(
       `${environment.backendURL}/gemini/rewrite-prompt`,
       payload,
     );
@@ -247,8 +247,8 @@ export class SearchService {
 
   getRandomPrompt(payload: {
     target_type: 'image' | 'video';
-  }): Observable<{ prompt: string }> {
-    return this.http.post<{ prompt: string }>(
+  }): Observable<{prompt: string}> {
+    return this.http.post<{prompt: string}>(
       `${environment.backendURL}/gemini/random-prompt`,
       payload,
     );
@@ -265,7 +265,7 @@ export class SearchService {
       tap(initialItem => {
         this.activeVtoJob.next(initialItem);
         this.startVtoPolling(initialItem.id);
-      })
+      }),
     );
   }
 
@@ -288,11 +288,14 @@ export class SearchService {
           ) {
             this.stopVtoPolling();
             if (latestItem.status === JobStatus.COMPLETED) {
-              handleSuccessSnackbar(this._snackBar, 'Your VTO result is ready!');
+              handleSuccessSnackbar(
+                this._snackBar,
+                'Your VTO result is ready!',
+              );
             } else {
               handleErrorSnackbar(
                 this._snackBar,
-                { message: latestItem.errorMessage || latestItem.error_message },
+                {message: latestItem.errorMessage || latestItem.error_message},
                 `VTO generation failed: ${latestItem.errorMessage || latestItem.error_message}`,
               );
             }

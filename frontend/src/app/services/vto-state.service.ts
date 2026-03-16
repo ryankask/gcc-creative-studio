@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
 
 export interface VtoState {
   stepperIndex: number;
@@ -28,7 +28,7 @@ export interface VtoState {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class VtoStateService {
   private initialState: VtoState = {
@@ -38,14 +38,14 @@ export class VtoStateService {
     top: null,
     bottom: null,
     dress: null,
-    shoes: null
+    shoes: null,
   };
 
   private state = new BehaviorSubject<VtoState>(this.initialState);
   state$ = this.state.asObservable();
 
   updateState(newState: Partial<VtoState>) {
-    this.state.next({ ...this.state.value, ...newState });
+    this.state.next({...this.state.value, ...newState});
   }
 
   getState(): VtoState {

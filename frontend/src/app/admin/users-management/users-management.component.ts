@@ -14,24 +14,30 @@
  * limitations under the License.
  */
 
-import {Component, OnInit, OnDestroy, ViewChild, Inject, PLATFORM_ID} from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  Inject,
+  PLATFORM_ID,
+} from '@angular/core';
 import {MatTableDataSource} from '@angular/material/table';
 import {MatPaginator, PageEvent} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {Subject, firstValueFrom} from 'rxjs';
-import {
-  debounceTime,
-  distinctUntilChanged,
-  takeUntil,
-} from 'rxjs/operators';
+import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
 import {isPlatformBrowser} from '@angular/common';
 import {UserService, PaginatedResponse} from './user.service';
 import {MatDialog} from '@angular/material/dialog';
 import {UserFormComponent} from './user-form.component';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {UserModel, UserRolesEnum} from '../../common/models/user.model';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
-import { ConfirmationDialogComponent } from '../../common/components/confirmation-dialog/confirmation-dialog.component';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
+import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
 
 @Component({
   selector: 'app-users-management',
@@ -82,7 +88,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
       if (userDetailsStr) {
         this.currentUserId = JSON.parse(userDetailsStr).id || null;
       }
-      this.fetchPage(0);
+      void this.fetchPage(0);
     }
 
     // Debounce filter input to avoid excessive Firestore reads
@@ -106,7 +112,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
       this.resetPaginationAndFetch();
       return;
     }
-    this.fetchPage(event.pageIndex);
+    void this.fetchPage(event.pageIndex);
   }
 
   async fetchPage(targetPageIndex: number) {
@@ -121,7 +127,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
           offset,
           this.includeDeleted, // Pass here
         ),
-        { defaultValue: { data: [], count: 0 } as any }
+        {defaultValue: {data: [], count: 0} as any},
       );
 
       this.dataSource.data = finalResponse.data;
@@ -145,7 +151,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
     if (this.paginator) {
       this.paginator.pageIndex = 0;
     }
-    this.fetchPage(0);
+    void this.fetchPage(0);
   }
 
   onIncludeDeletedChange(checked: boolean) {
@@ -158,7 +164,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
     try {
       await firstValueFrom(this.userService.restoreUser(userId));
       handleSuccessSnackbar(this._snackBar, 'User restored successfully!');
-      this.fetchPage(this.currentPageIndex);
+      await this.fetchPage(this.currentPageIndex);
     } catch (err) {
       console.error(`Error restoring user ${userId}:`, err);
       handleErrorSnackbar(this._snackBar, err, 'Restore user');
@@ -184,7 +190,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
             await firstValueFrom(this.userService.updateUser(result));
             handleSuccessSnackbar(this._snackBar, 'User updated successfully!');
             // Refetch to show updated data on the current page.
-            this.fetchPage(this.currentPageIndex);
+            await this.fetchPage(this.currentPageIndex);
           } catch (err) {
             console.error(`Error updating user ${result.id}:`, err);
             handleErrorSnackbar(this._snackBar, err, 'Update user');
@@ -204,7 +210,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result) {
         this.isLoading = true;
         try {

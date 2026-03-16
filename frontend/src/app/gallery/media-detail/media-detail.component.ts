@@ -14,24 +14,27 @@
  * limitations under the License.
  */
 
-import { Component, OnDestroy } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationExtras, Router } from '@angular/router';
-import { first, Subscription } from 'rxjs';
+import {Component, OnDestroy} from '@angular/core';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
+import {ActivatedRoute, NavigationExtras, Router} from '@angular/router';
+import {first, Subscription} from 'rxjs';
 import {
   EnrichedSourceAsset,
   MediaItem,
 } from '../../common/models/media-item.model';
-import { GalleryItem } from '../../common/models/gallery-item.model';
-import { CreatePromptMediaDto } from '../../common/models/prompt.model';
-import { SourceMediaItemLink } from '../../common/models/search.model';
-import { AuthService } from '../../common/services/auth.service';
-import { LoadingService } from '../../common/services/loading.service';
-import { MimeTypeEnum } from '../../fun-templates/media-template.model';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
-import { GalleryService } from '../gallery.service';
-import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
+import {GalleryItem} from '../../common/models/gallery-item.model';
+import {CreatePromptMediaDto} from '../../common/models/prompt.model';
+import {SourceMediaItemLink} from '../../common/models/search.model';
+import {AuthService} from '../../common/services/auth.service';
+import {LoadingService} from '../../common/services/loading.service';
+import {MimeTypeEnum} from '../../fun-templates/media-template.model';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
+import {GalleryService} from '../gallery.service';
+import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
 
 @Component({
   selector: 'app-media-detail',
@@ -52,37 +55,68 @@ export class MediaDetailComponent implements OnDestroy {
   public selectedAssetForLightbox: GalleryItem | null = null;
   public lightboxInitialIndex = 0;
 
-  get identityFields(): { label: string; value: any; type: string }[] {
+  get identityFields(): {label: string; value: any; type: string}[] {
     if (!this.mediaItem) return [];
 
     const isAsset = this.mediaItem.itemType === 'source_asset';
 
-    const fields: { label: string; value: any; type: string }[] = [
-      { label: 'Mime Type', value: this.mediaItem.mimeType, type: 'text' },
-      { label: 'Aspect Ratio', value: this.mediaItem.aspectRatio, type: 'text' },
-      { label: 'Resolution', value: this.mediaItem.resolution, type: 'text' },
+    const fields: {label: string; value: any; type: string}[] = [
+      {label: 'Mime Type', value: this.mediaItem.mimeType, type: 'text'},
+      {label: 'Aspect Ratio', value: this.mediaItem.aspectRatio, type: 'text'},
+      {label: 'Resolution', value: this.mediaItem.resolution, type: 'text'},
     ];
 
     if (this.isIdentityExpanded) {
       fields.push(
-        { label: 'Model', value: this.mediaItem.model, type: 'text' },
-        { label: 'Created At', value: this.mediaItem.createdAt, type: 'date' },
-        { label: 'Created By', value: this.mediaItem.userEmail, type: 'text' },
-        { label: 'Generation Time', value: this.mediaItem.generationTime ? `${this.mediaItem.generationTime.toFixed(2)}s` : undefined, type: 'text' },
-        { label: 'Source Assets', value: this.mediaItem.enrichedSourceAssets?.length ? this.mediaItem.enrichedSourceAssets : undefined, type: 'assets' }
+        {label: 'Model', value: this.mediaItem.model, type: 'text'},
+        {label: 'Created At', value: this.mediaItem.createdAt, type: 'date'},
+        {label: 'Created By', value: this.mediaItem.userEmail, type: 'text'},
+        {
+          label: 'Generation Time',
+          value: this.mediaItem.generationTime
+            ? `${this.mediaItem.generationTime.toFixed(2)}s`
+            : undefined,
+          type: 'text',
+        },
+        {
+          label: 'Source Assets',
+          value: this.mediaItem.enrichedSourceAssets?.length
+            ? this.mediaItem.enrichedSourceAssets
+            : undefined,
+          type: 'assets',
+        },
       );
 
       if (!isAsset) {
-        const originalPrompt = this.mediaItem.originalPrompt || (this.promptJson ? this.formattedPrompt : this.mediaItem.prompt);
-        fields.push({ label: 'Original Prompt', value: originalPrompt, type: 'prompt' });
+        const originalPrompt =
+          this.mediaItem.originalPrompt ||
+          (this.promptJson ? this.formattedPrompt : this.mediaItem.prompt);
+        fields.push({
+          label: 'Original Prompt',
+          value: originalPrompt,
+          type: 'prompt',
+        });
 
-        if (this.mediaItem.prompt && this.mediaItem.prompt !== this.mediaItem.originalPrompt) {
-          fields.push({ label: 'Prompt Used', value: this.mediaItem.prompt, type: 'prompt' });
+        if (
+          this.mediaItem.prompt &&
+          this.mediaItem.prompt !== this.mediaItem.originalPrompt
+        ) {
+          fields.push({
+            label: 'Prompt Used',
+            value: this.mediaItem.prompt,
+            type: 'prompt',
+          });
         }
       }
     }
 
-    return fields.filter(f => f.value !== null && f.value !== undefined && f.value !== '' && (Array.isArray(f.value) ? f.value.length > 0 : true));
+    return fields.filter(
+      f =>
+        f.value !== null &&
+        f.value !== undefined &&
+        f.value !== '' &&
+        (Array.isArray(f.value) ? f.value.length > 0 : true),
+    );
   }
 
   constructor(
@@ -97,7 +131,7 @@ export class MediaDetailComponent implements OnDestroy {
   ) {
     // Check if user is admin
     this.isAdmin = this.authService.isUserAdmin() ?? false;
-    
+
     // Always trigger fetch to get full source assets, metadata, etc.
     this.fetchMediaItem();
   }
@@ -118,9 +152,9 @@ export class MediaDetailComponent implements OnDestroy {
     this.mediaSub?.unsubscribe();
   }
 
-  fetchMediaDetails(id: number, isAsset: boolean = false): void {
-    const fetchObs = isAsset 
-      ? this.galleryService.getAsset(id) 
+  fetchMediaDetails(id: number, isAsset = false): void {
+    const fetchObs = isAsset
+      ? this.galleryService.getAsset(id)
       : this.galleryService.getMedia(id);
 
     this.mediaSub = fetchObs.subscribe({
@@ -222,10 +256,13 @@ export class MediaDetailComponent implements OnDestroy {
       .createTemplateFromMediaItem(this.mediaItem.id)
       .pipe(first())
       .subscribe({
-        next: (newTemplate: { id: string }) => {
+        next: (newTemplate: {id: string}) => {
           this.loadingService.hide();
-          handleSuccessSnackbar(this._snackBar, 'Template created successfully!');
-          this.router.navigate(['/templates/edit', newTemplate.id]);
+          handleSuccessSnackbar(
+            this._snackBar,
+            'Template created successfully!',
+          );
+          void this.router.navigate(['/templates/edit', newTemplate.id]);
         },
         error: err => {
           this.loadingService.hide();
@@ -263,10 +300,10 @@ export class MediaDetailComponent implements OnDestroy {
         },
       },
     };
-    this.router.navigate(['/'], navigationExtras);
+    void this.router.navigate(['/'], navigationExtras);
   }
 
-  generateVideoWithImage(event: { role: 'start' | 'end'; index: number }): void {
+  generateVideoWithImage(event: {role: 'start' | 'end'; index: number}): void {
     if (!this.mediaItem) {
       return;
     }
@@ -291,9 +328,9 @@ export class MediaDetailComponent implements OnDestroy {
     };
 
     const navigationExtras: NavigationExtras = {
-      state: { remixState },
+      state: {remixState},
     };
-    this.router.navigate(['/video'], navigationExtras);
+    void this.router.navigate(['/video'], navigationExtras);
   }
 
   sendToVto(index: number): void {
@@ -311,7 +348,7 @@ export class MediaDetailComponent implements OnDestroy {
         },
       },
     };
-    this.router.navigate(['/vto'], navigationExtras);
+    void this.router.navigate(['/vto'], navigationExtras);
   }
 
   handleExtendWithAi(event: {
@@ -338,9 +375,9 @@ export class MediaDetailComponent implements OnDestroy {
     };
 
     const navigationExtras: NavigationExtras = {
-      state: { remixState },
+      state: {remixState},
     };
-    this.router.navigate(['/video'], navigationExtras);
+    void this.router.navigate(['/video'], navigationExtras);
   }
 
   handleConcatenate(event: {
@@ -364,7 +401,7 @@ export class MediaDetailComponent implements OnDestroy {
       startConcatenation: true,
     };
 
-    this.router.navigate(['/video'], { state: { remixState } });
+    void this.router.navigate(['/video'], {state: {remixState}});
   }
 
   public openSourceAssetInLightbox(
@@ -419,19 +456,23 @@ export class MediaDetailComponent implements OnDestroy {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (workspaceId === null) return;
 
-    const confirmDelete = confirm('Are you sure you want to delete this media item?');
+    const confirmDelete = confirm(
+      'Are you sure you want to delete this media item?',
+    );
     if (!confirmDelete) return;
-    this.galleryService.bulkDelete(
-      [{ id: this.mediaItem.id, type: this.mediaItem.itemType }],
-      workspaceId
-    ).subscribe({
-      next: () => {
-        handleSuccessSnackbar(this._snackBar, 'Media deleted successfully');
-        this.router.navigate(['/gallery']);
-      },
-      error: (err) => {
-        handleErrorSnackbar(this._snackBar, err, 'Delete media');
-      }
-    });
+    this.galleryService
+      .bulkDelete(
+        [{id: this.mediaItem.id, type: this.mediaItem.itemType}],
+        workspaceId,
+      )
+      .subscribe({
+        next: () => {
+          handleSuccessSnackbar(this._snackBar, 'Media deleted successfully');
+          void this.router.navigate(['/gallery']);
+        },
+        error: err => {
+          handleErrorSnackbar(this._snackBar, err, 'Delete media');
+        },
+      });
   }
 }

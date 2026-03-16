@@ -20,7 +20,10 @@ import {MatPaginator} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {MediaTemplatesService} from './media-templates.service';
 import {MatSnackBar} from '@angular/material/snack-bar';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
 import {MatDialog} from '@angular/material/dialog';
 import {MediaTemplateFormComponent} from './media-template-form/media-template-form.component';
 import {MediaTemplate} from '../../fun-templates/media-template.model';

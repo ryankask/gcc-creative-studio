@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
 
 export interface Notification {
   id: string;
@@ -25,7 +25,7 @@ export interface Notification {
   matIcon?: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class NotificationService {
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   notifications$ = this.notificationsSubject.asObservable();
@@ -52,6 +52,8 @@ export class NotificationService {
   }
 
   remove(id: string) {
-    this.notificationsSubject.next(this.notificationsSubject.value.filter(n => n.id !== id));
+    this.notificationsSubject.next(
+      this.notificationsSubject.value.filter(n => n.id !== id),
+    );
   }
 }

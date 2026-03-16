@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-import { Pipe, PipeTransform } from '@angular/core';
+import {Pipe, PipeTransform} from '@angular/core';
 
 @Pipe({
-  name: 'truncate'
+  name: 'truncate',
 })
 export class TruncatePipe implements PipeTransform {
-  transform(value: string | undefined | null, limit: number = 20, trail: string = '...'): string {
+  transform(
+    value: string | undefined | null,
+    limit = 20,
+    trail = '...',
+  ): string {
     if (!value) return '';
     return value.length > limit ? value.substring(0, limit) + trail : value;
   }

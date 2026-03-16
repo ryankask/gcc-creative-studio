@@ -14,22 +14,28 @@
  * limitations under the License.
  */
 
-import { CdkDragDrop } from '@angular/cdk/drag-drop';
-import { Component, DestroyRef, OnDestroy, OnInit, inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {CdkDragDrop} from '@angular/cdk/drag-drop';
 import {
-  AbstractControl,
-  FormArray,
-  FormGroup
-} from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subscription, of } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
-import { MediaResolutionService } from '../shared/media-resolution.service';
+  Component,
+  DestroyRef,
+  OnDestroy,
+  OnInit,
+  inject,
+  PLATFORM_ID,
+} from '@angular/core';
+import {isPlatformBrowser} from '@angular/common';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {AbstractControl, FormArray, FormGroup} from '@angular/forms';
+import {MatDialog} from '@angular/material/dialog';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {ActivatedRoute, Router} from '@angular/router';
+import {Observable, Subscription, of} from 'rxjs';
+import {switchMap, tap} from 'rxjs/operators';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
+import {MediaResolutionService} from '../shared/media-resolution.service';
 import {
   NodeTypes,
   StepStatusEnum,
@@ -37,18 +43,16 @@ import {
   WorkflowCreateDto,
   WorkflowModel,
   WorkflowRunModel,
-  WorkflowUpdateDto
+  WorkflowUpdateDto,
 } from '../workflow.models';
 // import { STEP_CONFIGS_MAP } from '../shared/step-configs.map'; // Removed as only used by getStepConfig which is now in service (mostly)
 // But wait, template calls getStepConfig.
-import { STEP_CONFIGS_MAP } from '../shared/step-configs.map'; // Kept for template
-import { WorkflowService } from '../workflow.service';
-import { AddStepModalComponent } from './add-step-modal/add-step-modal.component';
-import { RunWorkflowModalComponent } from './run-workflow-modal/run-workflow-modal.component';
+import {STEP_CONFIGS_MAP} from '../shared/step-configs.map'; // Kept for template
+import {WorkflowService} from '../workflow.service';
+import {AddStepModalComponent} from './add-step-modal/add-step-modal.component';
+import {RunWorkflowModalComponent} from './run-workflow-modal/run-workflow-modal.component';
 
-import { WorkflowFormService } from './workflow-form.service';
-
-
+import {WorkflowFormService} from './workflow-form.service';
 
 @Component({
   selector: 'app-workflow-editor',
@@ -72,7 +76,9 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   // --- UI State ---
   // workflowForm handled by service
-  get workflowForm() { return this.formService.workflowForm; }
+  get workflowForm() {
+    return this.formService.workflowForm;
+  }
   isLoading = false;
   submitted = false;
   errorMessage: string | null = null;
@@ -80,7 +86,11 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   get selectedStep(): any | null {
     if (this.selectedStepIndex === null) return null;
     // stepsArray is accessed via getter now
-    if (!this.stepsArray || this.selectedStepIndex < 0 || this.selectedStepIndex >= this.stepsArray.length) {
+    if (
+      !this.stepsArray ||
+      this.selectedStepIndex < 0 ||
+      this.selectedStepIndex >= this.stepsArray.length
+    ) {
       return null;
     }
     return this.stepsArray.at(this.selectedStepIndex).value;
@@ -88,7 +98,9 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   get selectedStepExecution(): any | null {
     if (!this.selectedStep || !this.executionStepEntries) return null;
-    const entry = this.executionStepEntries.find(e => e.step_id === this.selectedStep.stepId);
+    const entry = this.executionStepEntries.find(
+      e => e.step_id === this.selectedStep.stepId,
+    );
     return entry ? entry : null;
   }
   // availableOutputsPerStep is now an observable, but template expects array.
@@ -97,10 +109,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   availableOutputsPerStep: any[][] = [];
   previousOutputDefinitions: any[] = [];
 
-
   private destroyRef = inject(DestroyRef);
   private formService = inject(WorkflowFormService);
-
 
   private mainSubscription!: Subscription;
   // private pollingSubscription?: Subscription; // Removed
@@ -111,7 +121,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   loadedMedia = new Set<string>();
   returnUrl: string | null = null;
 
-
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -119,9 +128,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private mediaResolutionService: MediaResolutionService,
-
-
-  ) { }
+  ) {}
 
   get stepsArray(): FormArray {
     return this.formService.stepsArray;
@@ -202,7 +209,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     // syncOutputs moved to service
     this.previousOutputDefinitions = this.outputDefinitionsArray.getRawValue();
     if (isPlatformBrowser(this.platformId)) {
-      this.outputDefinitionsArray.valueChanges.subscribe((currentValues) => {
+      this.outputDefinitionsArray.valueChanges.subscribe(currentValues => {
         this.handleOutputRenames(currentValues);
         this.formService.syncOutputs(); // Trigger sync in service if needed, although service might handle specific adds/removes
         this.previousOutputDefinitions = currentValues;
@@ -226,15 +233,21 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.mediaResolutionService.resolveMediaUrls(details.step_entries, stepTypeMap, this.mediaUrlMap);
+    this.mediaResolutionService.resolveMediaUrls(
+      details.step_entries,
+      stepTypeMap,
+      this.mediaUrlMap,
+    );
   }
 
   isImageOutput(stepId: string): boolean {
     const type = this.getStepType(stepId);
-    return type === NodeTypes.GENERATE_IMAGE ||
+    return (
+      type === NodeTypes.GENERATE_IMAGE ||
       type === NodeTypes.EDIT_IMAGE ||
       type === NodeTypes.CROP_IMAGE ||
-      type === NodeTypes.VIRTUAL_TRY_ON;
+      type === NodeTypes.VIRTUAL_TRY_ON
+    );
   }
 
   getStepType(stepId: string): NodeTypes | string | undefined {
@@ -242,7 +255,9 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     if (stepId === NodeTypes.USER_INPUT) return NodeTypes.USER_INPUT;
 
     // Find in steps array
-    const step = this.stepsArray.controls.find(c => c.get('stepId')?.value === stepId);
+    const step = this.stepsArray.controls.find(
+      c => c.get('stepId')?.value === stepId,
+    );
     return step ? step.get('type')?.value : undefined;
   }
 
@@ -298,8 +313,13 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       Object.keys(inputs.controls).forEach(inputKey => {
         const control = inputs.get(inputKey);
         const value = control?.value;
-        if (value && typeof value === 'object' && value.step === NodeTypes.USER_INPUT && value._definitionId === definitionId) {
-          control?.setValue({ ...value, output: newName });
+        if (
+          value &&
+          typeof value === 'object' &&
+          value.step === NodeTypes.USER_INPUT &&
+          value._definitionId === definitionId
+        ) {
+          control?.setValue({...value, output: newName});
         }
       });
     });
@@ -329,7 +349,10 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     // Update selectedStepIndex
     if (this.selectedStepIndex === index) {
       this.selectedStepIndex = null;
-    } else if (this.selectedStepIndex !== null && this.selectedStepIndex > index) {
+    } else if (
+      this.selectedStepIndex !== null &&
+      this.selectedStepIndex > index
+    ) {
       this.selectedStepIndex--;
     }
 
@@ -347,7 +370,11 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       Object.keys(inputs.controls).forEach(inputKey => {
         const control = inputs.get(inputKey);
         const value = control?.value;
-        if (value && typeof value === 'object' && value.step === deletedStepId) {
+        if (
+          value &&
+          typeof value === 'object' &&
+          value.step === deletedStepId
+        ) {
           control?.setValue(null);
           control?.markAsDirty();
           control?.updateValueAndValidity();
@@ -409,7 +436,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     }
 
     request$.subscribe({
-      next: (response) => {
+      next: response => {
         this.isLoading = false;
         this.workflowForm.markAsPristine();
 
@@ -417,9 +444,11 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         if (this.mode === EditorMode.Create && response && response.id) {
           this.mode = EditorMode.Edit;
           this.workflowId = response.id;
-          this.workflowForm.patchValue({ id: response.id });
+          this.workflowForm.patchValue({id: response.id});
           // Update URL without reloading
-          this.router.navigate(['/workflows', 'edit', response.id], { replaceUrl: true });
+          void this.router.navigate(['/workflows', 'edit', response.id], {
+            replaceUrl: true,
+          });
         }
       },
       error: err => {
@@ -458,7 +487,10 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         description: formValue.description || '',
         steps: steps,
       };
-      saveRequest$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
+      saveRequest$ = this.workflowService.updateWorkflow(
+        formValue.id,
+        updateDto,
+      );
     } else {
       const createDto: WorkflowCreateDto = {
         name: formValue.name,
@@ -469,7 +501,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     }
 
     saveRequest$.subscribe({
-      next: (response) => {
+      next: response => {
         this.isLoading = false;
         this.workflowForm.markAsPristine();
 
@@ -478,8 +510,10 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
           this.mode = EditorMode.Edit;
           this.workflowId = response.id;
           workflowId = response.id;
-          this.workflowForm.patchValue({ id: response.id });
-          this.router.navigate(['/workflows', 'edit', response.id], { replaceUrl: true });
+          this.workflowForm.patchValue({id: response.id});
+          void this.router.navigate(['/workflows', 'edit', response.id], {
+            replaceUrl: true,
+          });
         }
 
         if (workflowId) {
@@ -490,25 +524,25 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         console.error('Failed to save before run', err);
         this.errorMessage = 'Failed to save workflow before running.';
         this.isLoading = false;
-      }
+      },
     });
   }
 
   goBack(): void {
     if (this.returnUrl) {
-      this.router.navigateByUrl(this.returnUrl);
+      void this.router.navigateByUrl(this.returnUrl);
     } else {
-      this.router.navigate(['/workflows']);
+      void this.router.navigate(['/workflows']);
     }
   }
 
   private prepareSteps(formValue: any): any[] {
     const steps = formValue.steps.map((step: any) => {
-      const newStep = { ...step };
+      const newStep = {...step};
       if (newStep.inputs) {
-        const newInputs = { ...newStep.inputs };
+        const newInputs = {...newStep.inputs};
         Object.keys(newInputs).forEach(key => {
-          let val = newInputs[key];
+          const val = newInputs[key];
 
           if (Array.isArray(val)) {
             // Handle array inputs (e.g. multiple images)
@@ -538,24 +572,24 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       stepId: `${NodeTypes.USER_INPUT}`,
       type: NodeTypes.USER_INPUT,
       status: StepStatusEnum.IDLE,
-    }
+    };
     return [user_input_step, ...steps];
   }
 
   private cleanInputValue(val: any): any {
     if (!val || typeof val !== 'object') return val;
 
-    let newVal = { ...val };
+    let newVal = {...val};
 
     // Handle _definitionId removal
     if (newVal._definitionId) {
-      const { _definitionId, ...rest } = newVal;
+      const {_definitionId, ...rest} = newVal;
       newVal = rest;
     }
 
     // Handle user input name transformation (display -> identifier)
     if (newVal.step === NodeTypes.USER_INPUT && newVal.output) {
-      newVal = { ...newVal, output: this.toIdentifier(newVal.output) };
+      newVal = {...newVal, output: this.toIdentifier(newVal.output)};
     }
 
     return newVal;
@@ -564,7 +598,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   openRunModal(workflowId: string, userInputStep: any) {
     const dialogRef = this.dialog.open(RunWorkflowModalComponent, {
       width: '600px',
-      data: { userInputStep }
+      data: {userInputStep},
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -573,12 +607,12 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         this.currentExecutionState = 'ACTIVE';
         // Set all steps to PENDING
         this.stepsArray.controls.forEach(control => {
-          control.patchValue({ status: StepStatusEnum.PENDING });
+          control.patchValue({status: StepStatusEnum.PENDING});
         });
 
         this.isLoading = true;
         this.workflowService.executeWorkflow(workflowId, result).subscribe({
-          next: (res) => {
+          next: res => {
             console.log('Workflow execution started', res);
             this.currentExecutionId = res.execution_id;
             this.currentExecutionState = 'ACTIVE';
@@ -587,12 +621,12 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
             // Start polling for execution status
             this.startPollingExecution(workflowId, res.execution_id);
           },
-          error: (err) => {
+          error: err => {
             console.error('Failed to execute workflow', err);
             this.errorMessage = 'Failed to execute workflow';
             this.isLoading = false;
             handleErrorSnackbar(this.snackBar, err, 'Workflow execution');
-          }
+          },
         });
       }
     });
@@ -607,33 +641,36 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.isLoading = true;
 
     // Fetch once immediately, then start polling (or just start polling, but this keeps UI snappy)
-    this.workflowService.getExecutionDetails(this.workflowId, executionId).subscribe({
-      next: (details) => {
-        this.handleExecutionUpdate(details);
-        this.isLoading = false;
+    this.workflowService
+      .getExecutionDetails(this.workflowId, executionId)
+      .subscribe({
+        next: details => {
+          this.handleExecutionUpdate(details);
+          this.isLoading = false;
 
-        if (details.state === 'ACTIVE') {
-          this.startPollingExecution(this.workflowId!, executionId);
-        }
-      },
-      error: (err) => {
-        console.error('Failed to load execution details', err);
-        handleErrorSnackbar(this.snackBar, err, 'Load execution details');
-        this.isLoading = false;
-      }
-    });
+          if (details.state === 'ACTIVE') {
+            this.startPollingExecution(this.workflowId!, executionId);
+          }
+        },
+        error: err => {
+          console.error('Failed to load execution details', err);
+          handleErrorSnackbar(this.snackBar, err, 'Load execution details');
+          this.isLoading = false;
+        },
+      });
   }
 
   private startPollingExecution(workflowId: string, executionId: string): void {
-    this.workflowService.pollExecutionDetails(workflowId, executionId)
+    this.workflowService
+      .pollExecutionDetails(workflowId, executionId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (details) => {
+        next: details => {
           this.handleExecutionUpdate(details);
         },
-        error: (err) => {
+        error: err => {
           console.error('Polling error', err);
-        }
+        },
       });
   }
 
@@ -646,12 +683,15 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
     if (details.state !== 'ACTIVE') {
       if (details.state === 'SUCCEEDED') {
-        handleSuccessSnackbar(this.snackBar, 'Workflow completed successfully!');
+        handleSuccessSnackbar(
+          this.snackBar,
+          'Workflow completed successfully!',
+        );
       } else {
         handleErrorSnackbar(
           this.snackBar,
-          { message: `Workflow ${details.state.toLowerCase()}` },
-          'Workflow Execution'
+          {message: `Workflow ${details.state.toLowerCase()}`},
+          'Workflow Execution',
         );
       }
     }
@@ -669,7 +709,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     });
 
     // Update form controls
-    this.stepsArray.controls.forEach((control) => {
+    this.stepsArray.controls.forEach(control => {
       const stepId = control.get('stepId')?.value;
       if (stepId && stepStatusMap.has(stepId)) {
         const gcpState = stepStatusMap.get(stepId);
@@ -688,17 +728,19 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
             break;
         }
 
-        control.patchValue({ status: uiStatus });
+        control.patchValue({status: uiStatus});
       }
     });
 
     // Update outputs from step entries
     details.step_entries.forEach((entry: any) => {
-      const control = this.stepsArray.controls.find(c => c.get('stepId')?.value === entry.step_id);
+      const control = this.stepsArray.controls.find(
+        c => c.get('stepId')?.value === entry.step_id,
+      );
       if (control && entry.step_outputs) {
         // We update the whole outputs object in the form control
         // This ensures the UI sees the new outputs
-        control.patchValue({ outputs: entry.step_outputs });
+        control.patchValue({outputs: entry.step_outputs});
       }
     });
   }
@@ -712,9 +754,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   private toIdentifier(name: string): string {
     return name ? name.trim().replace(/\s+/g, '_') : name;
   }
-
-
-
 }
 
 export enum EditorMode {

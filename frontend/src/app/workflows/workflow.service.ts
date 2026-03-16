@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-import { HttpClient } from '@angular/common/http';
-import { Injectable, OnDestroy, PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { BehaviorSubject, Observable, Subscription, throwError, timer } from 'rxjs';
+import {HttpClient} from '@angular/common/http';
+import {Injectable, OnDestroy, PLATFORM_ID, inject} from '@angular/core';
+import {isPlatformBrowser} from '@angular/common';
 import {
-  shareReplay,
-  switchMap,
-  takeWhile,
-  tap
-} from 'rxjs/operators';
-import { environment } from '../../environments/environment';
-import { PaginationResponseDto } from '../common/services/source-asset.service';
-import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+  BehaviorSubject,
+  Observable,
+  Subscription,
+  throwError,
+  timer,
+} from 'rxjs';
+import {shareReplay, switchMap, takeWhile, tap} from 'rxjs/operators';
+import {environment} from '../../environments/environment';
+import {PaginationResponseDto} from '../common/services/source-asset.service';
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
 import {
   BatchExecutionResponse,
   ExecutionDetails,
@@ -166,9 +167,7 @@ export class WorkflowService implements OnDestroy {
     this.loadWorkflows(true, false);
   }
 
-  createWorkflow(
-    workflowData: WorkflowCreateDto,
-  ): Observable<WorkflowModel> {
+  createWorkflow(workflowData: WorkflowCreateDto): Observable<WorkflowModel> {
     return this.http
       .post<WorkflowModel>(`${this.API_BASE_URL}/workflows`, workflowData)
       .pipe(tap(() => this.loadWorkflows(true)));
@@ -177,7 +176,7 @@ export class WorkflowService implements OnDestroy {
   updateWorkflow(
     workflow_id: string,
     workflowData: WorkflowUpdateDto,
-  ): Observable<{ message: string }> {
+  ): Observable<{message: string}> {
     return this.http
       .put<{
         message: string;
@@ -199,7 +198,10 @@ export class WorkflowService implements OnDestroy {
       );
   }
 
-  executeWorkflow(workflowId: string, args: any): Observable<ExecutionResponse> {
+  executeWorkflow(
+    workflowId: string,
+    args: any,
+  ): Observable<ExecutionResponse> {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!workspaceId) {
       return throwError(() => new Error('No active workspace ID found.'));
@@ -208,16 +210,19 @@ export class WorkflowService implements OnDestroy {
     const payload = {
       args: {
         ...args,
-        workspace_id: workspaceId
-      }
+        workspace_id: workspaceId,
+      },
     };
     return this.http.post<ExecutionResponse>(
       `${this.API_BASE_URL}/workflows/${workflowId}/workflow-execute`,
-      payload
+      payload,
     );
   }
 
-  batchExecuteWorkflow(workflowId: string, items: { row_index: number; args: any }[]): Observable<BatchExecutionResponse> {
+  batchExecuteWorkflow(
+    workflowId: string,
+    items: {row_index: number; args: any}[],
+  ): Observable<BatchExecutionResponse> {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!workspaceId) {
       return throwError(() => new Error('No active workspace ID found.'));
@@ -228,19 +233,22 @@ export class WorkflowService implements OnDestroy {
       ...item,
       args: {
         ...item.args,
-        workspace_id: workspaceId
-      }
+        workspace_id: workspaceId,
+      },
     }));
 
     return this.http.post<BatchExecutionResponse>(
       `${this.API_BASE_URL}/workflows/${workflowId}/batch-execute`,
-      { items: enrichedItems }
+      {items: enrichedItems},
     );
   }
 
-  getExecutionDetails(workflowId: string, executionId: string): Observable<ExecutionDetails> {
+  getExecutionDetails(
+    workflowId: string,
+    executionId: string,
+  ): Observable<ExecutionDetails> {
     return this.http.get<ExecutionDetails>(
-      `${this.API_BASE_URL}/workflows/${workflowId}/executions/${encodeURIComponent(executionId)}`
+      `${this.API_BASE_URL}/workflows/${workflowId}/executions/${encodeURIComponent(executionId)}`,
     );
   }
 
@@ -250,37 +258,41 @@ export class WorkflowService implements OnDestroy {
    * @param executionId The execution ID
    * @param intervalMs How often to poll (default 5000ms)
    */
-  pollExecutionDetails(workflowId: string, executionId: string, intervalMs = 5000): Observable<ExecutionDetails> {
+  pollExecutionDetails(
+    workflowId: string,
+    executionId: string,
+    intervalMs = 5000,
+  ): Observable<ExecutionDetails> {
     return timer(0, intervalMs).pipe(
       // switchMap cancels the previous pending request if a new tick occurs
       switchMap(() => this.getExecutionDetails(workflowId, executionId)),
 
       // Continue polling ONLY while state is ACTIVE.
-      // The 'true' argument is vital: it ensures the *final* non-active value 
+      // The 'true' argument is vital: it ensures the *final* non-active value
       // (SUCCEEDED/FAILED) is emitted before the stream completes.
       takeWhile(details => details.state === 'ACTIVE', true),
 
       // Optional: Share the stream if multiple UI components need to listen to the same poll
-      shareReplay(1)
+      shareReplay(1),
     );
   }
 
   getExecutions(
     workflowId: string,
-    limit: number = 10,
+    limit = 10,
     pageToken?: string,
     status?: string,
-  ): Observable<{ executions: any[]; next_page_token: string }> {
-    let params: any = { limit };
+  ): Observable<{executions: any[]; next_page_token: string}> {
+    const params: any = {limit};
     if (pageToken) {
       params['page_token'] = pageToken;
     }
     if (status && status !== 'ALL') {
       params['status'] = status;
     }
-    return this.http.get<{ executions: any[]; next_page_token: string }>(
+    return this.http.get<{executions: any[]; next_page_token: string}>(
       `${this.API_BASE_URL}/workflows/${workflowId}/executions`,
-      { params },
+      {params},
     );
   }
 }

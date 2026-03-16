@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-import { Component, Input, Output, EventEmitter, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
-import { Router } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
-import { GalleryItem } from '../../models/gallery-item.model';
-import { MediaItemSelection } from '../image-selector/image-selector.component';
-import { MediaItem } from '../../models/media-item.model';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnDestroy,
+  Inject,
+  PLATFORM_ID,
+} from '@angular/core';
+import {Router} from '@angular/router';
+import {isPlatformBrowser} from '@angular/common';
+import {GalleryItem} from '../../models/gallery-item.model';
+import {MediaItemSelection} from '../image-selector/image-selector.component';
+import {MediaItem} from '../../models/media-item.model';
 
 @Component({
   selector: 'app-gallery-card',
@@ -29,24 +37,27 @@ import { MediaItem } from '../../models/media-item.model';
 export class GalleryCardComponent implements OnDestroy {
   constructor(
     private router: Router,
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
   @Input() item!: GalleryItem;
-  @Input() isSelectionMode: boolean = false;
-  @Input() isSelected: boolean = false;
-  @Input() anyItemSelected: boolean = false;
-  
+  @Input() isSelectionMode = false;
+  @Input() isSelected = false;
+  @Input() anyItemSelected = false;
+
   @Output() mediaItemSelected = new EventEmitter<MediaItemSelection>();
   @Output() mediaSelected = new EventEmitter<GalleryItem>();
   @Output() selectionToggled = new EventEmitter<GalleryItem>();
-  
-  currentImageIndex: number = 0;
+
+  currentImageIndex = 0;
   loadedMedia: Record<number, boolean> = {};
   hoveredVideoId: number | null = null;
   hoveredAudioId: number | null = null;
-  
+
   get displayUrls(): string[] {
-    if (this.item.presignedThumbnailUrls && this.item.presignedThumbnailUrls.length > 0) {
+    if (
+      this.item.presignedThumbnailUrls &&
+      this.item.presignedThumbnailUrls.length > 0
+    ) {
       return this.item.presignedThumbnailUrls;
     }
     return this.item.presignedUrls || [];
@@ -68,7 +79,12 @@ export class GalleryCardComponent implements OnDestroy {
     }
 
     const parts = rawRatio.split(':').map(Number);
-    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1]) || parts[1] === 0) {
+    if (
+      parts.length !== 2 ||
+      isNaN(parts[0]) ||
+      isNaN(parts[1]) ||
+      parts[1] === 0
+    ) {
       return '100%';
     }
     const ratio = parts[0] / parts[1];
@@ -86,8 +102,7 @@ export class GalleryCardComponent implements OnDestroy {
     }
   }
 
-  ngOnDestroy() {
-  }
+  ngOnDestroy() {}
 
   onMouseEnter() {
     if (this.item.mimeType?.startsWith('video/')) {
@@ -117,11 +132,11 @@ export class GalleryCardComponent implements OnDestroy {
     this.currentImageIndex = (this.currentImageIndex - 1 + total) % total;
   }
 
-  onMediaLoad(index: number = 0): void {
+  onMediaLoad(index = 0): void {
     this.loadedMedia[index] = true;
   }
 
-  isMediaLoaded(index: number = 0): boolean {
+  isMediaLoaded(index = 0): boolean {
     return !!this.loadedMedia[index];
   }
 
@@ -134,11 +149,11 @@ export class GalleryCardComponent implements OnDestroy {
   selectMedia(event: Event): void {
     if (this.isSelectionMode || this.anyItemSelected) {
       event.preventDefault();
-      
+
       if (this.isSelectionMode) {
         this.mediaItemSelected.emit({
           mediaItem: this.item as unknown as MediaItem,
-          selectedIndex: this.currentImageIndex
+          selectedIndex: this.currentImageIndex,
         });
       }
     }
@@ -151,12 +166,13 @@ export class GalleryCardComponent implements OnDestroy {
   onCardClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    
-    const route = this.item.itemType === 'source_asset'
-      ? ['/asset-detail', this.item.id]
-      : ['/gallery', this.item.id];
-      
-    this.router.navigate(route, { state: { mediaItem: this.item } });
+
+    const route =
+      this.item.itemType === 'source_asset'
+        ? ['/asset-detail', this.item.id]
+        : ['/gallery', this.item.id];
+
+    void this.router.navigate(route, {state: {mediaItem: this.item}});
   }
 
   getShortPrompt(prompt: string | undefined | null, wordLimit = 20): string {
@@ -164,12 +180,19 @@ export class GalleryCardComponent implements OnDestroy {
     let textToTruncate = prompt;
     try {
       const parsedPrompt = JSON.parse(prompt);
-      if (parsedPrompt && typeof parsedPrompt === 'object' && parsedPrompt.prompt_name) {
+      if (
+        parsedPrompt &&
+        typeof parsedPrompt === 'object' &&
+        parsedPrompt.prompt_name
+      ) {
         textToTruncate = parsedPrompt.prompt_name;
       }
-    } catch (e) {}
+    } catch (e) {
+      // Ignore JSON parsing errors and fall back to raw prompt
+    }
     const words = textToTruncate.split(/\s+/);
-    if (words.length > wordLimit) return words.slice(0, wordLimit).join(' ') + '...';
+    if (words.length > wordLimit)
+      return words.slice(0, wordLimit).join(' ') + '...';
     return textToTruncate;
   }
 }

@@ -25,7 +25,10 @@ import {firstValueFrom} from 'rxjs';
 import {GalleryService} from '../../gallery/gallery.service';
 import {GalleryItem} from '../../common/models/gallery-item.model';
 import {GallerySearchDto} from '../../common/models/search.model';
-import {handleErrorSnackbar, handleSuccessSnackbar} from '../../utils/handleMessageSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
 import {MatDialog} from '@angular/material/dialog';
 import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
 import {MODEL_CONFIGS} from '../../common/config/model-config';
@@ -48,7 +51,7 @@ export class MediaGalleryManagementComponent implements OnInit {
   ];
   dataSource = new MatTableDataSource<GalleryItem>();
   isLoading = true;
-  errorLoading: string|null = null;
+  errorLoading: string | null = null;
 
   // Filters
   filterEmail = '';
@@ -64,7 +67,7 @@ export class MediaGalleryManagementComponent implements OnInit {
     viewValue: config.viewValue.replace('\n', ' '),
   }));
 
-  modelOptions: { value: string; label: string }[] = [];
+  modelOptions: {value: string; label: string}[] = [];
 
   // Pagination
   totalItems = 0;
@@ -83,15 +86,14 @@ export class MediaGalleryManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.modelOptions = [
-      { value: '', label: 'All Models' },
-      ...this.generationModels.map(m => ({ value: m.value, label: m.viewValue }))
+      {value: '', label: 'All Models'},
+      ...this.generationModels.map(m => ({value: m.value, label: m.viewValue})),
     ];
 
     if (isPlatformBrowser(this.platformId)) {
-      this.fetchPage(0);
+      void this.fetchPage(0);
     }
   }
-
 
   async fetchPage(targetPageIndex: number) {
     this.isLoading = true;
@@ -104,28 +106,28 @@ export class MediaGalleryManagementComponent implements OnInit {
     };
 
     if (this.filterEmail.trim()) {
-       filters.userEmail = this.filterEmail.trim();
+      filters.userEmail = this.filterEmail.trim();
     }
     if (this.filterStatus) {
-       filters.status = this.filterStatus;
+      filters.status = this.filterStatus;
     }
     if (this.filterType) {
-       filters.itemType = this.filterType;
+      filters.itemType = this.filterType;
     }
     if (this.filterModel) {
-       filters.model = this.filterModel;
+      filters.model = this.filterModel;
     }
     if (this.filterStartDate) {
-       filters.startDate = this.filterStartDate.toISOString();
+      filters.startDate = this.filterStartDate.toISOString();
     }
     if (this.filterEndDate) {
-       filters.endDate = this.filterEndDate.toISOString();
+      filters.endDate = this.filterEndDate.toISOString();
     }
 
     try {
       const response = await firstValueFrom(
         this.galleryService.fetchImages(filters),
-        { defaultValue: { data: [], count: 0 } as any }
+        {defaultValue: {data: [], count: 0} as any},
       );
       this.dataSource.data = response.data;
       this.totalItems = response.count;
@@ -144,7 +146,7 @@ export class MediaGalleryManagementComponent implements OnInit {
       this.resetPaginationAndFetch();
       return;
     }
-    this.fetchPage(event.pageIndex);
+    void this.fetchPage(event.pageIndex);
   }
 
   onIncludeDeletedChange(checked: boolean) {
@@ -157,7 +159,7 @@ export class MediaGalleryManagementComponent implements OnInit {
     if (this.paginator) {
       this.paginator.pageIndex = 0;
     }
-    this.fetchPage(0);
+    void this.fetchPage(0);
   }
 
   applyFilters(): void {
@@ -174,9 +176,11 @@ export class MediaGalleryManagementComponent implements OnInit {
   async restoreItem(item: GalleryItem) {
     this.isLoading = true;
     try {
-      await firstValueFrom(this.galleryService.restoreMediaItem(item.id, item.itemType));
+      await firstValueFrom(
+        this.galleryService.restoreMediaItem(item.id, item.itemType),
+      );
       handleSuccessSnackbar(this.snackBar, 'Item restored successfully!');
-      this.fetchPage(this.currentPageIndex);
+      await this.fetchPage(this.currentPageIndex);
     } catch (err) {
       console.error(`Error restoring item ${item.id}:`, err);
       handleErrorSnackbar(this.snackBar, err, 'Restore item');
@@ -194,15 +198,15 @@ export class MediaGalleryManagementComponent implements OnInit {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result) {
         this.isLoading = true;
         try {
           await firstValueFrom(
             this.galleryService.bulkDelete(
-              [{ id: item.id, type: item.itemType }],
-              item.workspaceId || 0
-            )
+              [{id: item.id, type: item.itemType}],
+              item.workspaceId || 0,
+            ),
           );
           handleSuccessSnackbar(this.snackBar, 'Item deleted successfully!');
           this.resetPaginationAndFetch();

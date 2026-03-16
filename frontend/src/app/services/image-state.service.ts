@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
 
 export interface ImageState {
   prompt: string;
@@ -35,7 +35,7 @@ export interface ImageState {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ImageStateService {
   private initialState: ImageState = {
@@ -52,14 +52,14 @@ export class ImageStateService {
     numberOfMedia: 4,
     composition: null,
     useBrandGuidelines: false,
-    mode: 'Text to Image'
+    mode: 'Text to Image',
   };
 
   private state = new BehaviorSubject<ImageState>(this.initialState);
   state$ = this.state.asObservable();
 
   updateState(newState: Partial<ImageState>) {
-    this.state.next({ ...this.state.value, ...newState });
+    this.state.next({...this.state.value, ...newState});
   }
 
   getState(): ImageState {

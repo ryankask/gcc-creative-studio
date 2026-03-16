@@ -133,11 +133,23 @@ To ensure your code passes styling, linting, and license header checks automatic
 2.  **How it Works**:
     Whenever you run `git commit`, the hook will automatically run inside an isolated Docker container in the background loaded with all linter binaries (`addlicense`, `gts`, `pylint`, `black`, `ruff`). It blocks the commit if any checks fail, enforcing consistency.
 
-3.  **Manual Verification**:
-    To run all checks manually without committing:
+3.  **One-Time Repository Cleanup**:
+    To automatically format all backend files (`black`), frontend files (`gts fix`), and add missing license headers (`addlicense`) across the **entire repository** at once (useful for initial cleanup of existing files):
     ```bash
     docker compose run --rm pre-commit run --all-files
     ```
+    *💡 Tip: Inspect the resulting diff and commit it separately to keep your future feature commits focused and small.*
+
+
+### ⚙️ Continuous Integration (CI) with GitHub Actions
+
+To guarantee that only clean, tested code is merged, we run automated validation on every Pull Request or push using **GitHub Actions**:
+
+*   **Frontend Checks (`frontend-quality.yml`)**: Triggered on `frontend/**` changes. Spawns Node, installs using clean slate (`npm ci`), and verifies styling with `npx gts lint`.
+*   **Backend Checks (`backend-tests.yml`)**: Triggered on `backend/**` changes. Runs code style verification (`black --check`), static rule analysis (`pylint`), and the backend testing suite (`pytest`).
+
+If any check fails, a failure status is reported inside the PR discussion. When combined with GitHub **Branch Protection Rules** (configured in repo settings), this acts as a gatekeeper blocking unformatted or failing code from entering the default branches.
+
 
 
 ### Frontend (TypeScript with `gts`)

@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
-import { Component, Input, Output, EventEmitter, forwardRef, ViewEncapsulation } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  forwardRef,
+  ViewEncapsulation,
+} from '@angular/core';
+import {ControlValueAccessor, NG_VALUE_ACCESSOR} from '@angular/forms';
 
 @Component({
   selector: 'studio-slider',
@@ -25,10 +32,10 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => StudioSliderComponent),
-      multi: true
-    }
+      multi: true,
+    },
   ],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
 })
 export class StudioSliderComponent implements ControlValueAccessor {
   @Input() min = 0;
@@ -37,7 +44,7 @@ export class StudioSliderComponent implements ControlValueAccessor {
   @Input() label?: string;
   @Input() valueText?: string;
   @Input() disabled = false;
-  
+
   @Input() value = 0;
   @Output() valueChange = new EventEmitter<number>();
 
@@ -63,9 +70,9 @@ export class StudioSliderComponent implements ControlValueAccessor {
   }
 
   onModelChange(val: number) {
-     this.value = val;
-     this.valueChange.emit(this.value);
-     this.onChange(this.value);
-     this.onTouched();
+    this.value = val;
+    this.valueChange.emit(this.value);
+    this.onChange(this.value);
+    this.onTouched();
   }
 }

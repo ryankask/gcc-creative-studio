@@ -27,7 +27,7 @@ import {Observable} from 'rxjs';
 import {UserService} from '../common/services/user.service';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {AuthService} from '../common/services/auth.service';
-import { handleErrorSnackbar } from '../utils/handleMessageSnackbar';
+import {handleErrorSnackbar} from '../utils/handleMessageSnackbar';
 
 const LOGIN_ROUTE = '/login';
 
@@ -64,7 +64,7 @@ export class AdminAuthGuard implements CanActivate {
 
     // --- BROWSER SIDE ---
     if (!this.authService.isLoggedIn()) {
-      this.router.navigate([LOGIN_ROUTE]);
+      void this.router.navigate([LOGIN_ROUTE]);
       return false;
     }
 
@@ -77,10 +77,16 @@ export class AdminAuthGuard implements CanActivate {
       // User is not authenticated or not an allowed admin
       console.warn('Access denied to admin area.');
 
-      handleErrorSnackbar(this._snackBar, { message: `Access Denied: Your email (${userEmail}) is not authorized or login session expired.` }, 'Access Denied');
+      handleErrorSnackbar(
+        this._snackBar,
+        {
+          message: `Access Denied: Your email (${userEmail}) is not authorized or login session expired.`,
+        },
+        'Access Denied',
+      );
 
       // Use async logout and navigate *after* logout completes
-      this.authService.logout().then(() => {
+      void this.authService.logout().then(() => {
         console.log('Forced logout due to DEV email restriction complete.');
         // Navigation is handled by the logout method itself
       });

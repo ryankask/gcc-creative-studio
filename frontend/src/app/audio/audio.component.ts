@@ -14,20 +14,27 @@
  * limitations under the License.
  */
 
-import { Component, ElementRef, Inject, ViewChild } from '@angular/core';
-import { AudioService, CreateAudioDto, GenerationModelEnum } from '../services/audio/audio.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSelectChange } from '@angular/material/select';
-import { finalize } from 'rxjs';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { MediaItem } from '../common/models/media-item.model';
-import { AddVoiceDialogComponent } from '../components/add-voice-dialog/add-voice-dialog.component';
-import { MatIconRegistry } from '@angular/material/icon';
+import {Component, ElementRef, Inject, ViewChild} from '@angular/core';
+import {
+  AudioService,
+  CreateAudioDto,
+  GenerationModelEnum,
+} from '../services/audio/audio.service';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatDialog} from '@angular/material/dialog';
+import {MatSelectChange} from '@angular/material/select';
+import {finalize} from 'rxjs';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
+import {MediaItem} from '../common/models/media-item.model';
+import {AddVoiceDialogComponent} from '../components/add-voice-dialog/add-voice-dialog.component';
+import {MatIconRegistry} from '@angular/material/icon';
 import {LanguageEnum, VoiceEnum} from './audio.constants';
-import { GalleryService } from '../gallery/gallery.service';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
+import {GalleryService} from '../gallery/gallery.service';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../utils/handleMessageSnackbar';
 
 // UI Helper type
 type UiModelType = 'lyria' | 'chirp' | 'gemini-tts';
@@ -212,7 +219,11 @@ export class AudioComponent {
 
     const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!activeWorkspaceId) {
-      handleErrorSnackbar(this.snackBar, { message: 'Please select a workspace first.' }, 'Workspace');
+      handleErrorSnackbar(
+        this.snackBar,
+        {message: 'Please select a workspace first.'},
+        'Workspace',
+      );
       return;
     }
 
@@ -270,7 +281,7 @@ export class AudioComponent {
   togglePlay() {
     const audio = this.audioPlayerRef.nativeElement;
     if (audio.paused) {
-      audio.play();
+      void audio.play();
       this.isPlaying = true;
     } else {
       audio.pause();
@@ -318,20 +329,21 @@ export class AudioComponent {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (workspaceId === null) return;
 
-    const confirmDelete = confirm('Are you sure you want to delete this generation result?');
+    const confirmDelete = confirm(
+      'Are you sure you want to delete this generation result?',
+    );
     if (!confirmDelete) return;
 
-    this.galleryService.bulkDelete(
-      [{ id: this.mediaItem.id, type: 'media_item' }],
-      workspaceId
-    ).subscribe({
-      next: () => {
-        handleSuccessSnackbar(this.snackBar, 'Audio deleted successfully');
-        this.mediaItem = null;
-      },
-      error: (err) => {
-        handleErrorSnackbar(this.snackBar, err, 'Delete result');
-      }
-    });
+    this.galleryService
+      .bulkDelete([{id: this.mediaItem.id, type: 'media_item'}], workspaceId)
+      .subscribe({
+        next: () => {
+          handleSuccessSnackbar(this.snackBar, 'Audio deleted successfully');
+          this.mediaItem = null;
+        },
+        error: err => {
+          handleErrorSnackbar(this.snackBar, err, 'Delete result');
+        },
+      });
   }
 }

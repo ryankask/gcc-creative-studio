@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Component, Inject, OnInit } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { Workspace } from '../../models/workspace.model';
-import { WorkspaceService } from '../../../services/workspace/workspace.service';
-import { WorkspaceStateService } from '../../../services/workspace/workspace-state.service';
+import {Component, Inject, OnInit} from '@angular/core';
+import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
+import {Workspace} from '../../models/workspace.model';
+import {WorkspaceService} from '../../../services/workspace/workspace.service';
+import {WorkspaceStateService} from '../../../services/workspace/workspace-state.service';
 
 export interface CopyToWorkspaceDialogData {
   itemCount: number;
@@ -27,20 +27,20 @@ export interface CopyToWorkspaceDialogData {
 @Component({
   selector: 'app-copy-to-workspace-dialog',
   templateUrl: './copy-to-workspace-dialog.component.html',
-  styleUrls: ['./copy-to-workspace-dialog.component.scss']
+  styleUrls: ['./copy-to-workspace-dialog.component.scss'],
 })
 export class CopyToWorkspaceDialogComponent implements OnInit {
   workspaces: Workspace[] = [];
-  searchQuery: string = '';
+  searchQuery = '';
   selectedWorkspaceId: number | null = null;
-  isCopying: boolean = false;
+  isCopying = false;
   currentWorkspaceId: number | null = null;
 
   constructor(
     public dialogRef: MatDialogRef<CopyToWorkspaceDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: CopyToWorkspaceDialogData,
     private workspaceService: WorkspaceService,
-    private workspaceStateService: WorkspaceStateService
+    private workspaceStateService: WorkspaceStateService,
   ) {
     this.currentWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
   }
@@ -51,13 +51,15 @@ export class CopyToWorkspaceDialogComponent implements OnInit {
 
   loadWorkspaces(): void {
     this.workspaceService.getWorkspaces().subscribe({
-      next: (workspaces) => {
+      next: workspaces => {
         // Filter out the current workspace (no point in copying to itself)
-        this.workspaces = workspaces.filter(w => w.id !== this.currentWorkspaceId);
+        this.workspaces = workspaces.filter(
+          w => w.id !== this.currentWorkspaceId,
+        );
       },
-      error: (err) => {
+      error: err => {
         console.error('Failed to load workspaces', err);
-      }
+      },
     });
   }
 
@@ -66,9 +68,7 @@ export class CopyToWorkspaceDialogComponent implements OnInit {
       return this.workspaces;
     }
     const query = this.searchQuery.toLowerCase();
-    return this.workspaces.filter(w => 
-      w.name.toLowerCase().includes(query)
-    );
+    return this.workspaces.filter(w => w.name.toLowerCase().includes(query));
   }
 
   selectWorkspace(workspace: Workspace): void {

@@ -51,6 +51,16 @@ jobs:
         cd backend
         uv sync --all-extras
 
+    - name: Run Black Formatter Check
+      run: |
+        cd backend
+        uv run black --check src tests
+
+    - name: Run Pylint
+      run: |
+        cd backend
+        uvx pylint --rcfile=pylintrc src tests
+
     - name: Run tests
       run: |
         cd backend

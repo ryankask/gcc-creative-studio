@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { HttpClient } from '@angular/common/http';
+import {HttpClient} from '@angular/common/http';
 import {
   AfterViewInit,
   Component,
@@ -26,37 +26,47 @@ import {
   PLATFORM_ID,
   ViewChild,
 } from '@angular/core';
-import { MatChipInputEvent } from '@angular/material/chips';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconRegistry } from '@angular/material/icon';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { NavigationExtras, Router } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
-import { finalize, Observable } from 'rxjs';
-import { AssetTypeEnum } from '../admin/source-assets-management/source-asset.model';
-import { ImageCropperDialogComponent } from '../common/components/image-cropper-dialog/image-cropper-dialog.component';
+import {MatChipInputEvent} from '@angular/material/chips';
+import {MatDialog} from '@angular/material/dialog';
+import {MatIconRegistry} from '@angular/material/icon';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {NavigationExtras, Router} from '@angular/router';
+import {isPlatformBrowser} from '@angular/common';
+import {finalize, Observable} from 'rxjs';
+import {AssetTypeEnum} from '../admin/source-assets-management/source-asset.model';
+import {ImageCropperDialogComponent} from '../common/components/image-cropper-dialog/image-cropper-dialog.component';
 import {
   ImageSelectorComponent,
   MediaItemSelection,
 } from '../common/components/image-selector/image-selector.component';
-import { GenerationModelConfig, MODEL_CONFIGS } from '../common/config/model-config';
-import { MediaItem } from '../common/models/media-item.model';
+import {
+  GenerationModelConfig,
+  MODEL_CONFIGS,
+} from '../common/config/model-config';
+import {MediaItem} from '../common/models/media-item.model';
 import {
   ImagenRequest,
   ReferenceImage,
   SourceMediaItemLink,
 } from '../common/models/search.model';
-import { SourceAssetResponseDto, SourceAssetService } from '../common/services/source-asset.service';
+import {
+  SourceAssetResponseDto,
+  SourceAssetService,
+} from '../common/services/source-asset.service';
 import {
   EnrichedSourceAsset,
   GenerationParameters,
 } from '../fun-templates/media-template.model';
-import { ImageStateService } from '../services/image-state.service';
-import { SearchService } from '../services/search/search.service';
-import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { GalleryService } from '../gallery/gallery.service';
-import { handleErrorSnackbar, handleInfoSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
+import {ImageStateService} from '../services/image-state.service';
+import {SearchService} from '../services/search/search.service';
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
+import {GalleryService} from '../gallery/gallery.service';
+import {
+  handleErrorSnackbar,
+  handleInfoSnackbar,
+  handleSuccessSnackbar,
+} from '../utils/handleMessageSnackbar';
 
 @Component({
   selector: 'app-home',
@@ -102,8 +112,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   };
 
   modes = [
-    { value: 'Text to Image', icon: 'description', label: 'Text to Image' },
-    { value: 'Ingredients to Image', icon: 'layers', label: 'Ingredients to Image' }
+    {value: 'Text to Image', icon: 'description', label: 'Text to Image'},
+    {
+      value: 'Ingredients to Image',
+      icon: 'layers',
+      label: 'Ingredients to Image',
+    },
   ];
   currentMode = 'Text to Image';
 
@@ -111,7 +125,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   negativePhrases: string[] = [];
 
   // --- Dropdown Options ---
-  generationModels: GenerationModelConfig[] = MODEL_CONFIGS.filter(m => m.type === 'IMAGE');
+  generationModels: GenerationModelConfig[] = MODEL_CONFIGS.filter(
+    m => m.type === 'IMAGE',
+  );
   selectedGenerationModelObject = this.generationModels[0];
   selectedGenerationModel = this.generationModels[0].viewValue;
   aspectRatioOptions: {
@@ -120,91 +136,91 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     disabled: boolean;
     icon: string;
   }[] = [
-      {
-        value: '1:1',
-        viewValue: '1:1 \n Square',
-        disabled: false,
-        icon: 'crop_square',
-      },
-      {
-        value: '16:9',
-        viewValue: '16:9 \n Horizontal',
-        disabled: false,
-        icon: 'crop_16_9',
-      },
-      {
-        value: '9:16',
-        viewValue: '9:16 \n Vertical',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '3:4',
-        viewValue: '3:4 \n Portrait',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '4:3',
-        viewValue: '4:3 \n Pin',
-        disabled: false,
-        icon: 'crop_landscape',
-      },
-      {
-        value: '2:3',
-        viewValue: '2:3 \n Portrait',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '3:2',
-        viewValue: '3:2 \n Landscape',
-        disabled: false,
-        icon: 'crop_landscape',
-      },
-      {
-        value: '4:5',
-        viewValue: '4:5 \n Portrait',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '5:4',
-        viewValue: '5:4 \n Landscape',
-        disabled: false,
-        icon: 'crop_landscape',
-      },
-      {
-        value: '21:9',
-        viewValue: '21:9 \n Wide',
-        disabled: false,
-        icon: 'crop_16_9',
-      },
-      {
-        value: '1:4',
-        viewValue: '1:4 \n Skyscraper',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '4:1',
-        viewValue: '4:1 \n Banner',
-        disabled: false,
-        icon: 'crop_16_9',
-      },
-      {
-        value: '1:8',
-        viewValue: '1:8 \n Tall Ribbon',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '8:1',
-        viewValue: '8:1 \n Wide Ribbon',
-        disabled: false,
-        icon: 'crop_16_9',
-      },
-    ];
+    {
+      value: '1:1',
+      viewValue: '1:1 \n Square',
+      disabled: false,
+      icon: 'crop_square',
+    },
+    {
+      value: '16:9',
+      viewValue: '16:9 \n Horizontal',
+      disabled: false,
+      icon: 'crop_16_9',
+    },
+    {
+      value: '9:16',
+      viewValue: '9:16 \n Vertical',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '3:4',
+      viewValue: '3:4 \n Portrait',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '4:3',
+      viewValue: '4:3 \n Pin',
+      disabled: false,
+      icon: 'crop_landscape',
+    },
+    {
+      value: '2:3',
+      viewValue: '2:3 \n Portrait',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '3:2',
+      viewValue: '3:2 \n Landscape',
+      disabled: false,
+      icon: 'crop_landscape',
+    },
+    {
+      value: '4:5',
+      viewValue: '4:5 \n Portrait',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '5:4',
+      viewValue: '5:4 \n Landscape',
+      disabled: false,
+      icon: 'crop_landscape',
+    },
+    {
+      value: '21:9',
+      viewValue: '21:9 \n Wide',
+      disabled: false,
+      icon: 'crop_16_9',
+    },
+    {
+      value: '1:4',
+      viewValue: '1:4 \n Skyscraper',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '4:1',
+      viewValue: '4:1 \n Banner',
+      disabled: false,
+      icon: 'crop_16_9',
+    },
+    {
+      value: '1:8',
+      viewValue: '1:8 \n Tall Ribbon',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '8:1',
+      viewValue: '8:1 \n Wide Ribbon',
+      disabled: false,
+      icon: 'crop_16_9',
+    },
+  ];
   selectedAspectRatio = this.aspectRatioOptions[0].viewValue;
   imageStyles = [
     'Cinematic',
@@ -254,8 +270,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     'Wide angle',
   ];
   watermarkOptions = [
-    { value: true, viewValue: 'Yes' },
-    { value: false, viewValue: 'No' },
+    {value: true, viewValue: 'Yes'},
+    {value: false, viewValue: 'No'},
   ];
   selectedWatermark = this.watermarkOptions.find(
     o => o.value === this.searchRequest.addWatermark,
@@ -388,7 +404,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.searchRequest.lighting = state.lighting;
       this.searchRequest.addWatermark = state.watermark;
       this.searchRequest.googleSearch = state.googleSearch;
-      this.searchRequest.resolution = state.resolution as '4K' | '1K' | '2K' | undefined;
+      this.searchRequest.resolution = state.resolution as
+        | '4K'
+        | '1K'
+        | '2K'
+        | undefined;
       this.searchRequest.style = state.style;
       this.searchRequest.colorAndTone = state.colorAndTone;
       this.searchRequest.numberOfMedia = state.numberOfMedia;
@@ -397,20 +417,20 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.currentMode = state.mode;
 
       // Update local variables to reflect state
-      this.selectedGenerationModel = this.generationModels.find(
-        m => m.value === state.model
-      )?.viewValue || this.generationModels[0].viewValue;
-      this.selectedGenerationModelObject = this.generationModels.find(
-        m => m.value === state.model
-      ) || this.generationModels[0];
+      this.selectedGenerationModel =
+        this.generationModels.find(m => m.value === state.model)?.viewValue ||
+        this.generationModels[0].viewValue;
+      this.selectedGenerationModelObject =
+        this.generationModels.find(m => m.value === state.model) ||
+        this.generationModels[0];
 
-      this.selectedAspectRatio = this.aspectRatioOptions.find(
-        r => r.value === state.aspectRatio
-      )?.viewValue || '1:1 \n Square';
+      this.selectedAspectRatio =
+        this.aspectRatioOptions.find(r => r.value === state.aspectRatio)
+          ?.viewValue || '1:1 \n Square';
 
-      this.selectedWatermark = this.watermarkOptions.find(
-        o => o.value === state.watermark
-      )?.viewValue || 'No';
+      this.selectedWatermark =
+        this.watermarkOptions.find(o => o.value === state.watermark)
+          ?.viewValue || 'No';
       this.service.imagePrompt = state.prompt;
     });
   }
@@ -430,7 +450,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       numberOfMedia: this.searchRequest.numberOfMedia,
       composition: this.searchRequest.composition || null,
       useBrandGuidelines: this.searchRequest.useBrandGuidelines,
-      mode: this.currentMode
+      mode: this.currentMode,
     });
   }
 
@@ -440,10 +460,15 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.searchRequest.negativePrompt = state.negativePrompt;
     this.searchRequest.aspectRatio = state.aspectRatio;
     this.searchRequest.generationModel = state.model;
-    this.searchRequest.lighting = state.lighting === 'none' ? null : state.lighting;
+    this.searchRequest.lighting =
+      state.lighting === 'none' ? null : state.lighting;
     this.searchRequest.addWatermark = state.watermark;
     this.searchRequest.googleSearch = state.googleSearch;
-    this.searchRequest.resolution = state.resolution as '4K' | '1K' | '2K' | undefined;
+    this.searchRequest.resolution = state.resolution as
+      | '4K'
+      | '1K'
+      | '2K'
+      | undefined;
     this.searchRequest.style = state.style;
     this.searchRequest.colorAndTone = state.colorAndTone;
     this.searchRequest.numberOfMedia = state.numberOfMedia;
@@ -454,16 +479,22 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       ? state.negativePrompt.split(', ').filter(Boolean)
       : [];
     // Update selected options for UI
-    const modelOption = this.generationModels.find(m => m.value === state.model);
+    const modelOption = this.generationModels.find(
+      m => m.value === state.model,
+    );
     if (modelOption) {
       this.selectedGenerationModel = modelOption.viewValue;
       this.selectedGenerationModelObject = modelOption;
     }
-    const ratioOption = this.aspectRatioOptions.find(r => r.value === state.aspectRatio);
+    const ratioOption = this.aspectRatioOptions.find(
+      r => r.value === state.aspectRatio,
+    );
     if (ratioOption) {
       this.selectedAspectRatio = ratioOption.viewValue;
     }
-    const watermarkOption = this.watermarkOptions.find(o => o.value === state.watermark);
+    const watermarkOption = this.watermarkOptions.find(
+      o => o.value === state.watermark,
+    );
     if (watermarkOption) {
       this.selectedWatermark = watermarkOption.viewValue;
     }
@@ -484,7 +515,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     // If current aspect ratio is not supported, switch to the first supported one (usually 1:1)
-    if (!capabilities.supportedAspectRatios.includes(this.searchRequest.aspectRatio)) {
+    if (
+      !capabilities.supportedAspectRatios.includes(
+        this.searchRequest.aspectRatio,
+      )
+    ) {
       const firstSupported = this.aspectRatioOptions.find(r => !r.disabled);
       if (firstSupported) {
         this.selectAspectRatio(firstSupported);
@@ -581,7 +616,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Enforce reference image limits
     if (this.referenceImages.length > capabilities.maxReferenceImages) {
-      this.referenceImages = this.referenceImages.slice(0, capabilities.maxReferenceImages);
+      this.referenceImages = this.referenceImages.slice(
+        0,
+        capabilities.maxReferenceImages,
+      );
     }
 
     // Reset Google Search if not supported
@@ -592,7 +630,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.saveState();
   }
 
-  selectAspectRatio(ratio: { value: string; viewValue: string }): void {
+  selectAspectRatio(ratio: {value: string; viewValue: string}): void {
     this.searchRequest.aspectRatio = ratio.value;
     this.selectedAspectRatio = ratio.viewValue;
     this.saveState();
@@ -609,7 +647,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selectNumberOfImages(count);
   }
 
-  onClearReferenceImage(data: { index: number, event: Event }) {
+  onClearReferenceImage(data: {index: number; event: Event}) {
     this.clearImage(data.index, data.event as MouseEvent);
   }
 
@@ -679,7 +717,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.saveState();
   }
 
-  selectWatermark(option: { value: boolean; viewValue: string }): void {
+  selectWatermark(option: {value: boolean; viewValue: string}): void {
     this.searchRequest.addWatermark = option.value;
     this.selectedWatermark = option.viewValue;
     this.saveState();
@@ -704,7 +742,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   searchTerm() {
     if (!this.searchRequest.prompt) {
-      handleInfoSnackbar(this._snackBar, 'Please enter a prompt to generate an image.');
+      handleInfoSnackbar(
+        this._snackBar,
+        'Please enter a prompt to generate an image.',
+      );
       return;
     }
 
@@ -721,7 +762,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       );
       if (imagen3Model) {
         this.selectModel(imagen3Model);
-        handleSuccessSnackbar(this._snackBar, "Imagen 4 doesn't support images as input, so we've switched to Imagen 3 for you!");
+        handleSuccessSnackbar(
+          this._snackBar,
+          "Imagen 4 doesn't support images as input, so we've switched to Imagen 3 for you!",
+        );
         return;
       }
     }
@@ -739,7 +783,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!activeWorkspaceId) {
-      handleErrorSnackbar(this._snackBar, { message: 'Please select a workspace first.' }, 'Workspace');
+      handleErrorSnackbar(
+        this._snackBar,
+        {message: 'Please select a workspace first.'},
+        'Workspace',
+      );
       return;
     }
 
@@ -748,7 +796,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       negativePrompt: this.negativePhrases.join(', '),
       sourceMediaItems:
         this.currentMode === 'Ingredients to Image' &&
-          validSourceMediaItems.length
+        validSourceMediaItems.length
           ? validSourceMediaItems
           : undefined,
       sourceAssetIds:
@@ -788,7 +836,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       })
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
-        next: (response: { prompt: string }) => {
+        next: (response: {prompt: string}) => {
           this.searchRequest.prompt = response.prompt;
           this.saveState();
         },
@@ -802,10 +850,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading = true;
     this.searchRequest.prompt = '';
     this.service
-      .getRandomPrompt({ target_type: 'image' })
+      .getRandomPrompt({target_type: 'image'})
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
-        next: (response: { prompt: string }) => {
+        next: (response: {prompt: string}) => {
           this.searchRequest.prompt = response.prompt;
           this.saveState();
         },
@@ -846,14 +894,22 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const mediaItemId = this.imagenDocuments.id;
 
     // Select Nano Banana 2 (gemini-3.1-flash-image-preview)
-    const nanoBanana2 = this.generationModels.find(m => m.value === 'gemini-3.1-flash-image-preview');
+    const nanoBanana2 = this.generationModels.find(
+      m => m.value === 'gemini-3.1-flash-image-preview',
+    );
     if (nanoBanana2) {
       this.selectModel(nanoBanana2);
     }
 
     // Check if we reached the limit
-    if (this.referenceImages.length >= this.selectedGenerationModelObject.capabilities.maxReferenceImages) {
-      handleInfoSnackbar(this._snackBar, `You can only add up to ${this.selectedGenerationModelObject.capabilities.maxReferenceImages} reference images for this model.`);
+    if (
+      this.referenceImages.length >=
+      this.selectedGenerationModelObject.capabilities.maxReferenceImages
+    ) {
+      handleInfoSnackbar(
+        this._snackBar,
+        `You can only add up to ${this.selectedGenerationModelObject.capabilities.maxReferenceImages} reference images for this model.`,
+      );
       return;
     }
 
@@ -880,8 +936,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.saveState();
     this.scrollToBottom();
   }
-
-
 
   applyRemixState(state: any) {
     this.searchRequest.prompt = state.prompt;
@@ -941,7 +995,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.selectModel(
       this.generationModels.find(m => m.value === state.generationModel) ||
-      this.generationModels[0],
+        this.generationModels[0],
     );
     this.selectedAspectRatio =
       this.aspectRatioOptions.find(r => r.value === state.aspectRatio)
@@ -971,12 +1025,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   };
 
   openImageSelector(index?: number) {
-    const maxRefs = this.selectedGenerationModelObject?.capabilities.maxReferenceImages ?? 10;
+    const maxRefs =
+      this.selectedGenerationModelObject?.capabilities.maxReferenceImages ?? 10;
     const remainingSlots = maxRefs - this.referenceImages.length;
 
     // If we are adding a new image (no index) and we are full, prevent opening
     if (index === undefined && remainingSlots <= 0) {
-      handleInfoSnackbar(this._snackBar, `You can only add up to ${maxRefs} reference images for this model.`);
+      handleInfoSnackbar(
+        this._snackBar,
+        `You can only add up to ${maxRefs} reference images for this model.`,
+      );
       return;
     }
 
@@ -987,21 +1045,19 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       data: {
         mimeType: 'image/*',
         multiSelect: true,
-        maxSelection: index !== undefined ? 1 : remainingSlots
+        maxSelection: index !== undefined ? 1 : remainingSlots,
       },
       panelClass: 'image-selector-dialog',
     });
 
-    dialogRef
-      .afterClosed()
-      .subscribe((result: any) => {
-        if (!result) return;
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (!result) return;
 
-        const results = Array.isArray(result) ? result : [result];
-        results.forEach((res, i) => {
-          this.processInput(res, index !== undefined ? index + i : undefined);
-        });
+      const results = Array.isArray(result) ? result : [result];
+      results.forEach((res, i) => {
+        this.processInput(res, index !== undefined ? index + i : undefined);
       });
+    });
   }
 
   openCropperDialog(file: File, index?: number) {
@@ -1032,7 +1088,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (isGalleryImage) {
       const selection = result as MediaItemSelection;
       previewUrl =
-        selection.mediaItem.presignedUrls?.[selection.selectedIndex || 0] || null;
+        selection.mediaItem.presignedUrls?.[selection.selectedIndex || 0] ||
+        null;
       sourceMediaItem = {
         mediaItemId: selection.mediaItem.id,
         mediaIndex: selection.selectedIndex,
@@ -1091,10 +1148,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         const file = files[i];
         if (file.type.startsWith('image/')) {
           this.sourceAssetService
-            .uploadAsset(file, { assetType: AssetTypeEnum.GENERIC_IMAGE })
+            .uploadAsset(file, {assetType: AssetTypeEnum.GENERIC_IMAGE})
             .subscribe((result: SourceAssetResponseDto) => {
               if (result && result.id) {
-                this.processInput(result, index !== undefined ? index + i : undefined);
+                this.processInput(
+                  result,
+                  index !== undefined ? index + i : undefined,
+                );
               }
             });
         }
@@ -1109,15 +1169,13 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-
-
   scrollToBottom() {
     setTimeout(() => {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
     }, 100);
   }
 
-  generateVideoWithImage(event: { role: 'start' | 'end'; index: number }) {
+  generateVideoWithImage(event: {role: 'start' | 'end'; index: number}) {
     if (!this.imagenDocuments) {
       return;
     }
@@ -1142,9 +1200,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     };
 
     const navigationExtras: NavigationExtras = {
-      state: { remixState },
+      state: {remixState},
     };
-    this.router.navigate(['/video'], navigationExtras);
+    void this.router.navigate(['/video'], navigationExtras);
   }
 
   sendToVto(index: number) {
@@ -1162,16 +1220,15 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         },
       },
     };
-    this.router.navigate(['/vto'], navigationExtras);
+    void this.router.navigate(['/vto'], navigationExtras);
   }
-
 
   private applySourceAssets(sourceAssets: EnrichedSourceAsset[]) {
     this.referenceImages = sourceAssets.map(asset => ({
       previewUrl: asset.presignedUrl,
       sourceAssetId: asset.assetId,
       file: undefined,
-      sourceMediaItem: undefined
+      sourceMediaItem: undefined,
     }));
 
     if (this.referenceImages.length > 0) {
@@ -1186,22 +1243,29 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (workspaceId === null) return;
 
-    const confirmDelete = confirm('Are you sure you want to delete this generation result?');
+    const confirmDelete = confirm(
+      'Are you sure you want to delete this generation result?',
+    );
     if (!confirmDelete) return;
 
-    this.galleryService.bulkDelete(
-      [{ id: this.imagenDocuments.id, type: 'media_item' }],
-      workspaceId
-    ).subscribe({
-      next: () => {
-        handleSuccessSnackbar(this._snackBar, 'Generation results deleted successfully');
-        this.imagenDocuments = null;
-        this.showDefaultDocuments = true;
-        this.service.clearActiveImageJob();
-      },
-      error: (err) => {
-        handleErrorSnackbar(this._snackBar, err, 'Delete results');
-      }
-    });
+    this.galleryService
+      .bulkDelete(
+        [{id: this.imagenDocuments.id, type: 'media_item'}],
+        workspaceId,
+      )
+      .subscribe({
+        next: () => {
+          handleSuccessSnackbar(
+            this._snackBar,
+            'Generation results deleted successfully',
+          );
+          this.imagenDocuments = null;
+          this.showDefaultDocuments = true;
+          this.service.clearActiveImageJob();
+        },
+        error: err => {
+          handleErrorSnackbar(this._snackBar, err, 'Delete results');
+        },
+      });
   }
 }

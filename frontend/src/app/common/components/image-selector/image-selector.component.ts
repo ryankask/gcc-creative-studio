@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-import { Component, Inject, ViewChild } from '@angular/core';
+import {Component, Inject, ViewChild} from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialog,
   MatDialogRef,
 } from '@angular/material/dialog';
-import { finalize, Observable } from 'rxjs';
+import {finalize, Observable} from 'rxjs';
 import {
   SourceAssetResponseDto,
   SourceAssetService,
 } from '../../services/source-asset.service';
-import { AssetTypeEnum } from '../../../admin/source-assets-management/source-asset.model';
-import { MediaItem } from '../../models/media-item.model';
-import { MediaGalleryComponent } from '../../../gallery/media-gallery/media-gallery.component';
-import { ImageCropperDialogComponent } from '../image-cropper-dialog/image-cropper-dialog.component';
+import {AssetTypeEnum} from '../../../admin/source-assets-management/source-asset.model';
+import {MediaItem} from '../../models/media-item.model';
+import {MediaGalleryComponent} from '../../../gallery/media-gallery/media-gallery.component';
+import {ImageCropperDialogComponent} from '../image-cropper-dialog/image-cropper-dialog.component';
 
 export interface MediaItemSelection {
   mediaItem: MediaItem;
@@ -54,7 +54,14 @@ export class ImageSelectorComponent {
     private dialog: MatDialog,
     @Inject(MAT_DIALOG_DATA)
     public data: {
-      mimeType: 'image/*' | 'image/png' | 'video/mp4' | 'video/*' | 'audio/*' | 'audio/mpeg' | null;
+      mimeType:
+        | 'image/*'
+        | 'image/png'
+        | 'video/mp4'
+        | 'video/*'
+        | 'audio/*'
+        | 'audio/mpeg'
+        | null;
       assetType: AssetTypeEnum;
       enableUpscale?: boolean;
       multiSelect?: boolean;
@@ -90,7 +97,7 @@ export class ImageSelectorComponent {
         // If shouldCrop is false, upload directly
         this.isUploading = true;
         this.sourceAssetService
-          .uploadAsset(file, { assetType: this.data.assetType })
+          .uploadAsset(file, {assetType: this.data.assetType})
           .pipe(finalize(() => (this.isUploading = false)))
           .subscribe(asset => {
             if (asset) {
@@ -98,17 +105,13 @@ export class ImageSelectorComponent {
             }
           });
       }
-    } else if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+    } else if (
+      file.type.startsWith('video/') ||
+      file.type.startsWith('audio/')
+    ) {
       // If it's a video or audio, upload it directly from here
       this.isUploading = true;
       this.uploadMediaDirectly(file)
-        .pipe(finalize(() => (this.isUploading = false)))
-        .subscribe(asset => {
-          this.dialogRef.close(asset);
-        });
-    } else if (file.type.startsWith('audio/')) {
-      this.isUploading = true;
-      this.uploadVideoDirectly(file) // Reusing upload logic as it's just a file upload
         .pipe(finalize(() => (this.isUploading = false)))
         .subscribe(asset => {
           this.dialogRef.close(asset);
@@ -169,7 +172,10 @@ export class ImageSelectorComponent {
     } else {
       if (this.data.maxSelection === 1) {
         this.selectedMediaItems.clear();
-      } else if (this.data.maxSelection && this.selectedMediaItems.size >= this.data.maxSelection) {
+      } else if (
+        this.data.maxSelection &&
+        this.selectedMediaItems.size >= this.data.maxSelection
+      ) {
         return;
       }
       this.selectedMediaItems.set(id, item);
@@ -209,7 +215,7 @@ export class ImageSelectorComponent {
     const totalSelected = this.selectedMediaItems.size;
     if (totalSelected === 0) return;
 
-    const results = Array.from(this.selectedMediaItems.values()).map((item) => {
+    const results = Array.from(this.selectedMediaItems.values()).map(item => {
       if (item.itemType === 'source_asset') {
         return {
           id: item.id,
@@ -264,16 +270,22 @@ export class ImageSelectorComponent {
     if (!this.data.mimeType) {
       return 'image/*,video/*,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma';
     }
-    
-    if (this.data.mimeType === 'audio/*' || this.data.mimeType === 'audio/mpeg') {
+
+    if (
+      this.data.mimeType === 'audio/*' ||
+      this.data.mimeType === 'audio/mpeg'
+    ) {
       // Include explicit audio extensions for better compatibility
       return 'audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,.webm';
     }
-    
-    if (this.data.mimeType === 'video/*' || this.data.mimeType === 'video/mp4') {
+
+    if (
+      this.data.mimeType === 'video/*' ||
+      this.data.mimeType === 'video/mp4'
+    ) {
       return 'video/*,.mp4,.webm,.mov,.avi,.mkv';
     }
-    
+
     return this.data.mimeType;
   }
 }

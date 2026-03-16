@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { BehaviorSubject } from 'rxjs';
-import { pairwise, startWith } from 'rxjs/operators';
-import { STEP_CONFIGS_MAP } from '../shared/step-configs.map';
-import { NodeTypes, StepStatusEnum, WorkflowBase, WorkflowModel } from '../workflow.models';
+import {Injectable, PLATFORM_ID, inject} from '@angular/core';
+import {isPlatformBrowser} from '@angular/common';
+import {FormArray, FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {BehaviorSubject} from 'rxjs';
+import {pairwise, startWith} from 'rxjs/operators';
+import {STEP_CONFIGS_MAP} from '../shared/step-configs.map';
+import {
+  NodeTypes,
+  StepStatusEnum,
+  WorkflowBase,
+  WorkflowModel,
+} from '../workflow.models';
 
 @Injectable()
 export class WorkflowFormService {
@@ -29,9 +33,10 @@ export class WorkflowFormService {
   public workflowForm!: FormGroup;
 
   private _availableOutputsPerStep = new BehaviorSubject<any[][]>([]);
-  public availableOutputsPerStep$ = this._availableOutputsPerStep.asObservable();
+  public availableOutputsPerStep$ =
+    this._availableOutputsPerStep.asObservable();
 
-  constructor(private fb: FormBuilder) { }
+  constructor(private fb: FormBuilder) {}
 
   /**
    * Initializes the main workflow form.
@@ -67,10 +72,7 @@ export class WorkflowFormService {
     // Subscribe to output definition changes for renaming
     if (isPlatformBrowser(this.platformId)) {
       this.outputDefinitionsArray.valueChanges
-        .pipe(
-          startWith(this.outputDefinitionsArray.getRawValue()),
-          pairwise()
-        )
+        .pipe(startWith(this.outputDefinitionsArray.getRawValue()), pairwise())
         .subscribe(([prev, curr]) => {
           this.handleOutputRenames(prev, curr);
           this.syncOutputs(); // Also ensure outputs group is synced
@@ -102,7 +104,7 @@ export class WorkflowFormService {
       ...stepData,
       inputs: stepData.inputs || {},
       outputs: stepData.outputs || {},
-      settings: stepData.settings || {}
+      settings: stepData.settings || {},
     };
 
     const stepGroup = this.fb.group({
@@ -143,7 +145,7 @@ export class WorkflowFormService {
 
   // --- User Input Definitions ---
 
-  addOutputDefinition(name: string = '', type: string = 'text', id?: string): void {
+  addOutputDefinition(name = '', type = 'text', id?: string): void {
     const group = this.fb.group({
       id: [id || this.generateId()],
       name: [name, Validators.required],
@@ -169,13 +171,16 @@ export class WorkflowFormService {
       const type = control.get('type')?.value;
       if (name && type) {
         // We use this.fb.control because we inject FormBuilder
-        outputs.addControl(name, this.fb.control({ type: type }));
+        outputs.addControl(name, this.fb.control({type: type}));
       }
     });
     this.updateAvailableOutputs();
   }
 
-  private handleOutputRenames(prevDefinitions: any[], currentDefinitions: any[]) {
+  private handleOutputRenames(
+    prevDefinitions: any[],
+    currentDefinitions: any[],
+  ) {
     const prevMap = new Map(prevDefinitions.map(d => [d.id, d]));
 
     currentDefinitions.forEach(newDef => {
@@ -194,9 +199,14 @@ export class WorkflowFormService {
       Object.keys(inputs.controls).forEach(inputKey => {
         const control = inputs.get(inputKey);
         const value = control?.value;
-        if (value && typeof value === 'object' && value.step === NodeTypes.USER_INPUT && value._definitionId === definitionId) {
+        if (
+          value &&
+          typeof value === 'object' &&
+          value.step === NodeTypes.USER_INPUT &&
+          value._definitionId === definitionId
+        ) {
           // Update the output name in the reference
-          control?.setValue({ ...value, output: newName });
+          control?.setValue({...value, output: newName});
         }
       });
     });
@@ -212,9 +222,9 @@ export class WorkflowFormService {
         userInputOutputs.push({
           label: `User Input: ${val.name} `,
           value: {
-            step: "user_input",
+            step: 'user_input',
             output: val.name,
-            _definitionId: val.id
+            _definitionId: val.id,
           },
           type: val.type,
         });
@@ -252,8 +262,11 @@ export class WorkflowFormService {
   // --- Data Patching ---
 
   patchData(data: WorkflowModel | WorkflowBase): void {
-    const userInputStep = data.steps?.find(s => s.type === NodeTypes.USER_INPUT);
-    const otherSteps = data.steps?.filter(s => s.type !== NodeTypes.USER_INPUT) || [];
+    const userInputStep = data.steps?.find(
+      s => s.type === NodeTypes.USER_INPUT,
+    );
+    const otherSteps =
+      data.steps?.filter(s => s.type !== NodeTypes.USER_INPUT) || [];
 
     // 1. Patch Main Fields
     this.workflowForm.patchValue({
@@ -262,8 +275,8 @@ export class WorkflowFormService {
       description: data.description,
       userInput: {
         ...(userInputStep || {}),
-        status: StepStatusEnum.IDLE
-      }
+        status: StepStatusEnum.IDLE,
+      },
     });
 
     // 2. Rebuild User Input Definitions & Map IDs
@@ -271,27 +284,34 @@ export class WorkflowFormService {
     const outputIdMap = new Map<string, string>();
 
     if (userInputStep?.outputs) {
-      Object.entries(userInputStep.outputs).forEach(([key, value]: [string, any]) => {
-        // Reverse engineer the ID and Name from the stored output
-        const id = this.generateId();
-        outputIdMap.set(key, id);
-        this.addOutputDefinition(this.toDisplay(key), value.type, id);
-      });
+      Object.entries(userInputStep.outputs).forEach(
+        ([key, value]: [string, any]) => {
+          // Reverse engineer the ID and Name from the stored output
+          const id = this.generateId();
+          outputIdMap.set(key, id);
+          this.addOutputDefinition(this.toDisplay(key), value.type, id);
+        },
+      );
     }
 
     // 3. Rebuild Steps
     this.stepsArray.clear();
     otherSteps.forEach(step => {
-      let stepData = { ...step, status: StepStatusEnum.IDLE };
+      const stepData = {...step, status: StepStatusEnum.IDLE};
 
-      // Backfill _definitionId into inputs and transform output names to display names 
+      // Backfill _definitionId into inputs and transform output names to display names
       // if they reference user input
       if (stepData.inputs) {
-        const newInputs = { ...stepData.inputs };
+        const newInputs = {...stepData.inputs};
         let changed = false;
         Object.values(newInputs).forEach((input: any) => {
           // Check if it's a user input reference
-          if (input && typeof input === 'object' && input.step === NodeTypes.USER_INPUT && input.output) {
+          if (
+            input &&
+            typeof input === 'object' &&
+            input.step === NodeTypes.USER_INPUT &&
+            input.output
+          ) {
             // If we have a mapped ID for this user output
             if (outputIdMap.has(input.output)) {
               input._definitionId = outputIdMap.get(input.output);
@@ -326,7 +346,7 @@ export class WorkflowFormService {
 
     // Default settings logic
     if (type === NodeTypes.EDIT_IMAGE) {
-      base.settings = { aspectRatio: '1:1', saveOutputToGallery: true };
+      base.settings = {aspectRatio: '1:1', saveOutputToGallery: true};
     }
     return base;
   }
@@ -343,7 +363,10 @@ export class WorkflowFormService {
   }
 
   private generateId(): string {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 
   private toDisplay(name: string): string {

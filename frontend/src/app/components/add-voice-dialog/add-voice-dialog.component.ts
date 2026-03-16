@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { Component } from '@angular/core';
-import { MatDialogRef } from '@angular/material/dialog';
+import {Component} from '@angular/core';
+import {MatDialogRef} from '@angular/material/dialog';
 
 @Component({
   selector: 'app-add-voice-dialog',
   templateUrl: './add-voice-dialog.component.html',
-  styleUrls: ['./add-voice-dialog.component.scss']
+  styleUrls: ['./add-voice-dialog.component.scss'],
 })
 export class AddVoiceDialogComponent {
   voiceName = '';
@@ -42,7 +42,7 @@ export class AddVoiceDialogComponent {
     this.dialogRef.close({
       name: this.voiceName,
       sample1: this.file1,
-      sample2: this.file2
+      sample2: this.file2,
     });
   }
 }

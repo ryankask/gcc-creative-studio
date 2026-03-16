@@ -14,28 +14,37 @@
  * limitations under the License.
  */
 
-import { Component, EventEmitter, Input, Output, ElementRef, ViewChild, HostListener, HostBinding } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  ElementRef,
+  ViewChild,
+  HostListener,
+  HostBinding,
+} from '@angular/core';
 
 @Component({
   selector: 'studio-search-filter',
   templateUrl: './studio-search-filter.component.html',
-  styleUrls: ['./studio-search-filter.component.scss']
+  styleUrls: ['./studio-search-filter.component.scss'],
 })
 export class StudioSearchFilterComponent {
-  @Input() value: string = '';
-  @Input() placeholder: string = 'Search...';
-  @Input() icon: string = 'search';
-  @Input() isSvgIcon: boolean = false;
+  @Input() value = '';
+  @Input() placeholder = 'Search...';
+  @Input() icon = 'search';
+  @Input() isSvgIcon = false;
   @Input() size: 'small' | 'medium' | 'large' | 'default' = 'default';
-  @Input() expandable: boolean = true;
-  @Input() disabled: boolean = false;
+  @Input() expandable = true;
+  @Input() disabled = false;
 
   @Output() valueChange = new EventEmitter<string>();
   @Output() search = new EventEmitter<string>();
 
   @ViewChild('filterInput') filterInput!: ElementRef<HTMLInputElement>;
 
-  isOpen: boolean = false;
+  isOpen = false;
 
   @HostBinding('class') get hostClasses() {
     return `size-${this.size} ${this.isOpen ? 'is-open' : ''}`;

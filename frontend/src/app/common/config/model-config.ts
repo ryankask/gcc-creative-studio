@@ -59,7 +59,22 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     capabilities: {
       supportedModes: ['Text to Image', 'Ingredients to Image'],
       maxReferenceImages: 14,
-      supportedAspectRatios: ['1:1', '16:9', '9:16', '3:4', '4:3', '2:3', '3:2', '4:5', '5:4', '21:9', '1:4', '4:1', '1:8', '8:1'], // All
+      supportedAspectRatios: [
+        '1:1',
+        '16:9',
+        '9:16',
+        '3:4',
+        '4:3',
+        '2:3',
+        '3:2',
+        '4:5',
+        '5:4',
+        '21:9',
+        '1:4',
+        '4:1',
+        '1:8',
+        '8:1',
+      ], // All
       supportsGoogleSearch: true,
     },
   },
@@ -72,7 +87,18 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     capabilities: {
       supportedModes: ['Text to Image', 'Ingredients to Image'],
       maxReferenceImages: 14,
-      supportedAspectRatios: ['1:1', '16:9', '9:16', '3:4', '4:3', '2:3', '3:2', '4:5', '5:4', '21:9'], // All
+      supportedAspectRatios: [
+        '1:1',
+        '16:9',
+        '9:16',
+        '3:4',
+        '4:3',
+        '2:3',
+        '3:2',
+        '4:5',
+        '5:4',
+        '21:9',
+      ], // All
       supportsGoogleSearch: true,
     },
   },
@@ -85,7 +111,18 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     capabilities: {
       supportedModes: ['Text to Image', 'Ingredients to Image'],
       maxReferenceImages: 2,
-      supportedAspectRatios: ['1:1', '16:9', '9:16', '3:4', '4:3', '2:3', '3:2', '4:5', '5:4', '21:9'],
+      supportedAspectRatios: [
+        '1:1',
+        '16:9',
+        '9:16',
+        '3:4',
+        '4:3',
+        '2:3',
+        '3:2',
+        '4:5',
+        '5:4',
+        '21:9',
+      ],
     },
   },
   {
@@ -202,7 +239,11 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     type: 'VIDEO',
     icon: 'volume_up',
     capabilities: {
-      supportedModes: ['Text to Video', 'Ingredients to Video', 'Frames to Video'], // Assuming ingredients = image-to-video
+      supportedModes: [
+        'Text to Video',
+        'Ingredients to Video',
+        'Frames to Video',
+      ], // Assuming ingredients = image-to-video
       maxReferenceImages: 3,
       supportedAspectRatios: ['16:9', '9:16'],
       supportsAudio: true,

@@ -23,6 +23,13 @@ repos:
 
 - repo: local
   hooks:
+  - id: gts-fix
+    name: gts-fix
+    entry: bash -c 'cd frontend && npx gts fix "${@#frontend/}"' _
+    language: system
+    files: ^frontend/src/.*\.ts$
+    pass_filenames: true
+
   - id: gts
     name: gts
     entry: bash -c "cd frontend && npx gts lint"

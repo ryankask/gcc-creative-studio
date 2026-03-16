@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Component, Input } from '@angular/core';
+import {Component, Input} from '@angular/core';
 
 @Component({
   selector: 'app-gallery-item-overlay',
@@ -22,6 +22,6 @@ import { Component, Input } from '@angular/core';
   styleUrls: ['./gallery-item-overlay.component.scss'],
 })
 export class GalleryItemOverlayComponent {
-  @Input() itemType: string = '';
+  @Input() itemType = '';
   @Input() mimeType: string | undefined = '';
 }

@@ -28,19 +28,22 @@ import {
   Inject,
   PLATFORM_ID,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { debounceTime, finalize, fromEvent, Subscription } from 'rxjs';
-import { AssetTypeEnum } from '../../../admin/source-assets-management/source-asset.model';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../../utils/handleMessageSnackbar';
+import {isPlatformBrowser} from '@angular/common';
+import {MatDialog} from '@angular/material/dialog';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {debounceTime, finalize, fromEvent, Subscription} from 'rxjs';
+import {AssetTypeEnum} from '../../../admin/source-assets-management/source-asset.model';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../../utils/handleMessageSnackbar';
 import {
   SourceAssetResponseDto,
   SourceAssetSearchDto,
   SourceAssetService,
 } from '../../services/source-asset.service';
-import { UserService } from '../../services/user.service';
-import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
+import {UserService} from '../../services/user.service';
+import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
 
 @Component({
   selector: 'app-source-asset-gallery',
@@ -48,7 +51,8 @@ import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation
   styleUrls: ['./source-asset-gallery.component.scss'],
 })
 export class SourceAssetGalleryComponent
-  implements OnInit, OnDestroy, AfterViewInit {
+  implements OnInit, OnDestroy, AfterViewInit
+{
   @Output() assetSelected = new EventEmitter<SourceAssetResponseDto>();
   @Input() filterByType: AssetTypeEnum | null = null;
   @Input() filterByMimeType:
@@ -83,7 +87,7 @@ export class SourceAssetGalleryComponent
     private ngZone: NgZone,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    @Inject(PLATFORM_ID) platformId: Object
+    @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
@@ -122,8 +126,8 @@ export class SourceAssetGalleryComponent
 
     // --- Start: Add Resize Handling ---
     if (this.isBrowser) {
-        this.handleResize();
-        this.resizeSubscription = fromEvent(window, 'resize')
+      this.handleResize();
+      this.resizeSubscription = fromEvent(window, 'resize')
         .pipe(debounceTime(200))
         .subscribe(() => this.handleResize());
     }
@@ -132,7 +136,7 @@ export class SourceAssetGalleryComponent
 
   ngAfterViewInit(): void {
     if (this.isBrowser) {
-        this.setupInfiniteScrollObserver();
+      this.setupInfiniteScrollObserver();
     }
   }
 
@@ -203,7 +207,7 @@ export class SourceAssetGalleryComponent
   }
 
   private updateColumns(): void {
-    this.columns = Array.from({ length: this.numColumns }, () => []);
+    this.columns = Array.from({length: this.numColumns}, () => []);
     this.assets.forEach((asset, index) => {
       this.columns[index % this.numColumns].push(asset);
     });
@@ -232,7 +236,10 @@ export class SourceAssetGalleryComponent
           )
           .subscribe({
             next: () => {
-              handleSuccessSnackbar(this.snackBar, 'Asset deleted successfully.');
+              handleSuccessSnackbar(
+                this.snackBar,
+                'Asset deleted successfully.',
+              );
             },
             error: err => {
               handleErrorSnackbar(this.snackBar, err, 'Delete asset');
