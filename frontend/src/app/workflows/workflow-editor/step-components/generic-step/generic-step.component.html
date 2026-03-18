@@ -79,10 +79,14 @@
             <mat-checkbox [formControlName]="setting.name">{{ setting.label }}</mat-checkbox>
           </div>
           <div *ngIf="setting.type === 'slider'" class="slider-group">
-            <label>{{ setting.label }}: {{ stepForm.get('settings')?.get(setting.name)?.value }}</label>
-            <mat-slider [min]="setting.min || 0" [max]="setting.max || 1" [step]="setting.step || 0.1">
-              <input matSliderThumb [formControlName]="setting.name">
-            </mat-slider>
+            <studio-slider
+              label="{{ setting.label }}"
+              [valueText]="stepForm.get('settings')?.get(setting.name)?.value"
+              [min]="setting.min || 0"
+              [max]="setting.max || 1"
+              [step]="setting.step || 0.1"
+              [formControlName]="setting.name"
+            ></studio-slider>
           </div>
           <div *ngIf="setting.type === 'radio'" class="radio-group">
             <label>{{ setting.label }}</label>

@@ -15,16 +15,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.users.user_model import UserRoleEnum
+from src.auth.auth_guard import RoleChecker
 from src.multimodal.dto.gemini_prompt_enhancer_dto import (
     RandomPromptRequestDto,
     RewritePromptRequestDto,
     RewrittenOrRandomPromptResponse,
 )
-from src.auth.auth_guard import RoleChecker
 from src.multimodal.gemini_service import GeminiService
-from fastapi import APIRouter, Depends
-
+from src.users.user_model import UserRoleEnum
 
 router = APIRouter(
     prefix="/api/gemini",
@@ -36,9 +34,9 @@ router = APIRouter(
                 allowed_roles=[
                     UserRoleEnum.ADMIN,
                     UserRoleEnum.USER,
-                ]
-            )
-        )
+                ],
+            ),
+        ),
     ],
 )
 
@@ -52,14 +50,14 @@ async def rewrite_prompt_endpoint(
     rewrite_request: RewritePromptRequestDto,
     gemini_service: GeminiService = Depends(),
 ):
-    """
-    Takes a set of image generation parameters and combines them into a single,
+    """Takes a set of image generation parameters and combines them into a single,
     high-quality, natural language prompt suitable for an image model.
     This uses a deterministic, rule-based approach.
     """
     try:
         rewritten_prompt = gemini_service.generate_random_or_rewrite_prompt(
-            rewrite_request.target_type, rewrite_request.user_prompt
+            rewrite_request.target_type,
+            rewrite_request.user_prompt,
         )
         return RewrittenOrRandomPromptResponse(prompt=rewritten_prompt)
     except Exception as e:
@@ -78,13 +76,12 @@ async def random_prompt_endpoint(
     random_request: RandomPromptRequestDto,
     gemini_service: GeminiService = Depends(),
 ):
-    """
-    Generates a completely new, random, and visually descriptive prompt using Gemini.
+    """Generates a completely new, random, and visually descriptive prompt using Gemini.
     Useful for sparking creativity or for a "surprise me" feature.
     """
     try:
         random_prompt = gemini_service.generate_random_or_rewrite_prompt(
-            random_request.target_type
+            random_request.target_type,
         )
         return RewrittenOrRandomPromptResponse(prompt=random_prompt)
     except Exception as e:

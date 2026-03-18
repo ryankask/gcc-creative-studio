@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import asyncio
-from typing import Optional
 
 from fastapi import (
     APIRouter,
@@ -37,12 +36,10 @@ from src.source_assets.dto.vto_assets_response_dto import VtoAssetsResponseDto
 from src.source_assets.schema.source_asset_model import (
     AssetScopeEnum,
     AssetTypeEnum,
-    SourceAssetModel,
 )
 from src.source_assets.source_asset_service import SourceAssetService
 from src.users.repository.user_repository import UserRepository
 from src.users.user_model import UserModel, UserRoleEnum
-from src.workspaces.repository.workspace_repository import WorkspaceRepository
 from src.workspaces.workspace_auth_guard import WorkspaceAuth
 
 router = APIRouter(
@@ -52,7 +49,7 @@ router = APIRouter(
     dependencies=[
         Depends(
             RoleChecker(allowed_roles=[UserRoleEnum.USER, UserRoleEnum.ADMIN])
-        )
+        ),
     ],
 )
 
@@ -61,16 +58,15 @@ router = APIRouter(
 async def upload_source_asset(
     file: UploadFile = File(),
     workspaceId: int = Form(),
-    scope: Optional[AssetScopeEnum] = Form(None),
-    assetType: Optional[AssetTypeEnum] = Form(None),
-    aspectRatio: Optional[AspectRatioEnum] = Form(None),
-    upscaleFactor: Optional[str] = Form(None),
+    scope: AssetScopeEnum | None = Form(None),
+    assetType: AssetTypeEnum | None = Form(None),
+    aspectRatio: AspectRatioEnum | None = Form(None),
+    upscaleFactor: str | None = Form(None),
     current_user: UserModel = Depends(get_current_user),
     service: SourceAssetService = Depends(SourceAssetService),
     workspace_auth: WorkspaceAuth = Depends(),
 ):
-    """
-    Uploads a new source asset. Handles de-duplication and upscaling.
+    """Uploads a new source asset. Handles de-duplication and upscaling.
     Accepts multipart/form-data.
 
     - **scope**: (Admin only) Set the asset's scope. Defaults to 'private'.
@@ -105,8 +101,7 @@ async def convert_image_to_png(
     current_user: UserModel = Depends(get_current_user),
     service: SourceAssetService = Depends(),
 ):
-    """
-    Accepts any image file, converts it to PNG, and returns the binary data.
+    """Accepts any image file, converts it to PNG, and returns the binary data.
     Used for pre-processing unsupported formats before cropping on the frontend.
     """
     png_contents = await service.convert_to_png(file=file)
@@ -122,12 +117,11 @@ async def list_source_assets(
     service: SourceAssetService = Depends(),
     user_repo: UserRepository = Depends(),
 ):
-    """
-    Performs a paginated search for user assets with role-based access control.
+    """Performs a paginated search for user assets with role-based access control.
     - Regular users can only search their own assets.
     - Admins can search all assets, or filter by a specific user's email.
     """
-    target_user_id: Optional[int] = None
+    target_user_id: int | None = None
 
     is_admin = UserRoleEnum.ADMIN in current_user.roles
 
@@ -145,7 +139,8 @@ async def list_source_assets(
             target_user_id = current_user.id
         else:
             target_user = await asyncio.to_thread(
-                user_repo.get_by_email, search_dto.user_email
+                user_repo.get_by_email,
+                search_dto.user_email,
             )
             if not target_user:
                 raise HTTPException(
@@ -154,7 +149,8 @@ async def list_source_assets(
             target_user_id = target_user.id
 
     return await service.list_assets_for_user(
-        search_dto=search_dto, target_user_id=target_user_id
+        search_dto=search_dto,
+        target_user_id=target_user_id,
     )
 
 
@@ -163,8 +159,7 @@ async def get_vto_assets(
     current_user: UserModel = Depends(get_current_user),
     service: SourceAssetService = Depends(),
 ):
-    """
-    Retrieves all system-level VTO assets (models, clothing) categorized by type.
+    """Retrieves all system-level VTO assets (models, clothing) categorized by type.
     This is a public endpoint for any authenticated user to populate selection UIs.
     """
     try:
@@ -186,8 +181,7 @@ async def delete_source_asset(
     asset_id: int,
     service: SourceAssetService = Depends(),
 ):
-    """
-    Deletes a source asset by its ID. (Admin only)
+    """Deletes a source asset by its ID. (Admin only)
     This will also remove the corresponding file from Google Cloud Storage.
     """
     success = await service.delete_asset(asset_id)
@@ -205,9 +199,7 @@ async def get_source_asset(
     current_user: UserModel = Depends(get_current_user),
     service: SourceAssetService = Depends(),
 ):
-    """
-    Retrieves a single source asset by its ID.
-    """
+    """Retrieves a single source asset by its ID."""
     asset = await service.get_asset_by_id(asset_id, current_user)
     if not asset:
         raise HTTPException(

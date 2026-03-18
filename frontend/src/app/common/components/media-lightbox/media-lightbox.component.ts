@@ -26,13 +26,17 @@ import {
   ViewChild,
 } from '@angular/core';
 import {MediaItem} from '../../models/media-item.model';
+import {GalleryItem} from '../../models/gallery-item.model';
 import PhotoSwipeLightbox from 'photoswipe/lightbox';
 import {Clipboard} from '@angular/cdk/clipboard';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {ActivatedRoute, Router} from '@angular/router';
 import {EventEmitter} from '@angular/core';
 import {Location} from '@angular/common';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../../utils/handleMessageSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../../utils/handleMessageSnackbar';
 
 @Component({
   selector: 'app-media-lightbox',
@@ -42,14 +46,28 @@ import { handleErrorSnackbar, handleSuccessSnackbar } from '../../../utils/handl
 export class MediaLightboxComponent
   implements OnChanges, AfterViewInit, OnDestroy
 {
-  @Input() mediaItem: MediaItem | undefined;
+  @Input() mediaItem: MediaItem | GalleryItem | undefined;
   @Input() initialIndex = 0;
   @Input() showSeeMoreInfoButton = false;
   @Input() showShareButton = true;
   @Input() showDownloadButton = true;
-  @Input() showEditButton = false;
-  @Input() showGenerateVideoButton = false;
-  @Input() showVtoButton = false;
+  @Input() showDeleteButton = false;
+
+  get isImage(): boolean {
+    return this.mediaItem?.mimeType?.startsWith('image/') ?? false;
+  }
+
+  get showEditButton(): boolean {
+    return this.isImage;
+  }
+
+  get showGenerateVideoButton(): boolean {
+    return this.isImage;
+  }
+
+  get showVtoButton(): boolean {
+    return this.isImage;
+  }
   @Output() editClicked = new EventEmitter<number>();
   @Output() generateVideoClicked = new EventEmitter<{
     role: 'start' | 'end';
@@ -64,6 +82,7 @@ export class MediaLightboxComponent
     mediaItem: MediaItem;
     selectedIndex: number;
   }>();
+  @Output() deleteClicked = new EventEmitter<number>();
 
   selectedIndex = 0;
   selectedUrl: string | undefined;
@@ -136,14 +155,23 @@ export class MediaLightboxComponent
   }
 
   private initializePhotoSwipe(): void {
-    if (this.mediaItem?.presignedUrls && !this.isVideo) {
+    if (this.mediaItem?.presignedUrls && !this.isVideo && !this.isAudio) {
       this.lightbox = new PhotoSwipeLightbox({
-        dataSource: this.mediaItem.presignedUrls.map(url => ({
-          src: url,
-          width: this.imageWidth,
-          height: this.imageHeight,
-          alt: this.mediaItem?.originalPrompt,
-        })),
+        dataSource: this.mediaItem.presignedUrls.map((url, index) => {
+          // If this is the currently selected image and we have its natural dimensions, use them.
+          // Otherwise, fall back to calculated defaults.
+          const isSelected = index === this.selectedIndex;
+          const width = isSelected ? this.imageWidth : 1920;
+          const height = isSelected ? this.imageHeight : 1080;
+
+          return {
+            src: url,
+            width,
+            height,
+            alt:
+              (this.mediaItem as any).originalPrompt || this.mediaItem?.prompt,
+          };
+        }),
         pswpModule: () => import('photoswipe'),
       });
 
@@ -164,11 +192,31 @@ export class MediaLightboxComponent
     }
   }
 
+  onImageLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img && img.naturalWidth && img.naturalHeight) {
+      this.imageWidth = img.naturalWidth;
+      this.imageHeight = img.naturalHeight;
+
+      // Update the lightbox data source with genuine dimensions if it exists
+      if (this.lightbox) {
+        // We re-initialize to ensure PhotoSwipe picks up the new dimensions
+        // for the data source.
+        this.initializePhotoSwipe();
+      }
+    }
+  }
+
   private updateImageDimensions(): void {
+    // We no longer enforce dimensions here as we'll use 'fill' mode
+    // but we can keep some defaults for PhotoSwipe if needed.
     if (this.mediaItem) {
-      const aspectRatioStr = this.mediaItem.aspectRatio || '1:1';
+      const aspectRatioStr =
+        this.mediaItem.aspectRatio || (this.mediaItem as any).aspect || '1:1';
       const [w, h] = aspectRatioStr.split(':').map(Number);
-      this.imageHeight = (h / w) * this.imageWidth;
+      if (w && h) {
+        this.imageHeight = (h / w) * this.imageWidth;
+      }
     }
   }
 
@@ -228,7 +276,9 @@ export class MediaLightboxComponent
   ): string {
     const url = encodeURIComponent(this.currentImageUrl);
     const text = encodeURIComponent(
-      this.mediaItem?.originalPrompt || 'Check out this image!',
+      (this.mediaItem as any).originalPrompt ||
+        this.mediaItem?.prompt ||
+        'Check out this image!',
     );
     switch (platform) {
       case 'facebook':
@@ -250,7 +300,11 @@ export class MediaLightboxComponent
 
   copyLink(): void {
     if (!this.mediaItem?.id) {
-      handleErrorSnackbar(this.snackBar, { message: 'Cannot generate link: Media item has no ID.' }, 'Copy Link');
+      handleErrorSnackbar(
+        this.snackBar,
+        {message: 'Cannot generate link: Media item has no ID.'},
+        'Copy Link',
+      );
       return;
     }
 
@@ -349,18 +403,20 @@ export class MediaLightboxComponent
     // For Audio, we just want a nice container, aspect-video works well for the player shape
     if (this.isAudio) return 'aspect-video h-auto';
 
-    const ratio = this.mediaItem?.aspectRatio || this.mediaItem?.aspect;
-    switch (ratio) {
-      case '1:1':
-        return 'aspect-square';
-      case '16:9':
-        return 'aspect-video';
-      case null:
-      case undefined:
-        return 'aspect-square';
-      default:
+    // For Videos, we can still use the aspect ratio if available
+    if (this.isVideo) {
+      const ratio =
+        this.mediaItem?.aspectRatio || (this.mediaItem as any).aspect;
+      if (ratio === '1:1') return 'aspect-square';
+      if (ratio === '16:9') return 'aspect-video';
+      if (ratio && ratio.includes(':'))
         return `aspect-[${ratio.replace(':', '/')}]`;
+      return 'aspect-video'; // Default for video
     }
+
+    // For Images, we don't want to enforce an aspect ratio on the container
+    // as it causes stretching. We'll let the image's natural ratio prevail.
+    return '';
   }
 
   // --- AUDIO PLAYER LOGIC ---
@@ -369,7 +425,7 @@ export class MediaLightboxComponent
     if (!audio) return;
 
     if (audio.paused) {
-      audio.play();
+      void audio.play();
       this.isPlaying = true;
     } else {
       audio.pause();
@@ -439,7 +495,7 @@ export class MediaLightboxComponent
   onExtendWithAiClick() {
     if (this.mediaItem) {
       this.extendWithAiClicked.emit({
-        mediaItem: this.mediaItem,
+        mediaItem: this.mediaItem as MediaItem,
         selectedIndex: this.selectedIndex,
       });
     }
@@ -448,9 +504,13 @@ export class MediaLightboxComponent
   onConcatenateClick() {
     if (this.mediaItem) {
       this.concatenateClicked.emit({
-        mediaItem: this.mediaItem,
+        mediaItem: this.mediaItem as MediaItem,
         selectedIndex: this.selectedIndex,
       });
     }
+  }
+
+  onDeleteClick() {
+    this.deleteClicked.emit(this.selectedIndex);
   }
 }

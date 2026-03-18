@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+:host {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .btn-glass-primary {
   // 1. Define the Border Width
   // We use transparent so the gradient behind it shines through.
@@ -36,9 +41,6 @@
   // This adds that extra razor-sharp white line at the very top edge inside the border
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
 
-  // 5. Glass Blur
-  backdrop-filter: blur(10px);
-
   // Standard settings
   color: #fff !important;
   border-radius: 9999px !important;
@@ -46,7 +48,27 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+
+  // Fix content projection alignment inside Material's wrapper
+  & ::ng-deep {
+    .mdc-button__label, 
+    .mat-mdc-button-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    // Ensure icon doesn't shrink
+    mat-icon,
+    img {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+    }
+  }
+
   font-family: 'Google Sans Text', sans-serif;
   font-weight: 500;
 
@@ -80,50 +102,70 @@
 
 .btn-cta {
   // 1. Define the Border Width
-    border: 1px solid transparent;
+  border: 1px solid transparent;
+
+  // 2. The Magic: Stacked Backgrounds (Blue Edition)
+  background-image:
+    // Top Layer: Darker at top, Lighter at bottom
+    linear-gradient(180deg, rgba(11, 87, 208, 0.8) 0%, rgba(168, 225, 250, 0.52) 100%),
+    // Border Layer: Uniform White/Transparent for balanced border width
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.4));
+
+  // 3. Clip the backgrounds
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+
+  // 4. Glass Effect
+  backdrop-filter: blur(10px);
+
+  // 5. Highlights & Glows
+  box-shadow: 
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.423), // Subtle Top Highlight
+    0 4px 12px 0 rgba(26, 115, 232, 0.25); // Reduced Glow
+
+  // Standard settings
+  color: #fff !important;
+  border-radius: 9999px !important;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   
-    // 2. The Magic: Stacked Backgrounds (Blue Edition)
+  // Fix content projection alignment inside Material's wrapper
+  & ::ng-deep {
+    .mdc-button__label,
+    .mat-mdc-button-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    // Ensure icon doesn't shrink
+    mat-icon,
+    img {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+    }
+  }
+
+  font-family: 'Google Sans Text', sans-serif;
+  font-weight: 500;
+
+  &:hover {
+    transform: translateY(-1px);
+    // Brighter on hover
     background-image:
       // Top Layer: Darker at top, Lighter at bottom
       linear-gradient(180deg, rgba(11, 87, 208, 0.8) 0%, rgba(168, 225, 250, 0.52) 100%),
       // Border Layer: Uniform White/Transparent for balanced border width
       linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.4));
-  
-    // 3. Clip the backgrounds
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
-  
-    // 4. Glass Effect
-    backdrop-filter: blur(10px);
-  
-    // 5. Highlights & Glows
-    box-shadow: 
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.423), // Subtle Top Highlight
-      0 4px 12px 0 rgba(26, 115, 232, 0.25); // Reduced Glow
-  
-    // Standard settings
-    color: #fff !important;
-    border-radius: 9999px !important;
-    transition: all 0.2s ease-in-out;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-family: 'Google Sans Text', sans-serif;
-    font-weight: 500;
-
-  &:hover {
-    transform: translateY(-1px);
-    // Brighter on hover
-      background-image:
-      // Top Layer: Darker at top, Lighter at bottom
-      linear-gradient(180deg, rgba(11, 87, 208, 0.8) 0%, rgba(168, 225, 250, 0.52) 100%),
-      // Border Layer: Uniform White/Transparent for balanced border width
-      linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.4));
       
-      box-shadow: 
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
-        0 6px 20px 0 rgba(26, 115, 232, 0.7);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+      0 6px 20px 0 rgba(26, 115, 232, 0.7);
   }
 
   &:disabled,
@@ -155,10 +197,20 @@
   border-radius: 50% !important;
 
   // Fix alignment issues
-  gap: 0 !important;
+  // Fix alignment issues for circle buttons
+  & ::ng-deep {
+    .mdc-button__label,
+    .mat-mdc-button-label {
+      gap: 0 !important;
+      justify-content: center !important;
+      align-items: center !important;
+      width: 100%;
+      height: 100%;
+    }
+  }
   justify-content: center !important;
   align-items: center !important;
-  mat-icon {
+  ::ng-deep mat-icon {
     margin: 0;
     // Ensure icon itself is centered if it has internal spacing
     display: flex;
@@ -176,7 +228,7 @@
   height: 38px;
   font-size: 14px;
   
-  mat-icon {
+  ::ng-deep mat-icon {
     width: 20px;
     height: 20px;
     font-size: 20px;
@@ -192,7 +244,7 @@
   height: 32px;
   font-size: 13px; // Slightly smaller text
 
-  mat-icon {
+  ::ng-deep mat-icon {
     width: 18px;
     height: 18px;
     font-size: 18px;
@@ -209,7 +261,7 @@
   height: 56px;
   font-size: 16px;
 
-  mat-icon {
+  ::ng-deep mat-icon {
     width: 32px;
     height: 32px;
     font-size: 32px;
@@ -219,71 +271,5 @@
   &.btn-glass-circle {
     width: 56px;
     height: 56px;
-  }
-}
-
-// --- Toolbar Pattern (Glass Pill) ---
-
-.glass-toolbar {
-  @extend .btn-glass-primary; // Reuse the glass background/border logic
-  cursor: default; // It's a container, not a button itself
-  padding: 6px; // Space around inner buttons
-  gap: 12px; // Space between buttons
-  border-radius: 9999px !important;
-  
-  // Remove hover effects from the container itself if inherited
-  &:hover {
-    transform: none;
-  }
-}
-
-.glass-toolbar-btn {
-  // Reset mat-button base
-  min-width: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  
-  // Size & Shape
-  width: 32px;
-  height: 32px;
-  border-radius: 50% !important;
-  
-  // Default Style (Dark/Unselected)
-  background-color: rgba(30, 30, 30, 0.6) !important; // Darker semi-transparent
-  color: rgba(255, 255, 255, 0.7) !important;
-  transition: all 0.2s ease-in-out;
-  border: 1px solid transparent;
-  gap: 0 !important;
-
-  mat-icon {
-    // Ensure icon itself is centered if it has internal spacing
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-
-    // @extend .material-icons-outlined; // Removing this as it causes build error
-    width: 20px;
-    height: 20px;
-    font-size: 20px;
-  }
-
-  &:hover {
-    background-color: rgba(60, 60, 60, 0.8) !important;
-    color: #fff !important;
-    transform: scale(1.05);
-  }
-
-  // Active/Selected State
-  &.active {
-    background-color: rgba(255, 255, 255, 0.9) !important; // Whiter/Lit up
-    color: #1f1f1f !important; // Dark text for contrast against white
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
-    
-    mat-icon {
-      color: #1f1f1f !important;
-    }
   }
 }

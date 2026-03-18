@@ -1,5 +1,5 @@
 /**
- * Copyright 2025 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-import {Component} from '@angular/core';
+import {Component, Input} from '@angular/core';
 
 @Component({
-  selector: 'app-arena',
-  templateUrl: './arena.component.html',
-  styleUrl: './arena.component.scss',
+  selector: 'app-gallery-item-overlay',
+  templateUrl: './gallery-item-overlay.component.html',
+  styleUrls: ['./gallery-item-overlay.component.scss'],
 })
-export class ArenaComponent {}
+export class GalleryItemOverlayComponent {
+  @Input() itemType = '';
+  @Input() mimeType: string | undefined = '';
+}

@@ -14,12 +14,12 @@
 
 import datetime
 from enum import Enum
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
-from sqlalchemy import String, func, DateTime
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy import DateTime, String, func
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.common.base_dto import (
@@ -33,7 +33,6 @@ from src.common.base_dto import (
 from src.common.base_repository import BaseDocument
 from src.common.schema.media_item_model import (
     SourceAssetLink,
-    SourceMediaItemLink,
 )
 from src.database import Base
 
@@ -57,19 +56,18 @@ class IndustryEnum(str, Enum):
 
 
 class GenerationParameters(BaseModel):
-    """
-    A nested model to cleanly bundle all settings that will be passed
+    """A nested model to cleanly bundle all settings that will be passed
     to the media generation UI or service.
     """
 
-    prompt: Optional[str] = None
-    model: Optional[str] = None
-    aspect_ratio: Optional[AspectRatioEnum] = None
-    style: Optional[StyleEnum] = None
-    lighting: Optional[LightingEnum] = None
-    color_and_tone: Optional[ColorAndToneEnum] = None
-    composition: Optional[CompositionEnum] = None
-    negative_prompt: Optional[str] = None
+    prompt: str | None = None
+    model: str | None = None
+    aspect_ratio: AspectRatioEnum | None = None
+    style: StyleEnum | None = None
+    lighting: LightingEnum | None = None
+    color_and_tone: ColorAndToneEnum | None = None
+    composition: CompositionEnum | None = None
+    negative_prompt: str | None = None
 
     model_config = ConfigDict(
         use_enum_values=True,  # Allows passing enum members like StyleEnum.MODERN
@@ -81,48 +79,48 @@ class GenerationParameters(BaseModel):
 
 
 class MediaTemplate(Base):
-    """
-    SQLAlchemy model for the 'media_templates' table.
-    """
+    """SQLAlchemy model for the 'media_templates' table."""
+
     __tablename__ = "media_templates"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
-    
+
     mime_type: Mapped[MimeTypeEnum] = mapped_column(String, nullable=False)
-    industry: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    brand: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    
-    tags: Mapped[List[str]] = mapped_column(ARRAY(String), default=[])
-    
-    gcs_uris: Mapped[List[str]] = mapped_column(ARRAY(String), default=[])
-    thumbnail_uris: Mapped[List[str]] = mapped_column(ARRAY(String), default=[])
-    
+    industry: Mapped[str | None] = mapped_column(String, nullable=True)
+    brand: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=[])
+
+    gcs_uris: Mapped[list[str]] = mapped_column(ARRAY(String), default=[])
+    thumbnail_uris: Mapped[list[str]] = mapped_column(ARRAY(String), default=[])
+
     generation_parameters: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    
-    source_assets: Mapped[Optional[List[dict]]] = mapped_column(JSONB, nullable=True)
+
+    source_assets: Mapped[list[dict] | None] = mapped_column(
+        JSONB, nullable=True
+    )
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         insert_default=func.now(),
-        server_default=func.now()
+        server_default=func.now(),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         insert_default=func.now(),
         onupdate=func.now(),
-        server_default=func.now()
+        server_default=func.now(),
     )
 
 
 class MediaTemplateModel(BaseDocument):
-    """
-    Represents a unified, pre-configured, and queryable template for media generation,
+    """Represents a unified, pre-configured, and queryable template for media generation,
     incorporating strong validation and a clean structure.
     """
-    
-    id: Optional[int] = None
+
+    id: int | None = None
 
     # Using Field(..., min_length=1) for required, non-empty strings
     name: Annotated[
@@ -142,16 +140,17 @@ class MediaTemplateModel(BaseDocument):
 
     # --- Categorization & Filtering Fields ---
     mime_type: MimeTypeEnum = Field(
-        description="The primary type of mime type this template generates."
+        description="The primary type of mime type this template generates.",
     )
-    industry: Optional[IndustryEnum] = Field(
-        default=None, description="The target industry for this template."
+    industry: IndustryEnum | None = Field(
+        default=None,
+        description="The target industry for this template.",
     )
-    brand: Optional[str] = Field(
+    brand: str | None = Field(
         default=None,
         description="The specific brand this template is inspired by, e.g., 'IKEA'.",
     )
-    tags: Optional[List[str]] = Field(
+    tags: list[str] | None = Field(
         default_factory=list,
         description="A list of searchable keywords for filtering, e.g., ['futuristic', 'vibrant'].",
     )
@@ -159,16 +158,16 @@ class MediaTemplateModel(BaseDocument):
     # --- UI Display Fields ---
     # Using str for automatic URL validation
     gcs_uris: Annotated[
-        List[str],
+        list[str],
         Field(
             min_length=1,
             description="A list of public URLs for the media to be displayed (e.g., video or image).",
         ),
     ]
     thumbnail_uris: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         Field(
-            description="The public, permanent URL of the thumbnail image for this template."
+            description="The public, permanent URL of the thumbnail image for this template.",
         ),
     ]
 
@@ -176,7 +175,7 @@ class MediaTemplateModel(BaseDocument):
     generation_parameters: GenerationParameters
 
     # --- Source Asset Information ---
-    source_assets: Optional[List[SourceAssetLink]] = Field(
+    source_assets: list[SourceAssetLink] | None = Field(
         default=None,
         description="Links to source assets from the 'user_assets' collection used for generation.",
     )

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { AddVoiceDialogComponent } from './add-voice-dialog.component';
+import {AddVoiceDialogComponent} from './add-voice-dialog.component';
 
 describe('AddVoiceDialogComponent', () => {
   let component: AddVoiceDialogComponent;
@@ -24,9 +24,8 @@ describe('AddVoiceDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AddVoiceDialogComponent]
-    })
-    .compileComponents();
+      declarations: [AddVoiceDialogComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AddVoiceDialogComponent);
     component = fixture.componentInstance;

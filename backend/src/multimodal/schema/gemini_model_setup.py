@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from src.common.schema.genai_model_setup import GenAIModelSetup
 from google.genai import Client
+
+from src.common.schema.genai_model_setup import GenAIModelSetup
 
 
 class GeminiModelSetup(GenAIModelSetup):

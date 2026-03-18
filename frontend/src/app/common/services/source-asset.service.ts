@@ -14,17 +14,30 @@
  * limitations under the License.
  */
 
-import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, EMPTY, Observable, of, Subscription, timer } from 'rxjs';
-import { catchError, finalize, shareReplay, switchMap, tap } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
+import {HttpClient} from '@angular/common/http';
+import {Injectable} from '@angular/core';
+import {
+  BehaviorSubject,
+  EMPTY,
+  Observable,
+  of,
+  Subscription,
+  timer,
+} from 'rxjs';
+import {
+  catchError,
+  finalize,
+  shareReplay,
+  switchMap,
+  tap,
+} from 'rxjs/operators';
+import {environment} from '../../../environments/environment';
 import {
   AssetScopeEnum,
   AssetTypeEnum,
 } from '../../admin/source-assets-management/source-asset.model';
-import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
-import { JobStatus, MediaItem } from '../models/media-item.model';
+import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
+import {JobStatus, MediaItem} from '../models/media-item.model';
 
 export interface SourceAssetResponseDto {
   id: number;
@@ -83,8 +96,6 @@ export class SourceAssetService {
   public activeUpscaleJob$ = this.activeUpscaleJob.asObservable();
   private upscalePollingSubscription: Subscription | null = null;
 
-
-
   // Cache the request observable to prevent multiple API calls for the same filters.
   private assetsRequest$: Observable<
     PaginationResponseDto<SourceAssetResponseDto>
@@ -93,7 +104,7 @@ export class SourceAssetService {
   constructor(
     private http: HttpClient,
     private workspaceStateService: WorkspaceStateService,
-  ) { }
+  ) {}
 
   get assets(): Observable<SourceAssetResponseDto[]> {
     return this.assets$.asObservable();
@@ -159,9 +170,9 @@ export class SourceAssetService {
       .pipe(tap(() => this.refreshAssets()));
   }
 
-    uploadAndUpscaleImageAsset(
+  uploadAndUpscaleImageAsset(
     file: File,
-    options: SourceAssetOptionsDto = {}
+    options: SourceAssetOptionsDto = {},
   ): Observable<MediaItem> {
     const formData = new FormData();
     formData.append('file', file);
@@ -183,7 +194,12 @@ export class SourceAssetService {
     }
 
     // Validate and add mimeType only if it's valid
-    const validMimeTypes = ['image/jpeg', 'image/png', 'video/mp4', 'audio/wav'];
+    const validMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'video/mp4',
+      'audio/wav',
+    ];
     if (options.mimeType && validMimeTypes.includes(options.mimeType)) {
       formData.append('mimeType', options.mimeType);
     } else if (options.mimeType) {
@@ -202,17 +218,13 @@ export class SourceAssetService {
       )
       .pipe(
         tap(initialItem => {
-          console.log(
-            'Upscale job started successfully:',
-            initialItem,
-          );
+          console.log('Upscale job started successfully:', initialItem);
 
           this.activeUpscaleJob.next(initialItem);
           this.startUpscalePolling(String(initialItem.id));
         }),
       );
   }
-
 
   upscaleExistingAsset(
     asset: SourceAssetResponseDto,
@@ -239,8 +251,14 @@ export class SourceAssetService {
       formData.append('enhanceInputImage', String(options.enhance_input_image));
     }
 
-    if (options.image_preservation_factor !== undefined && options.image_preservation_factor !== null) {
-      formData.append('imagePreservationFactor', String(options.image_preservation_factor));
+    if (
+      options.image_preservation_factor !== undefined &&
+      options.image_preservation_factor !== null
+    ) {
+      formData.append(
+        'imagePreservationFactor',
+        String(options.image_preservation_factor),
+      );
     }
 
     return this.http
@@ -250,10 +268,7 @@ export class SourceAssetService {
       )
       .pipe(
         tap(initialItem => {
-          console.log(
-            'Upscale job started successfully:',
-            initialItem,
-          );
+          console.log('Upscale job started successfully:', initialItem);
 
           this.activeUpscaleJob.next(initialItem);
           this.startUpscalePolling(String(initialItem.id));
@@ -263,13 +278,11 @@ export class SourceAssetService {
 
   getAssetById(id: number): Observable<SourceAssetResponseDto> {
     return this.http.get<SourceAssetResponseDto>(
-      `${environment.backendURL}/source_assets/${id}`
+      `${environment.backendURL}/source_assets/${id}`,
     );
   }
 
-
   // UPSCALE POLLING
-
 
   private startUpscalePolling(mediaId: string): void {
     this.stopUpscalePolling();
@@ -352,7 +365,7 @@ export class SourceAssetService {
       }),
       catchError(() => {
         this.assetsRequest$ = null; // Allow retry on error
-        return of({ data: [], count: 0, page: 0, pageSize: 0, totalPages: 0 });
+        return of({data: [], count: 0, page: 0, pageSize: 0, totalPages: 0});
       }),
       finalize(() => {
         this.isLoading$.next(false);

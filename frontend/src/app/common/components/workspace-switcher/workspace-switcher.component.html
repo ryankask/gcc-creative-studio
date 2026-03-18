@@ -77,11 +77,12 @@
         <ng-container
           *ngIf="brandGuidelineService.activeBrandGuidelineJob$ | async as job"
         >
-          <mat-spinner
+          <mat-progress-spinner
             *ngIf="job.status === JobStatus.PROCESSING"
+            mode="indeterminate"
             [diameter]="20"
             class="inline-block mr-2"
-          ></mat-spinner>
+          ></mat-progress-spinner>
           <mat-icon *ngIf="job.status !== JobStatus.PROCESSING">style</mat-icon>
         </ng-container>
         <mat-icon

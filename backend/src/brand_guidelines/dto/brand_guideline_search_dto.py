@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from pydantic import Field
 
@@ -23,5 +22,6 @@ class BrandGuidelineSearchDto(BaseSearchDto):
     """Data Transfer Object for searching brand guidelines."""
 
     workspace_id: int = Field(
-        ge=1, description="The ID of the workspace to search within."
+        ge=1,
+        description="The ID of the workspace to search within.",
     )

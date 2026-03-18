@@ -12,36 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 from pydantic import BaseModel
+
 from src.workflows.schema.workflow_model import (
-    GenerateTextInputs,
-    GenerateTextSettings,
-    GenerateImageInputs,
-    GenerateImageSettings,
     EditImageInputs,
     EditImageSettings,
+    GenerateAudioInputs,
+    GenerateAudioSettings,
+    GenerateImageInputs,
+    GenerateImageSettings,
+    GenerateTextInputs,
+    GenerateTextSettings,
     GenerateVideoInputs,
     GenerateVideoSettings,
     VirtualTryOnInputs,
     VirtualTryOnSettings,
-    GenerateAudioInputs,
-    GenerateAudioSettings,
 )
+
 
 class GenerateTextRequest(BaseModel):
     inputs: GenerateTextInputs
     config: GenerateTextSettings
+
 
 class GenerateImageRequest(BaseModel):
     workspace_id: int
     inputs: GenerateImageInputs
     config: GenerateImageSettings
 
+
 class EditImageRequest(BaseModel):
     workspace_id: int
     inputs: EditImageInputs
     config: EditImageSettings
+
 
 class GenerateVideoRequest(BaseModel):
     workspace_id: int
@@ -53,6 +57,7 @@ class VirtualTryOnRequest(BaseModel):
     workspace_id: int
     inputs: VirtualTryOnInputs
     config: VirtualTryOnSettings
+
 
 class GenerateAudioRequest(BaseModel):
     workspace_id: int

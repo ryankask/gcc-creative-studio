@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 from pydantic import Field
 
 from src.common.base_dto import BaseDto
 
 
 class BaseSearchDto(BaseDto):
-    """
-    A base DTO for paginated search queries.
+    """A base DTO for paginated search queries.
     Provides common fields for limit and cursor-based pagination.
     """
 

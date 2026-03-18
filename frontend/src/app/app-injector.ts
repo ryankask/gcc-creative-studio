@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Injector } from '@angular/core';
+import {Injector} from '@angular/core';
 
 export let AppInjector: Injector;
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -24,7 +24,7 @@ class ConcatenationInput(BaseModel):
 
     id: int = Field(description="The ID of the asset or media item.")
     type: Literal["media_item", "source_asset"] = Field(
-        description="The type of the input."
+        description="The type of the input.",
     )
 
 
@@ -37,9 +37,10 @@ class ConcatenateVideosDto(BaseDto):
         default="Concatenated Video",
     )
     workspace_id: int = Field(
-        ge=1, description="The ID of the workspace for this generation."
+        ge=1,
+        description="The ID of the workspace for this generation.",
     )
-    inputs: List[ConcatenationInput] = Field(
+    inputs: list[ConcatenationInput] = Field(
         min_length=2,
         description="An ordered list of videos to concatenate.",
     )

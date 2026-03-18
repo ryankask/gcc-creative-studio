@@ -19,11 +19,13 @@ services:
       dockerfile: Dockerfile
     container_name: creative-studio-backend
     ports:
-      - "8080:8080"
+      - "9000:8080"
     restart: unless-stopped
+    depends_on:
+      - postgres
 
     env_file:
-      - ./backend/.env # Update as needed, for ex to './backend/.local.env'
+      - ./backend/.env
 
     # Override the Dockerfile's CMD to enable --reload.
     # Using 1 worker is better for a dev/reload environment.
@@ -71,5 +73,42 @@ services:
       - ./frontend/proxy.conf.json:/app/proxy.conf.json
 
 # Define the named volume at the top level
+  postgres:
+    image: postgres:15-alpine
+    container_name: creative-studio-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=studio_user
+      - POSTGRES_PASSWORD=studio_pass
+      - POSTGRES_DB=creative_studio
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio_user -d creative_studio"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    container_name: creative-studio-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  pre-commit:
+    build:
+      context: .
+      dockerfile: infra/pre-commit/Dockerfile.pre-commit
+    container_name: creative-studio-pre-commit
+    volumes:
+      - .:/app
+    working_dir: /app
+
 volumes:
   backend_venv:
+  postgres_data:

@@ -14,27 +14,39 @@
  * limitations under the License.
  */
 
-import { Component, EventEmitter, Input, Output, signal, HostListener, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
-import { VeoRequest } from '../../models/search.model';
-import { GenerationModelConfig } from '../../config/model-config';
-import { MatIcon, MatIconModule } from '@angular/material/icon';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  signal,
+  HostListener,
+  SimpleChanges,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
+import {VeoRequest} from '../../models/search.model';
+import {GenerationModelConfig} from '../../config/model-config';
+import {MatIcon, MatIconModule} from '@angular/material/icon';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {MatButtonModule} from '@angular/material/button';
+import {MatMenuModule} from '@angular/material/menu';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 @Component({
   standalone: true,
   selector: 'app-flow-prompt-box',
   templateUrl: './flow-prompt-box.component.html',
   styleUrls: ['./flow-prompt-box.component.scss'],
-  imports:[CommonModule,
+  imports: [
+    CommonModule,
     FormsModule,
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
-    MatTooltipModule]
+    MatTooltipModule,
+  ],
 })
 export class FlowPromptBoxComponent {
   @Input() searchRequest!: any; // Keep for now, but prefer individual inputs
@@ -45,8 +57,13 @@ export class FlowPromptBoxComponent {
   @Input() aspectRatio = '16:9';
   @Input() outputs = 4;
   @Input() mode = 'Text to Video';
-  @Input() aspectRatioOptions: { value: string; viewValue: string; disabled: boolean; icon?: string }[] = [];
-  @Input() modes: { value: string; icon: string; label: string }[] = [];
+  @Input() aspectRatioOptions: {
+    value: string;
+    viewValue: string;
+    disabled: boolean;
+    icon?: string;
+  }[] = [];
+  @Input() modes: {value: string; icon: string; label: string}[] = [];
 
   @Output() generateClicked = new EventEmitter<void>();
   @Output() rewriteClicked = new EventEmitter<void>();
@@ -56,18 +73,19 @@ export class FlowPromptBoxComponent {
   @Output() outputsChanged = new EventEmitter<number>();
   @Output() modeChanged = new EventEmitter<string>();
   @Output() openImageSelector = new EventEmitter<1 | 2>();
-  @Output() clearImage = new EventEmitter<{num: 1 | 2, event: Event}>();
+  @Output() clearImage = new EventEmitter<{num: 1 | 2; event: Event}>();
   @Output() openImageSelectorForReference = new EventEmitter<void>();
   @Output() onReferenceImageDrop = new EventEmitter<DragEvent>();
-  @Output() clearReferenceImage = new EventEmitter<{index: number, event: Event}>();
+  @Output() clearReferenceImage = new EventEmitter<{
+    index: number;
+    event: Event;
+  }>();
   @Output() toggleReferenceImagesType = new EventEmitter<boolean>();
 
   @Input() image1Preview: string | null = null;
   @Input() image2Preview: string | null = null;
   @Input() referenceImages: any[] = [];
   @Input() referenceImagesType: 'ASSET' | 'STYLE' = 'ASSET';
-
-
 
   @ViewChild('modeTrigger') modeTrigger!: ElementRef;
   @ViewChild('modeMenu') modeMenu!: ElementRef;
@@ -93,7 +111,8 @@ export class FlowPromptBoxComponent {
       this.isSettingsMenuOpen() &&
       this.settingsTrigger &&
       !this.settingsTrigger.nativeElement.contains(event.target) &&
-      (!this.settingsMenu || !this.settingsMenu.nativeElement.contains(event.target))
+      (!this.settingsMenu ||
+        !this.settingsMenu.nativeElement.contains(event.target))
     ) {
       this.isSettingsMenuOpen.set(false);
     }
@@ -163,6 +182,8 @@ export class FlowPromptBoxComponent {
   }
 
   getSelectedModelObject(): GenerationModelConfig | undefined {
-    return this.generationModels.find(m => m.viewValue === this.selectedGenerationModel);
+    return this.generationModels.find(
+      m => m.viewValue === this.selectedGenerationModel,
+    );
   }
 }

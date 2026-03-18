@@ -17,11 +17,11 @@ from src.source_assets.schema.source_asset_model import SourceAssetModel
 
 
 class SourceAssetResponseDto(SourceAssetModel):
-    """
-    Data transfer object for returning a user asset, including a
+    """Data transfer object for returning a user asset, including a
     temporary, accessible URL.
     """
 
     presigned_url: str
     presigned_original_url: str
     presigned_thumbnail_url: str
+    user_email: str | None = None

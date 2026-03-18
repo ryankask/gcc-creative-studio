@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Service for audio generation and analysis."""
+
 
 import asyncio
 import base64
@@ -18,21 +20,24 @@ import io
 import logging
 import time
 import wave
-from typing import Any, Dict, List, MutableSequence, Optional, cast
-
-from fastapi import Depends
+from collections.abc import MutableSequence
+from typing import Any
 
 import vertexai
+from fastapi import Depends
 from google.cloud import aiplatform
 from google.cloud import texttospeech_v1beta1 as texttospeech
 from google.genai import types
 from google.protobuf import json_format, struct_pb2
-from vertexai.generative_models import GenerationConfig, GenerativeModel
 
 from src.audios.audio_constants import LanguageEnum, VoiceEnum
 from src.audios.dto.create_audio_dto import CreateAudioDto
 from src.auth.iam_signer_credentials_service import IamSignerCredentials
-from src.common.base_dto import AspectRatioEnum, GenerationModelEnum, MimeTypeEnum
+from src.common.base_dto import (
+    AspectRatioEnum,
+    GenerationModelEnum,
+    MimeTypeEnum,
+)
 from src.common.schema.genai_model_setup import GenAIModelSetup
 from src.common.schema.media_item_model import JobStatusEnum, MediaItemModel
 from src.common.storage_service import GcsService
@@ -84,47 +89,50 @@ class AudioService:
         vertexai.init(project=self.cfg.PROJECT_ID, location=self.cfg.LOCATION)
 
     async def generate_audio(
-        self, request_dto: CreateAudioDto, user: UserModel
+        self,
+        request_dto: CreateAudioDto,
+        user: UserModel,
     ) -> MediaItemResponse | None:
-        """
-        Main entry point: Routes to the correct generation logic based on the model type.
-        """
-
+        """Main entry point: Routes to the correct generation logic
+        based on the model type."""
         # 1. Route to Music Generation (Lyria)
         if request_dto.model in self.MUSIC_MODELS:
             return await self._generate_music_lyria(request_dto, user)
 
         # 2. Route to Gemini TTS Native Speech (Generate Content API)
-        elif request_dto.model in self.GEMINI_MODELS:
+        if request_dto.model in self.GEMINI_MODELS:
             return await self._generate_gemini_speech(request_dto, user)
 
         # 3. Route to Standard/Chirp TTS (Synthesize Speech API)
-        elif request_dto.model in self.TTS_MODELS:
+        if request_dto.model in self.TTS_MODELS:
             return await self._generate_standard_speech(request_dto, user)
 
-        else:
-            raise ValueError(
-                f"Model '{request_dto.model}' is not supported by AudioService."
-            )
+        raise ValueError(
+            f"Model '{request_dto.model}' is not supported by AudioService.",
+        )
 
     async def _generate_gemini_speech(
-        self, request_dto: CreateAudioDto, user: UserModel
+        self,
+        request_dto: CreateAudioDto,
+        user: UserModel,
     ) -> MediaItemResponse | None:
-        """
-        Handles logic for Gemini Models (LLM Audio Generation).
+        """Handles logic for Gemini Models (LLM Audio Generation).
         Implements Parallel Execution for multiple samples.
         """
         start_time = time.monotonic()
         model_id = request_dto.model.value
 
         # Define the single generation task
-        async def generate_single_sample(index: int) -> Optional[str]:
+        async def generate_single_sample(index: int) -> str | None:
             try:
                 # 1. Call GenAI API
                 response = self.client.models.generate_content(
                     model=model_id,
                     contents=[
-                        f"Please read the following text: \n{request_dto.prompt}"
+                        (
+                            "Please read the following text: \n"
+                            f"{request_dto.prompt}"
+                        ),
                     ],
                     config=types.GenerateContentConfig(
                         response_modalities=["AUDIO"],
@@ -132,9 +140,9 @@ class AudioService:
                         speech_config=types.SpeechConfig(
                             voice_config=types.VoiceConfig(
                                 prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                                    voice_name=request_dto.voice_name or "Puck"
-                                )
-                            )
+                                    voice_name=request_dto.voice_name or "Puck",
+                                ),
+                            ),
                         ),
                     ),
                 )
@@ -146,7 +154,7 @@ class AudioService:
                     or not response.candidates[0].content.parts
                 ):
                     logger.warning(
-                        f"Gemini attempt {index} returned no content."
+                        "Gemini attempt %s returned no content.", index
                     )
                     return None
 
@@ -160,7 +168,7 @@ class AudioService:
                         pcm_bytes = base64.b64decode(pcm_bytes)
                 else:
                     logger.warning(
-                        f"Gemini attempt {index} had no inline data."
+                        "Gemini attempt %s had no inline data.", index
                     )
                     return None
 
@@ -178,7 +186,12 @@ class AudioService:
                 final_wav_bytes = wav_buffer.getvalue()
 
                 # 5. Save to GCS
-                file_name = f"gemini_audio_{request_dto.model.value}_{int(time.time())}_{str(user.id)[:4]}_{index}.wav"
+                timestamp = int(time.time())
+                uid_short = str(user.id)[:4]
+                file_name = (
+                    f"gemini_audio_{model_id}_{timestamp}_"
+                    f"{uid_short}_{index}.wav"
+                )
                 gcs_uri = self.gcs_service.store_to_gcs(
                     folder="gemini_audio",
                     file_name=file_name,
@@ -189,7 +202,9 @@ class AudioService:
                 return gcs_uri
 
             except Exception as e:
-                logger.error(f"Gemini generation attempt {index} failed: {e}")
+                logger.error(
+                    "Gemini generation attempt %s failed: %s", index, e
+                )
                 return None
 
         # --- PARALLEL EXECUTION ---
@@ -211,23 +226,25 @@ class AudioService:
         )
 
     async def _generate_standard_speech(
-        self, request_dto: CreateAudioDto, user: UserModel
+        self,
+        request_dto: CreateAudioDto,
+        user: UserModel,
     ) -> MediaItemResponse | None:
-        """
-        Handles logic for Chirp and Standard Google Cloud TTS voices.
+        """Handles logic for Chirp and Standard Google Cloud TTS voices.
         INTEGRATION NOTE: Now uses Chirp3 HD logic from working snippet.
         """
         start_time = time.monotonic()
 
         # Define the single generation task
-        async def generate_single_sample(index: int) -> Optional[str]:
+        async def generate_single_sample(index: int) -> str | None:
             try:
                 synthesis_input = texttospeech.SynthesisInput(
                     text=request_dto.prompt
                 )
 
                 # Construct the full voice name string if using Chirp 3
-                # Example: "en-US" + "Chirp3-HD" + "Puck" -> "en-US-Chirp3-HD-Fenrir"
+                # Example: "en-US" + "Chirp3-HD" + "Puck" ->
+                # "en-US-Chirp3-HD-Fenrir"
                 voice_name = (
                     request_dto.voice_name.value
                     if request_dto.voice_name
@@ -239,7 +256,8 @@ class AudioService:
                     else LanguageEnum.EN_US.value
                 )
 
-                # If it is Chirp 3 and the user passed just the name (e.g., "Fenrir" or "Puck")
+                # If it is Chirp 3 and the user passed just the name
+                # (e.g., "Fenrir" or "Puck")
                 # we need to format it correctly.
                 if request_dto.model == GenerationModelEnum.CHIRP_3:
                     voice_name = f"{language_code}-Chirp3-HD-{voice_name}"
@@ -265,7 +283,12 @@ class AudioService:
 
                 audio_bytes = response.audio_content
 
-                file_name = f"tts_{request_dto.model.value}_{int(time.time())}_{str(user.id)[:4]}_{index}.wav"
+                timestamp = int(time.time())
+                uid_short = str(user.id)[:4]
+                model_val = request_dto.model.value
+                file_name = (
+                    f"tts_{model_val}_{timestamp}_{uid_short}_" f"{index}.wav"
+                )
 
                 gcs_uri = self.gcs_service.store_to_gcs(
                     folder="tts_audio",
@@ -277,7 +300,7 @@ class AudioService:
                 return gcs_uri
 
             except Exception as e:
-                logger.error(f"Standard TTS attempt {index} failed: {e}")
+                logger.error("Standard TTS attempt %s failed: %s", index, e)
                 return None
 
         # --- PARALLEL EXECUTION ---
@@ -299,11 +322,13 @@ class AudioService:
             start_time,
             MimeTypeEnum.AUDIO_WAV,
         )
+
     async def _generate_music_lyria(
-        self, request_dto: CreateAudioDto, user: UserModel
+        self,
+        request_dto: CreateAudioDto,
+        user: UserModel,
     ) -> MediaItemResponse | None:
-        """
-        Handles logic for Lyria.
+        """Handles logic for Lyria.
         Implements manual parallelism to support sample_count > 1.
         """
         start_time = time.monotonic()
@@ -318,7 +343,7 @@ class AudioService:
         )
 
         # Define the single generation task
-        async def generate_single_sample(index: int) -> Optional[str]:
+        async def generate_single_sample(index: int) -> str | None:
             try:
                 # 1. Prepare Parameters (Force count=1 for individual call)
                 parameters_dict = {"sample_count": 1}
@@ -326,7 +351,7 @@ class AudioService:
                 json_format.ParseDict(parameters_dict, parameters_value)
 
                 # 2. Prepare Instance
-                instance_dict: Dict[str, Any] = {"prompt": request_dto.prompt}
+                instance_dict: dict[str, Any] = {"prompt": request_dto.prompt}
                 if request_dto.negative_prompt:
                     instance_dict["negative_prompt"] = (
                         request_dto.negative_prompt
@@ -340,9 +365,13 @@ class AudioService:
                 instances: MutableSequence[struct_pb2.Value] = [instance_value]
 
                 # 3. Call API
+                endpoint = (
+                    f"projects/{self.cfg.PROJECT_ID}/locations/global/"
+                    "publishers/google/models/lyria-002"
+                )
                 response = await asyncio.to_thread(
                     client.predict,
-                    endpoint=f"projects/{self.cfg.PROJECT_ID}/locations/global/publishers/google/models/lyria-002",
+                    endpoint=endpoint,
                     instances=instances,
                     parameters=parameters_value,
                 )
@@ -362,8 +391,10 @@ class AudioService:
                 audio_bytes = base64.b64decode(audio_b64)
 
                 # Unique filename per sample
+                timestamp = int(time.time())
+                user_id_short = str(user.id)[:4]
                 file_name = (
-                    f"lyria_music_{int(time.time())}_{str(user.id)[:4]}_{index}.wav"
+                    f"lyria_music_{timestamp}_{user_id_short}_" f"{index}.wav"
                 )
 
                 # 5. Save to GCS
@@ -377,7 +408,12 @@ class AudioService:
                 return gcs_uri
 
             except Exception as e:
-                logger.error(f"Lyria generation attempt {index} failed: {e}", exc_info=True)
+                logger.error(
+                    "Lyria generation attempt %s failed: %s",
+                    index,
+                    e,
+                    exc_info=True,
+                )
                 return None
 
         # --- PARALLEL EXECUTION ---
@@ -407,13 +443,11 @@ class AudioService:
         self,
         user: UserModel,
         request_dto: CreateAudioDto,
-        gcs_uris: List[str],
+        gcs_uris: list[str],
         start_time: float,
-        mime_type: MimeTypeEnum
+        mime_type: MimeTypeEnum,
     ) -> MediaItemResponse:
-        """
-        Helper to save DB record and generate presigned URLs.
-        """
+        """Helper to save DB record and generate presigned URLs."""
         if not gcs_uris:
             raise ValueError("No audio content generated.")
 

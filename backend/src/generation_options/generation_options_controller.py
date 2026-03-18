@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from fastapi import APIRouter
+
 from src.common.base_dto import (
     AspectRatioEnum,
     CompositionEnum,
@@ -22,7 +23,7 @@ from src.common.base_dto import (
 from src.generation_options.dto.generation_options_dto import (
     GenerationOptionsResponse,
 )
-from src.images.dto.create_imagen_dto import LightingEnum, ColorAndToneEnum
+from src.images.dto.create_imagen_dto import ColorAndToneEnum, LightingEnum
 
 router = APIRouter(
     prefix="/api/options",
@@ -32,8 +33,7 @@ router = APIRouter(
 
 @router.get("/image-generation", response_model=GenerationOptionsResponse)
 async def get_image_generation_options():
-    """
-    Provides a list of available options for the image generation UI,
+    """Provides a list of available options for the image generation UI,
     dynamically sourced from the backend enums.
     """
     return GenerationOptionsResponse(

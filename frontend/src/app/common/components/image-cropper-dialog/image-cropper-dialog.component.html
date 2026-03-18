@@ -14,133 +14,138 @@
  limitations under the License.
 -->
 
-<h2 mat-dialog-title>Crop Your Image</h2>
-<mat-dialog-content>
-  <div *ngIf="isConverting" class="loading-overlay">
-    <mat-progress-spinner
-      mode="indeterminate"
-      [diameter]="50"
-    ></mat-progress-spinner>
-    <p>Converting image...</p>
-  </div>
+<div class="image-cropper-container">
+  <h2 mat-dialog-title>Crop Your Image</h2>
+  <mat-dialog-content>
+    <div *ngIf="isConverting" class="loading-overlay">
+      <mat-progress-spinner
+        mode="indeterminate"
+        [diameter]="50"
+      ></mat-progress-spinner>
+      <p>Converting image...</p>
+    </div>
 
-  <div *ngIf="!isConverting">
-    <div class="controls-toolbar">
-      <mat-form-field
-        appearance="outline"
-        class="aspect-ratio-dropdown mt-3"
-        *ngIf="aspectRatios.length > 1"
+    <div *ngIf="!isConverting">
+      <div class="controls-toolbar">
+        <mat-form-field
+          appearance="outline"
+          class="aspect-ratio-dropdown mt-3"
+          *ngIf="aspectRatios.length > 1"
+        >
+          <mat-label>Aspect Ratio</mat-label>
+          <mat-select
+            [value]="currentAspectRatio"
+            (selectionChange)="onAspectRatioChange($event.value)"
+          >
+            <mat-option *ngFor="let ratio of aspectRatios" [value]="ratio.value">
+              {{ ratio.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="control-group">
+          <button mat-icon-button (click)="zoomOut()" matTooltip="Zoom Out">
+            <mat-icon>zoom_out</mat-icon>
+          </button>
+          <button mat-icon-button (click)="zoomIn()" matTooltip="Zoom In">
+            <mat-icon>zoom_in</mat-icon>
+          </button>
+        </div>
+
+        <div class="control-group">
+          <button mat-icon-button (click)="rotateLeft()" matTooltip="Rotate Left">
+            <mat-icon>rotate_left</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            (click)="rotateRight()"
+            matTooltip="Rotate Right"
+          >
+            <mat-icon>rotate_right</mat-icon>
+          </button>
+        </div>
+
+        <div class="control-group">
+          <button
+            mat-icon-button
+            (click)="flipHorizontal()"
+            matTooltip="Flip Horizontal"
+          >
+            <mat-icon>flip</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            (click)="flipVertical()"
+            matTooltip="Flip Vertical"
+            class="flip-vertical"
+          >
+            <mat-icon>flip</mat-icon>
+          </button>
+        </div>
+
+        <div class="control-group">
+          <button mat-icon-button (click)="moveLeft()" matTooltip="Move Left">
+            <mat-icon>keyboard_arrow_left</mat-icon>
+          </button>
+          <button mat-icon-button (click)="moveRight()" matTooltip="Move Right">
+            <mat-icon>keyboard_arrow_right</mat-icon>
+          </button>
+          <button mat-icon-button (click)="moveUp()" matTooltip="Move Up">
+            <mat-icon>keyboard_arrow_up</mat-icon>
+          </button>
+          <button mat-icon-button (click)="moveDown()" matTooltip="Move Down">
+            <mat-icon>keyboard_arrow_down</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="cropper-area">
+        <image-cropper
+          [imageFile]="imageFile || undefined"
+          [options]="options"
+          [canvasRotation]="canvasRotation"
+          [(transform)]="transform"
+          [containWithinAspectRatio]="containWithinAspectRatio"
+          format="png"
+          (imageCropped)="imageCropped($event)"
+        ></image-cropper>
+      </div>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <div class="controls-row">
+      <div class="footer-controls">
+        <label class="text-white">Fill Aspect Ratio</label>
+        <mat-slide-toggle [(ngModel)]="containWithinAspectRatio"></mat-slide-toggle>
+
+        <div class="color-picker">
+          <label class="text-white">Background</label>
+          <input
+            type="color"
+            [ngModel]="backgroundColor"
+            (ngModelChange)="onBackgroundColorChange($event)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="buttons-row">
+      <studio-button mat-dialog-close [disabled]="isUploading">
+        Cancel
+      </studio-button>
+      <studio-button
+        variant="cta"
+        size="medium"
+        (click)="uploadCroppedImage()"
+        [disabled]="isUploading || !croppedImageBlob"
       >
-        <mat-label>Aspect Ratio</mat-label>
-        <mat-select
-          [value]="currentAspectRatio"
-          (selectionChange)="onAspectRatioChange($event.value)"
-        >
-          <mat-option *ngFor="let ratio of aspectRatios" [value]="ratio.value">
-            {{ ratio.label }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <div class="control-group">
-        <button mat-icon-button (click)="zoomOut()" matTooltip="Zoom Out">
-          <mat-icon>zoom_out</mat-icon>
-        </button>
-        <button mat-icon-button (click)="zoomIn()" matTooltip="Zoom In">
-          <mat-icon>zoom_in</mat-icon>
-        </button>
-      </div>
-
-      <div class="control-group">
-        <button mat-icon-button (click)="rotateLeft()" matTooltip="Rotate Left">
-          <mat-icon>rotate_left</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          (click)="rotateRight()"
-          matTooltip="Rotate Right"
-        >
-          <mat-icon>rotate_right</mat-icon>
-        </button>
-      </div>
-
-      <div class="control-group">
-        <button
-          mat-icon-button
-          (click)="flipHorizontal()"
-          matTooltip="Flip Horizontal"
-        >
-          <mat-icon>flip</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          (click)="flipVertical()"
-          matTooltip="Flip Vertical"
-          class="flip-vertical"
-        >
-          <mat-icon>flip</mat-icon>
-        </button>
-      </div>
-
-      <div class="control-group">
-        <button mat-icon-button (click)="moveLeft()" matTooltip="Move Left">
-          <mat-icon>keyboard_arrow_left</mat-icon>
-        </button>
-        <button mat-icon-button (click)="moveRight()" matTooltip="Move Right">
-          <mat-icon>keyboard_arrow_right</mat-icon>
-        </button>
-        <button mat-icon-button (click)="moveUp()" matTooltip="Move Up">
-          <mat-icon>keyboard_arrow_up</mat-icon>
-        </button>
-        <button mat-icon-button (click)="moveDown()" matTooltip="Move Down">
-          <mat-icon>keyboard_arrow_down</mat-icon>
-        </button>
-      </div>
+        <mat-spinner
+          *ngIf="isUploading"
+          [diameter]="20"
+          class="mr-2 inline-block"
+        ></mat-spinner>
+        <span *ngIf="!isUploading">Crop & Upload</span>
+      </studio-button>
     </div>
-
-    <div class="cropper-container">
-      <image-cropper
-        [imageFile]="imageFile || undefined"
-        [options]="options"
-        [canvasRotation]="canvasRotation"
-        [(transform)]="transform"
-        [containWithinAspectRatio]="containWithinAspectRatio"
-        format="png"
-        (imageCropped)="imageCropped($event)"
-      ></image-cropper>
-    </div>
-  </div>
-</mat-dialog-content>
-<mat-dialog-actions align="end">
-  <div class="footer-controls">
-    <label class="text-white">Fill Aspect Ratio</label>
-    <mat-slide-toggle [(ngModel)]="containWithinAspectRatio"></mat-slide-toggle>
-
-    <div class="color-picker">
-      <label class="text-white">Background</label>
-      <input
-        type="color"
-        [ngModel]="backgroundColor"
-        (ngModelChange)="onBackgroundColorChange($event)"
-      />
-    </div>
-  </div>
-  <span class="flex-spacer"></span>
-  <button mat-stroked-button mat-dialog-close [disabled]="isUploading">
-    Cancel
-  </button>
-  <button
-    mat-flat-button
-    color="primary"
-    (click)="uploadCroppedImage()"
-    [disabled]="!croppedImageBlob || isUploading"
-    class="crop-upload-btn"
-  >
-    <mat-progress-spinner
-      *ngIf="isUploading"
-      mode="indeterminate"
-      [diameter]="20"
-    ></mat-progress-spinner>
-    <span *ngIf="!isUploading">Crop & Upload</span>
-  </button>
-</mat-dialog-actions>
+  </mat-dialog-actions>
+</div>

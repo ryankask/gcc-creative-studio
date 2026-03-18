@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+
+from typing import Annotated
 
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 
 class ImageMetadata(BaseModel):
     """High-level administrative data for the image prompt."""
 
     prompt_name: Annotated[
-        str, Field(description="A descriptive name for your image concept.")
+        str,
+        Field(description="A descriptive name for your image concept."),
     ]
     version: float = Field(
         default=1.0, description="Version of the prompt structure."
@@ -43,23 +44,23 @@ class SubjectAndScene(BaseModel):
     main_subject: Annotated[
         str,
         Field(
-            description="The primary character, object, or focus. E.g., 'A golden retriever puppy', 'A vintage sports car'."
+            description="The primary character, object, or focus. E.g., 'A golden retriever puppy', 'A vintage sports car'.",
         ),
     ]
-    subject_details: Optional[str] = Field(
+    subject_details: str | None = Field(
         default=None,
         description="Key features, clothing, or expression if the subject is a character. E.g., 'wearing a tiny red bowtie'.",
     )
     environment: Annotated[
         str,
         Field(
-            description="Describe the overall setting or background. E.g., 'sitting in a sunlit meadow', 'on a rain-slicked neon street'."
+            description="Describe the overall setting or background. E.g., 'sitting in a sunlit meadow', 'on a rain-slicked neon street'.",
         ),
     ]
     mood_and_atmosphere: Annotated[
         str,
         Field(
-            description="Comma-separated keywords describing the feeling. E.g., 'Joyful, vibrant, warm', 'Mysterious, noir, tense'."
+            description="Comma-separated keywords describing the feeling. E.g., 'Joyful, vibrant, warm', 'Mysterious, noir, tense'.",
         ),
     ]
 
@@ -67,15 +68,15 @@ class SubjectAndScene(BaseModel):
 class VisualStyle(BaseModel):
     """Defines the overall artistic and visual style of the image."""
 
-    aesthetic: Optional[str] = Field(
+    aesthetic: str | None = Field(
         default=None,
         description="The primary artistic style. E.g., 'Photorealistic', 'Cinematic', 'Studio photography', 'Fantasy art'.",
     )
-    color_palette: Optional[str] = Field(
+    color_palette: str | None = Field(
         default=None,
         description="Describe the dominant colors. E.g., 'Warm autumn colors', 'Cool blues and muted grays'.",
     )
-    artistic_influences: Optional[str] = Field(
+    artistic_influences: str | None = Field(
         default=None,
         description="Optional artists or movements to draw inspiration from. E.g., 'in the style of Ansel Adams', 'reminiscent of impressionist paintings'.",
     )
@@ -87,13 +88,13 @@ class PhotographyDirectives(BaseModel):
     shot_type: Annotated[
         str,
         Field(
-            description="The camera shot framing. E.g., 'Extreme close-up', 'Wide shot', 'Aerial view'."
+            description="The camera shot framing. E.g., 'Extreme close-up', 'Wide shot', 'Aerial view'.",
         ),
     ]
     lighting_style: Annotated[
         str,
         Field(
-            description="Describe the lighting setup. E.g., 'Golden hour backlighting', 'Dramatic three-point studio lighting'."
+            description="Describe the lighting setup. E.g., 'Golden hour backlighting', 'Dramatic three-point studio lighting'.",
         ),
     ]
     aspect_ratio: Annotated[
@@ -103,11 +104,11 @@ class PhotographyDirectives(BaseModel):
             description="The aspect ratio of the final image, e.g., '16:9', '1:1', '4:3'.",
         ),
     ]
-    composition: Optional[str] = Field(
+    composition: str | None = Field(
         default=None,
         description="Compositional rules. E.g., 'Rule of thirds', 'Symmetrical', 'Leading lines'.",
     )
-    lens_and_effects: Optional[str] = Field(
+    lens_and_effects: str | None = Field(
         default=None,
         description="Lens choice and optical effects. E.g., 'Shot with a macro lens with a shallow depth of field', 'Anamorphic lens flare'.",
     )
@@ -116,7 +117,7 @@ class PhotographyDirectives(BaseModel):
 class Constraints(BaseModel):
     """Specifies what to explicitly exclude from the generation."""
 
-    negative_prompts: List[str] = Field(
+    negative_prompts: list[str] = Field(
         default_factory=list,
         description="List of elements, styles, or colors to explicitly avoid. E.g., ['blurry', 'text', 'watermarks'].",
     )
@@ -127,6 +128,6 @@ class CreatePromptImageDto(BaseModel):
 
     metadata: ImageMetadata
     subject_and_scene: SubjectAndScene
-    visual_style: Optional[VisualStyle]
+    visual_style: VisualStyle | None
     photography_directives: PhotographyDirectives
     constraints: Constraints

@@ -17,20 +17,23 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header
 
 from src.workflows_executor.dto.workflows_executor_dto import (
-    GenerateTextRequest,
-    GenerateImageRequest,
     EditImageRequest,
+    GenerateAudioRequest,
+    GenerateImageRequest,
+    GenerateTextRequest,
     GenerateVideoRequest,
     VirtualTryOnRequest,
-    GenerateAudioRequest,
 )
-from src.workflows_executor.workflows_executor_service import WorkflowsExecutorService
+from src.workflows_executor.workflows_executor_service import (
+    WorkflowsExecutorService,
+)
 
 router = APIRouter(
     prefix="/api/workflows-executor",
     tags=["Workflows Executor"],
     responses={404: {"description": "Not found"}},
 )
+
 
 @router.post("/generate_text")
 async def generate_text(

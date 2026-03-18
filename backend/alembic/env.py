@@ -20,16 +20,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-
 from src.database import Base, get_conn_string
-from src.users.user_model import User
-from src.workspaces.schema.workspace_model import Workspace
-from src.brand_guidelines.schema.brand_guideline_model import BrandGuideline
-from src.common.schema.media_item_model import MediaItem
-from src.media_templates.schema.media_template_model import MediaTemplate
-from src.source_assets.schema.source_asset_model import SourceAsset
-from src.workflows.schema.workflow_model import Workflow
-from src.workflows.schema.workflow_run_model import WorkflowRun
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -80,25 +71,27 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 from google.cloud.sql.connector import Connector, IPTypes
+
 from src.config.config_service import config_service
+
 
 # Define a local get_connection for Alembic to avoid loop issues with the global one
 async def alembic_get_connection():
     import asyncio
-    
+
     # Explicitly get the running loop and pass it to Connector if supported,
     # or ensure Connector uses it.
     # Note: Connector() might not accept loop in newer versions, but let's try to force it
     # by setting the event loop if needed, or just relying on get_running_loop.
     # If Connector uses get_event_loop(), we might need to set it.
     loop = asyncio.get_running_loop()
-    
+
     try:
         connector = Connector(loop=loop)
     except TypeError:
         # Fallback if loop arg is not supported
         connector = Connector()
-        
+
     conn = await connector.connect_async(
         config_service.INSTANCE_CONNECTION_NAME,
         "asyncpg",
@@ -109,6 +102,7 @@ async def alembic_get_connection():
     )
     return conn
 
+
 async def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -118,10 +112,13 @@ async def run_migrations_online() -> None:
     """
     # Create a configuration dict from the alembic config
     configuration = config.get_section(config.config_ini_section, {})
-    
+
     # If using Cloud SQL Connector, we need to pass the async_creator
     connect_args = {}
-    if config_service.INSTANCE_CONNECTION_NAME and not config_service.USE_CLOUD_SQL_AUTH_PROXY:
+    if (
+        config_service.INSTANCE_CONNECTION_NAME
+        and not config_service.USE_CLOUD_SQL_AUTH_PROXY
+    ):
         # We override the URL to be empty/generic because the connector handles it
         configuration["sqlalchemy.url"] = "postgresql+asyncpg://"
         connect_args["async_creator"] = alembic_get_connection

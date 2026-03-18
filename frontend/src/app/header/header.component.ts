@@ -68,13 +68,13 @@ export class HeaderComponent implements OnDestroy {
     public userService: UserService,
     public authService: AuthService,
     private breakpointObserver: BreakpointObserver,
-    @Inject(PLATFORM_ID) platformId: Object
+    @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     // Initialize menuFixed from localStorage
     if (this.isBrowser) {
-        const storedMenuFixed = localStorage.getItem('menuFixed');
-        this.menuFixed = storedMenuFixed === 'true';
+      const storedMenuFixed = localStorage.getItem('menuFixed');
+      this.menuFixed = storedMenuFixed === 'true';
     }
 
     this.matIconRegistry

@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-import { HttpClient } from '@angular/common/http';
+import {HttpClient} from '@angular/common/http';
 import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  Inject,
   OnInit,
-  ViewChild
+  ViewChild,
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconRegistry } from '@angular/material/icon';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatStepper } from '@angular/material/stepper';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { NavigationExtras, Router } from '@angular/router';
-import { finalize, Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {MatDialog} from '@angular/material/dialog';
+import {MatIconRegistry} from '@angular/material/icon';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatStepper} from '@angular/material/stepper';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {NavigationExtras, Router} from '@angular/router';
+import {finalize, Observable} from 'rxjs';
+import {environment} from '../../environments/environment';
 import {
   AssetScopeEnum,
   AssetTypeEnum,
@@ -39,16 +40,20 @@ import {
   ImageSelectorComponent,
   MediaItemSelection,
 } from '../common/components/image-selector/image-selector.component';
-import { JobStatus, MediaItem } from '../common/models/media-item.model';
+import {JobStatus, MediaItem} from '../common/models/media-item.model';
 import {
   SourceAssetResponseDto,
   SourceAssetService,
 } from '../common/services/source-asset.service';
-import { SearchService } from '../services/search/search.service';
-import { VtoStateService } from '../services/vto-state.service';
-import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { handleErrorSnackbar } from '../utils/handleMessageSnackbar';
-import { VtoInputLink, VtoRequest, VtoSourceMediaItemLink } from './vto.model';
+import {SearchService} from '../services/search/search.service';
+import {VtoStateService} from '../services/vto-state.service';
+import {GalleryService} from '../gallery/gallery.service';
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../utils/handleMessageSnackbar';
+import {VtoInputLink, VtoRequest, VtoSourceMediaItemLink} from './vto.model';
 
 interface Garment {
   id: string;
@@ -95,14 +100,14 @@ export class VtoComponent implements OnInit, AfterViewInit {
   imagenDocuments: MediaItem | null = null;
   previousResult: MediaItem | null = null;
   private shouldAdvanceStepperOnLoad = false;
-  private savedStepperIndex: number = 0;
+  private savedStepperIndex = 0;
 
   selectedTop: Garment | null = null;
   selectedBottom: Garment | null = null;
   selectedDress: Garment | null = null;
   selectedShoes: Garment | null = null;
 
-  uploadExamples: { imageUrl: string; alt: string }[] = [
+  uploadExamples: {imageUrl: string; alt: string}[] = [
     {
       imageUrl: 'assets/images/vto/upload-photo-1.png',
       alt: 'Well-lit, full body example 1',
@@ -144,6 +149,8 @@ export class VtoComponent implements OnInit, AfterViewInit {
     private sourceAssetService: SourceAssetService,
     private searchService: SearchService,
     private vtoStateService: VtoStateService,
+    @Inject(GalleryService)
+    private galleryService: GalleryService,
   ) {
     this.activeVtoJob$ = this.searchService.activeVtoJob$;
     this.matIconRegistry.addSvgIcon(
@@ -188,20 +195,34 @@ export class VtoComponent implements OnInit, AfterViewInit {
       this.selectedTop = top;
       if (top) {
         if (this.secondFormGroup.get('dress')?.value) {
-          handleErrorSnackbar(this._snackBar, { message: 'A dress cannot be worn with a top. The dress has been unselected.' }, 'Garment Conflict');
+          handleErrorSnackbar(
+            this._snackBar,
+            {
+              message:
+                'A dress cannot be worn with a top. The dress has been unselected.',
+            },
+            'Garment Conflict',
+          );
         }
         this.selectedDress = null;
-        this.secondFormGroup.get('dress')?.reset(null, { emitEvent: false });
+        this.secondFormGroup.get('dress')?.reset(null, {emitEvent: false});
       }
     });
     this.secondFormGroup.get('bottom')?.valueChanges.subscribe(bottom => {
       this.selectedBottom = bottom;
       if (bottom) {
         if (this.secondFormGroup.get('dress')?.value) {
-          handleErrorSnackbar(this._snackBar, { message: 'A dress cannot be worn with a bottom. The dress has been unselected.' }, 'Garment Conflict');
+          handleErrorSnackbar(
+            this._snackBar,
+            {
+              message:
+                'A dress cannot be worn with a bottom. The dress has been unselected.',
+            },
+            'Garment Conflict',
+          );
         }
         this.selectedDress = null;
-        this.secondFormGroup.get('dress')?.reset(null, { emitEvent: false });
+        this.secondFormGroup.get('dress')?.reset(null, {emitEvent: false});
       }
     });
     this.secondFormGroup.get('dress')?.valueChanges.subscribe(dress => {
@@ -222,12 +243,16 @@ export class VtoComponent implements OnInit, AfterViewInit {
             'A bottom cannot be worn with a dress. The bottom has been unselected.';
         }
         if (message) {
-          handleErrorSnackbar(this._snackBar, { message: message }, 'Garment Conflict');
+          handleErrorSnackbar(
+            this._snackBar,
+            {message: message},
+            'Garment Conflict',
+          );
         }
         this.selectedTop = null;
         this.selectedBottom = null;
-        this.secondFormGroup.get('top')?.reset(null, { emitEvent: false });
-        this.secondFormGroup.get('bottom')?.reset(null, { emitEvent: false });
+        this.secondFormGroup.get('top')?.reset(null, {emitEvent: false});
+        this.secondFormGroup.get('bottom')?.reset(null, {emitEvent: false});
       }
     });
     this.secondFormGroup.get('shoes')?.valueChanges.subscribe(shoes => {
@@ -316,7 +341,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
       name: asset.originalFilename,
       imageUrl: asset.presignedUrl,
       size: 'M', // Default size or handle differently
-      inputLink: { sourceAssetId: asset.id },
+      inputLink: {sourceAssetId: asset.id},
     };
   }
 
@@ -329,7 +354,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
       name: asset.originalFilename,
       imageUrl: asset.presignedUrl,
       type: type,
-      inputLink: { sourceAssetId: asset.id },
+      inputLink: {sourceAssetId: asset.id},
     };
   }
 
@@ -339,7 +364,11 @@ export class VtoComponent implements OnInit, AfterViewInit {
       height: '80vh',
       maxWidth: '90vw',
       panelClass: 'image-selector-dialog',
-      data: { mimeType: 'image/*' },
+      data: {
+        mimeType: 'image/*',
+        showFooter: true,
+        maxSelection: 1,
+      },
     });
 
     dialogRef
@@ -353,7 +382,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
               name: result.originalFilename,
               imageUrl: result.presignedUrl,
               size: 'custom',
-              inputLink: { sourceAssetId: result.id },
+              inputLink: {sourceAssetId: result.id},
             };
             this.firstFormGroup.get('model')?.setValue(uploadedModel);
           } else {
@@ -395,7 +424,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
               name: asset.originalFilename,
               imageUrl: asset.presignedUrl,
               size: 'custom',
-              inputLink: { sourceAssetId: asset.id },
+              inputLink: {sourceAssetId: asset.id},
             };
             this.firstFormGroup.get('model')?.setValue(uploadedModel);
           },
@@ -433,7 +462,11 @@ export class VtoComponent implements OnInit, AfterViewInit {
       !this.selectedDress &&
       !this.selectedShoes
     ) {
-      handleErrorSnackbar(this._snackBar, { message: 'You need to select at least 1 garment!' }, 'Virtual Try-On');
+      handleErrorSnackbar(
+        this._snackBar,
+        {message: 'You need to select at least 1 garment!'},
+        'Virtual Try-On',
+      );
       return;
     }
 
@@ -445,7 +478,11 @@ export class VtoComponent implements OnInit, AfterViewInit {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
 
     if (!workspaceId) {
-      handleErrorSnackbar(this._snackBar, { message: 'Workspace ID is missing' }, 'Virtual Try-On');
+      handleErrorSnackbar(
+        this._snackBar,
+        {message: 'Workspace ID is missing'},
+        'Virtual Try-On',
+      );
       return;
     }
 
@@ -474,7 +511,6 @@ export class VtoComponent implements OnInit, AfterViewInit {
         },
       });
   }
-
 
   closeErrorOverlay() {
     this.showErrorOverlay = false;
@@ -541,10 +577,10 @@ export class VtoComponent implements OnInit, AfterViewInit {
         },
       },
     };
-    this.router.navigate(['/'], navigationExtras);
+    void this.router.navigate(['/'], navigationExtras);
   }
 
-  generateVideoWithResult(event: { role: 'start' | 'end'; index: number }): void {
+  generateVideoWithResult(event: {role: 'start' | 'end'; index: number}): void {
     if (!this.imagenDocuments) {
       return;
     }
@@ -570,9 +606,9 @@ export class VtoComponent implements OnInit, AfterViewInit {
     };
 
     const navigationExtras: NavigationExtras = {
-      state: { remixState },
+      state: {remixState},
     };
-    this.router.navigate(['/video'], navigationExtras);
+    void this.router.navigate(['/video'], navigationExtras);
   }
 
   openGarmentSelector(type: 'top' | 'bottom' | 'dress' | 'shoes') {
@@ -583,7 +619,9 @@ export class VtoComponent implements OnInit, AfterViewInit {
       panelClass: 'image-selector-dialog',
       data: {
         assetType: `vto_${type}`,
-        mimeType: 'image/*', // VTO garments are always images
+        mimeType: 'image/*',
+        showFooter: true,
+        maxSelection: 1,
       },
     });
 
@@ -652,27 +690,39 @@ export class VtoComponent implements OnInit, AfterViewInit {
     try {
       // Restore first form group
       if (state.modelType) {
-        this.firstFormGroup.get('modelType')?.setValue(state.modelType, { emitEvent: false });
+        this.firstFormGroup
+          .get('modelType')
+          ?.setValue(state.modelType, {emitEvent: false});
       }
       if (state.model) {
-        this.firstFormGroup.get('model')?.setValue(state.model, { emitEvent: false });
+        this.firstFormGroup
+          .get('model')
+          ?.setValue(state.model, {emitEvent: false});
       }
 
       // Restore second form group
       if (state.top) {
-        this.secondFormGroup.get('top')?.setValue(state.top, { emitEvent: false });
+        this.secondFormGroup
+          .get('top')
+          ?.setValue(state.top, {emitEvent: false});
         this.selectedTop = state.top;
       }
       if (state.bottom) {
-        this.secondFormGroup.get('bottom')?.setValue(state.bottom, { emitEvent: false });
+        this.secondFormGroup
+          .get('bottom')
+          ?.setValue(state.bottom, {emitEvent: false});
         this.selectedBottom = state.bottom;
       }
       if (state.dress) {
-        this.secondFormGroup.get('dress')?.setValue(state.dress, { emitEvent: false });
+        this.secondFormGroup
+          .get('dress')
+          ?.setValue(state.dress, {emitEvent: false});
         this.selectedDress = state.dress;
       }
       if (state.shoes) {
-        this.secondFormGroup.get('shoes')?.setValue(state.shoes, { emitEvent: false });
+        this.secondFormGroup
+          .get('shoes')
+          ?.setValue(state.shoes, {emitEvent: false});
         this.selectedShoes = state.shoes;
       }
 
@@ -687,5 +737,33 @@ export class VtoComponent implements OnInit, AfterViewInit {
   private clearVtoState(): void {
     this.vtoStateService.resetState();
     this.savedStepperIndex = 0;
+  }
+
+  deleteGeneratedMedia() {
+    if (!this.imagenDocuments?.id) return;
+
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (workspaceId === null) return;
+
+    const confirmDelete = confirm(
+      'Are you sure you want to delete this try-on result?',
+    );
+    if (!confirmDelete) return;
+
+    this.galleryService
+      .bulkDelete(
+        [{id: this.imagenDocuments.id, type: 'media_item'}],
+        workspaceId,
+      )
+      .subscribe({
+        next: () => {
+          handleSuccessSnackbar(this._snackBar, 'Media deleted successfully');
+          this.imagenDocuments = null;
+          this.searchService.clearActiveVtoJob();
+        },
+        error: err => {
+          handleErrorSnackbar(this._snackBar, err, 'Delete result');
+        },
+      });
   }
 }

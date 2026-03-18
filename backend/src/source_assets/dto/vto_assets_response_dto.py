@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -24,9 +23,9 @@ from src.source_assets.dto.source_asset_response_dto import (
 class VtoAssetsResponseDto(BaseModel):
     """A structured response containing all system-level VTO assets, categorized by type."""
 
-    male_models: List[SourceAssetResponseDto] = Field(default_factory=list)
-    female_models: List[SourceAssetResponseDto] = Field(default_factory=list)
-    tops: List[SourceAssetResponseDto] = Field(default_factory=list)
-    bottoms: List[SourceAssetResponseDto] = Field(default_factory=list)
-    dresses: List[SourceAssetResponseDto] = Field(default_factory=list)
-    shoes: List[SourceAssetResponseDto] = Field(default_factory=list)
+    male_models: list[SourceAssetResponseDto] = Field(default_factory=list)
+    female_models: list[SourceAssetResponseDto] = Field(default_factory=list)
+    tops: list[SourceAssetResponseDto] = Field(default_factory=list)
+    bottoms: list[SourceAssetResponseDto] = Field(default_factory=list)
+    dresses: list[SourceAssetResponseDto] = Field(default_factory=list)
+    shoes: list[SourceAssetResponseDto] = Field(default_factory=list)

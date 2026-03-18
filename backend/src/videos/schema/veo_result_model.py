@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from src.common.base_dto import BaseDto
 
 
 class CustomVeoResult(BaseDto):
-    gcs_uri: Optional[str]
+    gcs_uri: str | None
     mime_type: str
     encoded_video: str
     presigned_url: str
@@ -28,5 +27,5 @@ class CustomVeoResult(BaseDto):
 class VeoGenerationResult(BaseDto):
     enhanced_prompt: str
     original_prompt: str
-    rai_filtered_reason: Optional[str]
+    rai_filtered_reason: str | None
     video: CustomVeoResult

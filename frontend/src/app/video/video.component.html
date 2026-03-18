@@ -73,8 +73,10 @@
           [mediaItem]="job"
           [initialIndex]="0"
           [showSeeMoreInfoButton]="true"
+          [showDeleteButton]="true"
           (extendWithAiClicked)="handleExtendWithAi($event)"
           (concatenateClicked)="handleConcatenate($event)"
+          (deleteClicked)="deleteGeneratedMedia()"
           style="max-height: 60vh"
         ></app-media-lightbox>
       </ng-container>

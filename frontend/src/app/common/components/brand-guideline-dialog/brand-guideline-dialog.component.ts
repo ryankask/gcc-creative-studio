@@ -19,7 +19,7 @@ import {FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {BrandGuidelineModel} from '../../models/brand-guideline.model';
-import { handleErrorSnackbar } from '../../../utils/handleMessageSnackbar';
+import {handleErrorSnackbar} from '../../../utils/handleMessageSnackbar';
 
 export interface BrandGuidelineDialogData {
   workspaceId: number;
@@ -59,7 +59,11 @@ export class BrandGuidelineDialogComponent {
       const file = input.files[0];
       const maxSize = 500 * 1024 * 1024; // 500MB
       if (file.size > maxSize) {
-        handleErrorSnackbar(this.snackBar, { message: 'File size cannot exceed 500MB.' }, 'File Upload');
+        handleErrorSnackbar(
+          this.snackBar,
+          {message: 'File size cannot exceed 500MB.'},
+          'File Upload',
+        );
         this.form.get('file')?.setValue(null);
         this.fileName = null;
         input.value = ''; // Reset file input to allow re-selection of the same file

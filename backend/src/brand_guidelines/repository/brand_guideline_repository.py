@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from fastapi import Depends
 from sqlalchemy import func, select
@@ -30,23 +29,23 @@ from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.database import get_db
 
 
-class BrandGuidelineRepository(BaseRepository[BrandGuideline, BrandGuidelineModel]):
-    """
-    Repository for all database operations related to the 'brand_guidelines' table.
-    """
+class BrandGuidelineRepository(
+    BaseRepository[BrandGuideline, BrandGuidelineModel]
+):
+    """Repository for all database operations related to the 'brand_guidelines' table."""
 
     def __init__(self, db: AsyncSession = Depends(get_db)):
         """Initializes the repository."""
-        super().__init__(model=BrandGuideline, schema=BrandGuidelineModel, db=db)
+        super().__init__(
+            model=BrandGuideline, schema=BrandGuidelineModel, db=db
+        )
 
     async def query(
         self,
         search_dto: BrandGuidelineSearchDto,
-        workspace_id: Optional[int] = None,
+        workspace_id: int | None = None,
     ) -> PaginationResponseDto[BrandGuidelineModel]:
-        """
-        Performs a generic, paginated query on the brand_guidelines table.
-        """
+        """Performs a generic, paginated query on the brand_guidelines table."""
         query = select(self.model)
 
         # Apply filters
@@ -67,10 +66,8 @@ class BrandGuidelineRepository(BaseRepository[BrandGuideline, BrandGuidelineMode
         # Execute
         result = await self.db.execute(query)
         guidelines = result.scalars().all()
-        
-        guideline_data = [
-            self.schema.model_validate(g) for g in guidelines
-        ]
+
+        guideline_data = [self.schema.model_validate(g) for g in guidelines]
 
         # Calculate pagination metadata
         page = (search_dto.offset // search_dto.limit) + 1

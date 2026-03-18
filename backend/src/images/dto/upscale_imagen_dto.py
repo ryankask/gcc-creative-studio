@@ -15,12 +15,12 @@
 from typing import Literal
 
 from pydantic import Field, field_validator
+
 from src.common.base_dto import BaseDto, GenerationModelEnum, MimeTypeEnum
 
 
 class UpscaleImagenDto(BaseDto):
-    """
-    The refactored request model. Defaults are defined here to make the API
+    """The refactored request model. Defaults are defined here to make the API
     contract explicit and self-documenting.
     """
 
@@ -29,7 +29,7 @@ class UpscaleImagenDto(BaseDto):
         description="Model used for image generation.",
     )
     user_image: str = Field(
-        description="Base 64 encoded image or gcs uri of the image to scale."
+        description="Base 64 encoded image or gcs uri of the image to scale.",
     )
     upscale_factor: Literal["x2", "x3", "x4"] = Field(
         default="x2",
@@ -60,7 +60,8 @@ class UpscaleImagenDto(BaseDto):
 
     @field_validator("generation_model")
     def validate_imagen_generation_model(
-        cls, value: GenerationModelEnum
+        cls,
+        value: GenerationModelEnum,
     ) -> GenerationModelEnum:
         """Ensures that only supported generation models for imagen are used."""
         valid_video_ratios = [

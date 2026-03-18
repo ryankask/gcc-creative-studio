@@ -44,28 +44,6 @@
    text-overflow: ellipsis;
 }
 
-::ng-deep .glass-slider .mdc-slider__thumb-knob {
-   height: 24px !important;
-   width: 32px !important;
-   top:16px !important;
-   border-radius: 48px !important;
-   border: 1px solid rgba(193, 193, 193, 0.80) !important;
-   background: rgba(255, 255, 255, 0.40) !important;
-   background-blend-mode: soft-light !important;
-   box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) !important;
-   backdrop-filter: blur(1.899999976158142px) !important;
-}
-::ng-deep .glass-slider .mdc-slider__track--active {
-   height: 24px !important;
-   top: -10px !important;
-}
-::ng-deep .glass-slider .mdc-slider__track--active_fill {
-   /* Make it a semi-transparent white or color to contrast with the glass track */
-   border-radius: 12px !important;
-   height: 24px !important;
-   background: var(--Greeting-gradient, linear-gradient(77deg, var(--gem-sys-color--brand-blue) 6.99%, var(--gem-sys-color--brand-transition-blue-1) 45.46%, var(--gem-sys-color--brand-transition-blue-2) 88.2%)) !important;
-   border: none !important;
-}
 
 .beta-label {
    position: absolute;
@@ -245,4 +223,3 @@
    border: 1px solid white;
 }
 
-@import "../workflows/shared/buttons";

@@ -14,112 +14,120 @@
  * limitations under the License.
  */
 
-import { Component, Inject, OnInit } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { WorkflowService } from '../../workflow.service';
+import {Component, Inject, OnInit} from '@angular/core';
+import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
+import {WorkflowService} from '../../workflow.service';
 
-import { NodeTypes, WorkflowModel } from '../../workflow.models';
+import {NodeTypes, WorkflowModel} from '../../workflow.models';
 
-import { GalleryService } from '../../../gallery/gallery.service';
+import {GalleryService} from '../../../gallery/gallery.service';
 
-import { Router } from '@angular/router';
-import { MediaResolutionService } from '../../shared/media-resolution.service';
+import {Router} from '@angular/router';
+import {MediaResolutionService} from '../../shared/media-resolution.service';
 
 @Component({
-    selector: 'app-execution-details-modal',
-    templateUrl: './execution-details-modal.component.html',
-    styleUrls: ['./execution-details-modal.component.scss']
+  selector: 'app-execution-details-modal',
+  templateUrl: './execution-details-modal.component.html',
+  styleUrls: ['./execution-details-modal.component.scss'],
 })
 export class ExecutionDetailsModalComponent implements OnInit {
-    isLoading = true;
-    details: any = null;
-    workflow: WorkflowModel | null = null;
-    NodeTypes = NodeTypes;
-    expandedSteps = new Set<string>();
-    mediaUrlMap = new Map<string, string>();
-    loadedMedia = new Set<string>();
+  isLoading = true;
+  details: any = null;
+  workflow: WorkflowModel | null = null;
+  NodeTypes = NodeTypes;
+  expandedSteps = new Set<string>();
+  mediaUrlMap = new Map<string, string>();
+  loadedMedia = new Set<string>();
 
-    constructor(
-        public dialogRef: MatDialogRef<ExecutionDetailsModalComponent>,
-        @Inject(MAT_DIALOG_DATA) public data: { workflowId: string, executionId: string },
-        private workflowService: WorkflowService,
-        private galleryService: GalleryService,
-        private router: Router,
-        private mediaResolutionService: MediaResolutionService
-    ) { }
+  constructor(
+    public dialogRef: MatDialogRef<ExecutionDetailsModalComponent>,
+    @Inject(MAT_DIALOG_DATA)
+    public data: {workflowId: string; executionId: string},
+    private workflowService: WorkflowService,
+    private galleryService: GalleryService,
+    private router: Router,
+    private mediaResolutionService: MediaResolutionService,
+  ) {}
 
-    ngOnInit(): void {
-        this.loadDetails();
+  ngOnInit(): void {
+    this.loadDetails();
+  }
+
+  visibleStepEntries: any[] = [];
+
+  loadDetails(): void {
+    this.isLoading = true;
+    this.workflowService
+      .getExecutionDetails(this.data.workflowId, this.data.executionId)
+      .subscribe({
+        next: details => {
+          this.details = details;
+          if (details.workflow_definition) {
+            this.workflow = details.workflow_definition as WorkflowModel;
+          }
+
+          this.filterStepEntries();
+          this.resolveMediaUrls();
+          this.isLoading = false;
+        },
+        error: err => {
+          console.error('Failed to load details', err);
+          this.isLoading = false;
+        },
+      });
+  }
+
+  filterStepEntries(): void {
+    if (!this.details?.step_entries || !this.workflow) {
+      this.visibleStepEntries = [];
+      return;
     }
+    this.visibleStepEntries = this.details.step_entries.filter((step: any) => {
+      const type = this.getStepType(step.step_id);
+      return type !== NodeTypes.USER_INPUT;
+    });
+  }
 
-    visibleStepEntries: any[] = [];
+  resolveMediaUrls(): void {
+    if (!this.details || !this.details.step_entries || !this.workflow) return;
 
-    loadDetails(): void {
-        this.isLoading = true;
-        this.workflowService.getExecutionDetails(this.data.workflowId, this.data.executionId)
-            .subscribe({
-                next: (details) => {
-                    this.details = details;
-                    if (details.workflow_definition) {
-                        this.workflow = details.workflow_definition as WorkflowModel;
-                    }
+    const stepTypeMap = new Map<string, NodeTypes | string>();
+    this.workflow.steps.forEach(s => stepTypeMap.set(s.stepId, s.type));
 
-                    this.filterStepEntries();
-                    this.resolveMediaUrls();
-                    this.isLoading = false;
-                },
-                error: (err) => {
-                    console.error('Failed to load details', err);
-                    this.isLoading = false;
-                }
-            });
+    this.mediaResolutionService.resolveMediaUrls(
+      this.details.step_entries,
+      stepTypeMap,
+      this.mediaUrlMap,
+    );
+  }
+
+  toggleStep(stepId: string): void {
+    if (this.expandedSteps.has(stepId)) {
+      this.expandedSteps.delete(stepId);
+    } else {
+      this.expandedSteps.add(stepId);
     }
+  }
 
-    filterStepEntries(): void {
-        if (!this.details?.step_entries || !this.workflow) {
-            this.visibleStepEntries = [];
-            return;
-        }
-        this.visibleStepEntries = this.details.step_entries.filter((step: any) => {
-            const type = this.getStepType(step.step_id);
-            return type !== NodeTypes.USER_INPUT;
-        });
-    }
+  hasData(obj: any): boolean {
+    return obj && Object.keys(obj).length > 0;
+  }
 
-    resolveMediaUrls(): void {
-        if (!this.details || !this.details.step_entries || !this.workflow) return;
+  getStatusClass(state: string): string {
+    return ''; // Legacy/Unused
+  }
 
-        const stepTypeMap = new Map<string, NodeTypes | string>();
-        this.workflow.steps.forEach(s => stepTypeMap.set(s.stepId, s.type));
+  getStepType(stepId: string): NodeTypes | string | undefined {
+    return this.workflow?.steps.find(s => s.stepId === stepId)?.type;
+  }
 
-        this.mediaResolutionService.resolveMediaUrls(this.details.step_entries, stepTypeMap, this.mediaUrlMap);
-    }
-
-    toggleStep(stepId: string): void {
-        if (this.expandedSteps.has(stepId)) {
-            this.expandedSteps.delete(stepId);
-        } else {
-            this.expandedSteps.add(stepId);
-        }
-    }
-
-    hasData(obj: any): boolean {
-        return obj && Object.keys(obj).length > 0;
-    }
-
-    getStatusClass(state: string): string {
-        return ''; // Legacy/Unused
-    }
-
-    getStepType(stepId: string): NodeTypes | string | undefined {
-        return this.workflow?.steps.find(s => s.stepId === stepId)?.type;
-    }
-
-    isImageOutput(stepId: string): boolean {
-        const type = this.getStepType(stepId);
-        return type === NodeTypes.GENERATE_IMAGE ||
-            type === NodeTypes.EDIT_IMAGE ||
-            type === NodeTypes.CROP_IMAGE ||
-            type === NodeTypes.VIRTUAL_TRY_ON;
-    }
+  isImageOutput(stepId: string): boolean {
+    const type = this.getStepType(stepId);
+    return (
+      type === NodeTypes.GENERATE_IMAGE ||
+      type === NodeTypes.EDIT_IMAGE ||
+      type === NodeTypes.CROP_IMAGE ||
+      type === NodeTypes.VIRTUAL_TRY_ON
+    );
+  }
 }

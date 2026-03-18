@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
-import { PaginatedResponse } from '../../common/models/paginated-response.model';
-import { SourceAssetResponseDto } from '../../common/services/source-asset.service';
-import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
-import { AssetScopeEnum, AssetTypeEnum, SourceAsset } from './source-asset.model';
+import {HttpClient, HttpErrorResponse} from '@angular/common/http';
+import {Injectable} from '@angular/core';
+import {Observable, throwError} from 'rxjs';
+import {catchError} from 'rxjs/operators';
+import {environment} from '../../../environments/environment';
+import {PaginatedResponse} from '../../common/models/paginated-response.model';
+import {SourceAssetResponseDto} from '../../common/services/source-asset.service';
+import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
+import {AssetScopeEnum, AssetTypeEnum, SourceAsset} from './source-asset.model';
 
 export interface SourceAssetSearch {
   originalFilename?: string;
@@ -39,14 +39,14 @@ export class SourceAssetsService {
   constructor(
     private http: HttpClient,
     private workspaceStateService: WorkspaceStateService,
-  ) { }
+  ) {}
 
   searchSourceAssets(
     filters: SourceAssetSearch,
     limit: number,
     offset?: number,
   ): Observable<PaginatedResponse<SourceAssetResponseDto>> {
-    const backendFilters: { [key: string]: any } = {
+    const backendFilters: {[key: string]: any} = {
       original_filename: filters.originalFilename,
       scope: filters.scope,
       asset_type: filters.assetType,

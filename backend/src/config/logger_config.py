@@ -13,15 +13,15 @@
 # limitations under the License.
 
 import logging
-from os import getenv
 import sys
+from os import getenv
+
 from google.cloud.logging import Client as LoggerClient
 from google.cloud.logging.handlers import CloudLoggingHandler
 
 
 def setup_logging():
-    """
-    Configures the root logger for the entire application.
+    """Configures the root logger for the entire application.
     This should be called once at application startup.
     """
     # Get the logger instance that Uvicorn is using
@@ -47,7 +47,7 @@ def setup_logging():
         # In DEVELOPMENT, use a simple stream handler for readable console output.
         handler = logging.StreamHandler(sys.stderr)
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         handler.setFormatter(formatter)
         root_logger.addHandler(handler)

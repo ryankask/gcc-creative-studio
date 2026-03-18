@@ -115,4 +115,9 @@ export interface GallerySearchDto {
   model?: string;
   status?: string;
   workspaceId?: number;
+  includeDeleted?: boolean;
+  startDate?: string;
+  endDate?: string;
+  itemType?: string;
+  query?: string;
 }

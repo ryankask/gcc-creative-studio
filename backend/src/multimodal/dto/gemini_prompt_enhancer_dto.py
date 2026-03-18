@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Annotated
+
 from pydantic import Field
-from typing_extensions import Annotated
 
 from src.common.base_dto import BaseDto
 from src.multimodal.gemini_service import PromptTargetEnum
@@ -25,7 +26,7 @@ class RewritePromptRequestDto(BaseDto):
     target_type: Annotated[
         PromptTargetEnum,
         Field(
-            description="The target media type to tailor the prompt for (e.g., 'image' or 'video')."
+            description="The target media type to tailor the prompt for (e.g., 'image' or 'video').",
         ),
     ]
     user_prompt: Annotated[
@@ -43,7 +44,7 @@ class RandomPromptRequestDto(BaseDto):
     target_type: Annotated[
         PromptTargetEnum,
         Field(
-            description="The target media type for which to generate a random prompt."
+            description="The target media type for which to generate a random prompt.",
         ),
     ]
 

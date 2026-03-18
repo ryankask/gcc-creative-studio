@@ -243,14 +243,11 @@
                   [mediaItem]="vtoJob"
                   [initialIndex]="0"
                   [showSeeMoreInfoButton]="true"
-                  [showShareButton]="true"
-                  [showDownloadButton]="true"
-                  [showEditButton]="true"
-                  [showVtoButton]="true"
-                  [showGenerateVideoButton]="true"
+                  [showDeleteButton]="true"
                   (editClicked)="remixWithThisImage($event)"
                   (sendToVtoClicked)="setModelFromImage($event)"
                   (generateVideoClicked)="generateVideoWithResult($event)"
+                  (deleteClicked)="deleteGeneratedMedia()"
                   style="max-height: 60vh"
                 ></app-media-lightbox>
               </div>

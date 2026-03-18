@@ -1,0 +1,108 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Tests for Create Veo Dto."""
+
+
+import pytest
+from pydantic import ValidationError
+
+from src.common.base_dto import (
+    GenerationModelEnum,
+    ReferenceImageTypeEnum,
+)
+from src.common.schema.media_item_model import SourceMediaItemLink
+from src.videos.dto.create_veo_dto import CreateVeoDto, ReferenceImageDto
+
+
+def test_create_veo_dto_valid():
+    dto = CreateVeoDto(
+        prompt="Test",
+        workspace_id=1,
+        generation_model=GenerationModelEnum.VEO_3_QUALITY,
+        aspect_ratio="16:9",
+    )
+    assert dto.prompt == "Test"
+
+
+def test_validate_video_aspect_ratio_error():
+    with pytest.raises(ValidationError) as exc_info:
+        CreateVeoDto(
+            prompt="Test", workspace_id=1, aspect_ratio="1:1"
+        )  # Invalid
+    assert "Invalid aspect ratio for video" in str(exc_info.value)
+
+
+def test_validate_source_media_items_invalid_role():
+    with pytest.raises(ValidationError) as exc_info:
+        CreateVeoDto(
+            prompt="Test",
+            workspace_id=1,
+            source_media_items=[
+                SourceMediaItemLink(
+                    media_item_id=1,
+                    media_index=0,
+                    role="invalid_role",
+                ),
+            ],
+        )
+    # Pydantic validation error or enum validation error
+    assert "invalid_role" in str(exc_info.value)
+
+
+def test_validate_source_media_items_model_conflict():
+    with pytest.raises(ValidationError) as exc_info:
+        CreateVeoDto(
+            prompt="Test",
+            workspace_id=1,
+            generation_model=GenerationModelEnum.VEO_3_QUALITY,
+            reference_images=[
+                ReferenceImageDto(
+                    asset_id=1,
+                    reference_type=ReferenceImageTypeEnum.ASSET,
+                ),
+            ],
+            source_media_items=[],  # Force validator to run
+        )
+    assert "Reference images are only supported by" in str(exc_info.value)
+
+
+def test_validate_source_media_items_conflicting_inputs():
+    with pytest.raises(ValidationError) as exc_info:
+        CreateVeoDto(
+            prompt="Test",
+            workspace_id=1,
+            generation_model=GenerationModelEnum.VEO_3_1_PREVIEW,
+            start_image_asset_id=1,
+            reference_images=[
+                ReferenceImageDto(
+                    asset_id=2,
+                    reference_type=ReferenceImageTypeEnum.ASSET,
+                ),
+            ],
+            source_media_items=[],  # Force validator to run
+        )
+    assert "Reference images cannot be used at the same time" in str(
+        exc_info.value
+    )
+
+
+def test_validate_video_generation_model_error():
+    with pytest.raises(ValidationError) as exc_info:
+        CreateVeoDto(
+            prompt="Test", workspace_id=1, generation_model="invalid_model"
+        )
+    assert (
+        "Invalid generation model for video" in str(exc_info.value)
+        or "enum" in str(exc_info.value).lower()
+    )

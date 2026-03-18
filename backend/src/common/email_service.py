@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Email sending service."""
+
 
 import base64
 import logging
@@ -39,7 +41,7 @@ class EmailService:
         if not self.sender_email:
             logger.warning(
                 "SENDER_EMAIL not set for Gmail API. "
-                "EmailService will log emails instead of sending."
+                "EmailService will log emails instead of sending.",
             )
 
     def send_workspace_invitation_email(
@@ -49,8 +51,7 @@ class EmailService:
         workspace_name: str,
         workspace_id: int,
     ):
-        """
-        Sends an email to a user inviting them to a workspace using the Gmail API
+        """Sends an email to a user inviting them to a workspace using the Gmail API
         with service account domain-wide delegation.
         If sender credentials are not configured, it will log the email content.
         """
@@ -63,7 +64,10 @@ class EmailService:
         if not self.sender_email:
             logger.info("--- SIMULATING EMAIL SEND (due to missing config) ---")
             logger.info(
-                f"To: {recipient_email}\nSubject: {subject}\nBody:\n{plain_text_content}"
+                "To: %s\nSubject: %s\nBody:\n%s",
+                recipient_email,
+                subject,
+                plain_text_content,
             )
             return
 
@@ -105,14 +109,18 @@ class EmailService:
                 .execute()
             )
             logger.info(
-                f'Message Id: {send_message["id"]} sent to {recipient_email}'
+                "Message Id: %s sent to %s", send_message["id"], recipient_email
             )
 
         except HttpError as error:
             logger.error(
-                f"An error occurred sending email to {recipient_email}: {error}"
+                "An error occurred sending email to %s: %s",
+                recipient_email,
+                error,
             )
         except Exception as e:  # Catch other potential errors like auth issues
             logger.error(
-                f"Failed to send workspace invitation email to {recipient_email}: {e}"
+                "Failed to send workspace invitation email to %s: %s",
+                recipient_email,
+                e,
             )

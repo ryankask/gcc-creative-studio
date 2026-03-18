@@ -14,28 +14,26 @@
  * limitations under the License.
  */
 
-import { TestBed } from '@angular/core/testing';
-import { RouterTestingModule } from '@angular/router/testing';
-import { AppComponent } from './app.component';
-import { LoadingService } from './common/services/loading.service';
-import { of } from 'rxjs';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import {TestBed} from '@angular/core/testing';
+import {RouterTestingModule} from '@angular/router/testing';
+import {AppComponent} from './app.component';
+import {LoadingService} from './common/services/loading.service';
+import {of} from 'rxjs';
+import {NO_ERRORS_SCHEMA} from '@angular/core';
 
 describe('AppComponent', () => {
   let loadingServiceMock: any;
 
   beforeEach(async () => {
     loadingServiceMock = {
-      isLoading$: of(false)
+      isLoading$: of(false),
     };
 
     await TestBed.configureTestingModule({
       imports: [RouterTestingModule],
       declarations: [AppComponent],
-      providers: [
-        { provide: LoadingService, useValue: loadingServiceMock }
-      ],
-      schemas: [NO_ERRORS_SCHEMA]
+      providers: [{provide: LoadingService, useValue: loadingServiceMock}],
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
   });
 

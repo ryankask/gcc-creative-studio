@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Base Data Transfer Object classes."""
+
 
 from enum import Enum
 
@@ -115,7 +117,7 @@ class GenerationModelEnum(str, Enum):
                 AspectRatioEnum.RATIO_1_8,
                 AspectRatioEnum.RATIO_8_1,
             ]
-        elif self.is_gemini_image_model:
+        if self.is_gemini_image_model:
             return [
                 AspectRatioEnum.RATIO_1_1,
                 AspectRatioEnum.RATIO_3_4,
@@ -128,19 +130,21 @@ class GenerationModelEnum(str, Enum):
                 AspectRatioEnum.RATIO_16_9,
                 AspectRatioEnum.RATIO_21_9,
             ]
-        else:
-            return [
-                AspectRatioEnum.RATIO_1_1,
-                AspectRatioEnum.RATIO_3_4,
-                AspectRatioEnum.RATIO_4_3,
-                AspectRatioEnum.RATIO_9_16,
-                AspectRatioEnum.RATIO_16_9,
-            ]
+        return [
+            AspectRatioEnum.RATIO_1_1,
+            AspectRatioEnum.RATIO_3_4,
+            AspectRatioEnum.RATIO_4_3,
+            AspectRatioEnum.RATIO_9_16,
+            AspectRatioEnum.RATIO_16_9,
+        ]
 
     @property
     def max_total_inputs(self) -> int:
         """Returns the maximum number of total inputs allowed for the model."""
-        if self in [GenerationModelEnum.GEMINI_3_PRO_IMAGE_PREVIEW, GenerationModelEnum.GEMINI_3_1_FLASH_IMAGE_PREVIEW]:
+        if self in [
+            GenerationModelEnum.GEMINI_3_PRO_IMAGE_PREVIEW,
+            GenerationModelEnum.GEMINI_3_1_FLASH_IMAGE_PREVIEW,
+        ]:
             return 14
         if self.is_gemini_image_model:
             return 2
@@ -167,7 +171,7 @@ class AspectRatioEnum(str, Enum):
     RATIO_4_1 = "4:1"
     RATIO_1_8 = "1:8"
     RATIO_8_1 = "8:1"
-    
+    OTHER = "other"
 
 
 class StyleEnum(str, Enum):

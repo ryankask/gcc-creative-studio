@@ -488,3 +488,10 @@ app-workspace-switcher .workspace-name {
 // 4K Displays (Ultra HD) (Projectors or Higher Resolution Screens, 2160px and up)
 @media screen and (min-width: 2160px) {
 }
+// Custom Snackbar Styles
+.gallery-hint-snackbar {
+  .mat-mdc-snack-bar-action {
+    color: #004a99 !important; // Darker blue for better visibility on light snackbar background
+    font-weight: 600;
+  }
+}

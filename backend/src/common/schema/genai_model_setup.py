@@ -14,27 +14,24 @@
 # limitations under the License.
 
 import logging
-from typing import Optional
-import google.auth
+
 from google.genai import Client
+
 from src.config.config_service import config_service
 
 logger = logging.getLogger(__name__)
 
 
 class GenAIModelSetup:
-    """
-    A base class to handle the initialization of a shared Google GenAI client.
+    """A base class to handle the initialization of a shared Google GenAI client.
     This uses a singleton pattern to ensure the client is only created once.
     """
 
-    _client: Optional[Client] = None
+    _client: Client | None = None
 
     @classmethod
     def get_client(cls) -> Client:
-        """
-        Initializes and returns a shared GenAI client instance for Vertex AI.
-        """
+        """Initializes and returns a shared GenAI client instance for Vertex AI."""
         if cls._client is None:
             try:
                 config = config_service
@@ -44,7 +41,7 @@ class GenAIModelSetup:
                     raise ValueError("All parameters must be set.")
 
                 logger.info(
-                    f"Initializing shared GenAI client for project '{project_id}' in location '{location}'"
+                    f"Initializing shared GenAI client for project '{project_id}' in location '{location}'",
                 )
 
                 cls._client = Client(
@@ -53,13 +50,11 @@ class GenAIModelSetup:
                     vertexai=config.INIT_VERTEX,
                 )
             except Exception as e:
-                logger.error(f"Failed to initialize GenAI client: {e}")
+                logger.error("Failed to initialize GenAI client: %s", e)
                 raise
         return cls._client
 
     @staticmethod
     def init() -> Client:
-        """
-        Returns the shared client instance.
-        """
+        """Returns the shared client instance."""
         return GenAIModelSetup.get_client()

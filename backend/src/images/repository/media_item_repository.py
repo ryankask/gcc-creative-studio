@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from fastapi import Depends
 from sqlalchemy import func, select
@@ -34,16 +33,14 @@ class MediaRepository(BaseRepository[MediaItem, MediaItemModel]):
     async def query(
         self,
         search_dto: GallerySearchDto,
-        workspace_id: Optional[int] = None,
+        workspace_id: int | None = None,
     ) -> PaginationResponseDto[MediaItemModel]:
-        """
-        Performs a generic, paginated query on the media_library table.
-        """
+        """Performs a generic, paginated query on the media_library table."""
         query = select(self.model)
 
         if search_dto.user_email:
             query = query.where(self.model.user_email == search_dto.user_email)
-        
+
         if search_dto.mime_type:
             if search_dto.mime_type.value.endswith("/*"):
                 # Handle wildcard search (e.g., "image/*")
@@ -51,14 +48,16 @@ class MediaRepository(BaseRepository[MediaItem, MediaItemModel]):
                 query = query.where(self.model.mime_type.like(f"{prefix}%"))
             else:
                 # Handle exact match
-                query = query.where(self.model.mime_type == search_dto.mime_type.value)
-        
+                query = query.where(
+                    self.model.mime_type == search_dto.mime_type.value
+                )
+
         if search_dto.model:
             query = query.where(self.model.model == search_dto.model.value)
-        
+
         if search_dto.status:
             query = query.where(self.model.status == search_dto.status.value)
-            
+
         if workspace_id is not None:
             query = query.where(self.model.workspace_id == workspace_id)
 
@@ -74,10 +73,8 @@ class MediaRepository(BaseRepository[MediaItem, MediaItemModel]):
         # Execute
         result = await self.db.execute(query)
         items = result.scalars().all()
-        
-        media_item_data = [
-            self.schema.model_validate(item) for item in items
-        ]
+
+        media_item_data = [self.schema.model_validate(item) for item in items]
 
         # Calculate pagination metadata
         page = (search_dto.offset // search_dto.limit) + 1

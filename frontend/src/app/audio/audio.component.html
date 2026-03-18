@@ -40,12 +40,9 @@
         <app-media-lightbox
             [mediaItem]="mediaItem"
             [initialIndex]="0"
-            [showDownloadButton]="true"
-            [showShareButton]="false"
-            [showEditButton]="false"
-            [showGenerateVideoButton]="false"
-            [showVtoButton]="false"
             [showSeeMoreInfoButton]="true"
+            [showDeleteButton]="true"
+            (deleteClicked)="deleteGeneratedMedia()"
         ></app-media-lightbox>
     </div>
 

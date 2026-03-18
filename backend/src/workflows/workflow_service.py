@@ -12,45 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fastapi import Depends
-import logging
-import datetime
 import asyncio
-import uuid
+import datetime
 import json
+import logging
+import uuid
 
+import google.auth
 import yaml
+from fastapi import Depends
+from google.api_core.exceptions import NotFound
+from google.auth.transport.requests import AuthorizedSession
 from google.cloud import workflows_v1
 from google.cloud.workflows import executions_v1
-from google.api_core.exceptions import NotFound
-from google.auth.transport.requests import Request
-from google.oauth2 import service_account
-import google.auth
-import requests
 from pydantic import BaseModel, ValidationError
 
 from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.config.config_service import config_service
 from src.images.imagen_service import ImagenService
+from src.source_assets.source_asset_service import SourceAssetService
 from src.users.user_model import UserModel
-from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
-from src.workflows.repository.workflow_repository import WorkflowRepository
-from google.auth.transport.requests import AuthorizedSession
-from src.workflows.schema.workflow_model import (
-    NodeTypes,
-    WorkflowCreateDto,
-    StepOutputReference,
-    StepOutputReference,
-    WorkflowModel,
-)
-from src.workflows.schema.workflow_run_model import WorkflowRun, WorkflowRunModel, WorkflowRunStatusEnum
-from src.workflows.repository.workflow_run_repository import WorkflowRunRepository
 from src.workflows.dto.batch_execution_dto import (
     BatchExecutionRequestDto,
     BatchExecutionResponseDto,
     BatchItemResultDto,
 )
-from src.source_assets.source_asset_service import SourceAssetService
+from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
+from src.workflows.repository.workflow_repository import WorkflowRepository
+from src.workflows.repository.workflow_run_repository import (
+    WorkflowRunRepository,
+)
+from src.workflows.schema.workflow_model import (
+    NodeTypes,
+    StepOutputReference,
+    WorkflowCreateDto,
+    WorkflowModel,
+)
+from src.workflows.schema.workflow_run_model import (
+    WorkflowRunModel,
+    WorkflowRunStatusEnum,
+)
 
 logger = logging.getLogger(__name__)
 PROJECT_ID = config_service.PROJECT_ID
@@ -76,13 +77,9 @@ class WorkflowService:
         self,
         workflow: WorkflowModel,
     ):
-        """
-        This function contains the business logic for generating the workflow.
-        """
+        """This function contains the business logic for generating the workflow."""
         user_id = workflow.user_id
-        logger.info(
-            f"Received workflow generation request for user {user_id}"
-        )
+        logger.info("Received workflow generation request for user %s", user_id)
         # A very basic transformation to a GCP-like workflow structure
         step_outputs = {}
         gcp_steps = []
@@ -111,20 +108,22 @@ class WorkflowService:
 
             def resolve_value(value):
                 # If it's a StepOutputReference (dict with step and output)
-                if isinstance(value, dict) and "step" in value and "output" in value:
+                if (
+                    isinstance(value, dict)
+                    and "step" in value
+                    and "output" in value
+                ):
                     ref_step_id = value["step"]
                     ref_output_name = value["output"]
 
                     if ref_step_id == user_input_step_id:
                         return f"${{args.{ref_output_name}}}"
-                    else:
-                        return f"${{{ref_step_id}_result.body.{ref_output_name}}}"
+                    return f"${{{ref_step_id}_result.body.{ref_output_name}}}"
                 # If it's a list, resolve each item
-                elif isinstance(value, list):
+                if isinstance(value, list):
                     return [resolve_value(item) for item in value]
                 # Otherwise, return as is
-                else:
-                    return value
+                return value
 
             for input_name, input_value in step.inputs.model_dump().items():
                 resolved_inputs[input_name] = resolve_value(input_value)
@@ -146,7 +145,7 @@ class WorkflowService:
                         "body": body,
                     },
                     "result": f"{step_name}_result",
-                }
+                },
             }
             gcp_steps.append(gcp_step)
 
@@ -172,7 +171,9 @@ class WorkflowService:
             workflows_v1.ExecutionHistoryLevel.EXECUTION_HISTORY_DETAILED
         )
         if config_service.BACKEND_SERVICE_ACCOUNT_EMAIL:
-            workflow.service_account = config_service.BACKEND_SERVICE_ACCOUNT_EMAIL
+            workflow.service_account = (
+                config_service.BACKEND_SERVICE_ACCOUNT_EMAIL
+            )
 
         request = workflows_v1.CreateWorkflowRequest(
             parent=f"projects/{PROJECT_ID}/locations/{LOCATION}",
@@ -188,13 +189,17 @@ class WorkflowService:
         client = workflows_v1.WorkflowsClient()
 
         # Initialize request argument(s)
-        workflow = workflows_v1.Workflow(name = f"projects/{PROJECT_ID}/locations/{LOCATION}/workflows/{workflow_id}")
+        workflow = workflows_v1.Workflow(
+            name=f"projects/{PROJECT_ID}/locations/{LOCATION}/workflows/{workflow_id}",
+        )
         workflow.source_contents = source_contents
         workflow.execution_history_level = (
             workflows_v1.ExecutionHistoryLevel.EXECUTION_HISTORY_DETAILED
         )
         if config_service.BACKEND_SERVICE_ACCOUNT_EMAIL:
-            workflow.service_account = config_service.BACKEND_SERVICE_ACCOUNT_EMAIL
+            workflow.service_account = (
+                config_service.BACKEND_SERVICE_ACCOUNT_EMAIL
+            )
 
         request = workflows_v1.UpdateWorkflowRequest(
             workflow=workflow,
@@ -209,7 +214,9 @@ class WorkflowService:
 
         # Construct the fully qualified location path.
         parent = client.workflow_path(
-            config_service.PROJECT_ID, config_service.WORKFLOWS_LOCATION, workflow_id
+            config_service.PROJECT_ID,
+            config_service.WORKFLOWS_LOCATION,
+            workflow_id,
         )
 
         request = workflows_v1.DeleteWorkflowRequest(
@@ -219,14 +226,20 @@ class WorkflowService:
         try:
             operation = client.delete_workflow(request=request)
             response = operation.result()
-            logger.info(f"Deleted GCP workflow for id '{workflow_id}' with response '{response}'")
+            logger.info(
+                f"Deleted GCP workflow for id '{workflow_id}' with response '{response}'",
+            )
             return response
         except NotFound:
-            logger.warning(f"Workflow '{workflow_id}' not found in GCP. Proceeding with local deletion.")
+            logger.warning(
+                f"Workflow '{workflow_id}' not found in GCP. Proceeding with local deletion.",
+            )
             return None
 
     async def create_workflow(
-        self, workflow_dto: WorkflowCreateDto, user: UserModel
+        self,
+        workflow_dto: WorkflowCreateDto,
+        user: UserModel,
     ) -> WorkflowModel:
         """Creates a new workflow definition."""
         try:
@@ -241,7 +254,9 @@ class WorkflowService:
                 description=workflow_dto.description,
                 steps=workflow_dto.steps,
             )
-            created_workflow = await self.workflow_repository.create(workflow_model)
+            created_workflow = await self.workflow_repository.create(
+                workflow_model
+            )
 
             # 3. Generate GCP Workflow YAML (using the same ID)
             yaml_output = self._generate_workflow_yaml(created_workflow)
@@ -253,7 +268,9 @@ class WorkflowService:
                 self._create_gcp_workflow(yaml_output, workflow_id)
             except Exception as e:
                 # Rollback DB creation if GCP creation fails
-                logger.error(f"Failed to create GCP workflow: {e}. Rolling back DB.")
+                logger.error(
+                    "Failed to create GCP workflow: %s. Rolling back DB.", e
+                )
                 await self.workflow_repository.delete(created_workflow.id)
                 raise e
 
@@ -262,7 +279,7 @@ class WorkflowService:
             raise ValueError(str(e))
         except Exception as e:
             # TODO: Improve error handling here
-            logging.error(e)
+            logging.exception(e)
             raise e
 
     async def get_workflow(self, user_id: int, workflow_id: str):
@@ -277,12 +294,17 @@ class WorkflowService:
         return await self.workflow_repository.get_by_id(workflow_id)
 
     async def query_workflows(
-        self, user_id: int, search_dto: WorkflowSearchDto
+        self,
+        user_id: int,
+        search_dto: WorkflowSearchDto,
     ) -> PaginationResponseDto[WorkflowModel]:
         return await self.workflow_repository.query(user_id, search_dto)
 
     async def update_workflow(
-        self, workflow_id: str, workflow_dto: WorkflowCreateDto, user: UserModel
+        self,
+        workflow_id: str,
+        workflow_dto: WorkflowCreateDto,
+        user: UserModel,
     ) -> WorkflowModel | None:
         """Validates and updates a workflow."""
         try:
@@ -302,7 +324,9 @@ class WorkflowService:
             # The GCP workflow ID matches the DB ID (which is already in the format id-UUID)
             self._update_gcp_workflow(yaml_output, workflow_id)
 
-            return await self.workflow_repository.update(workflow_id, updated_model)
+            return await self.workflow_repository.update(
+                workflow_id, updated_model
+            )
         except ValidationError as e:
             raise ValueError(str(e))
 
@@ -313,9 +337,13 @@ class WorkflowService:
         response = await self.workflow_repository.delete(workflow_id)
         return response
 
-    async def execute_workflow(self, workflow_id: str, args: dict, user: UserModel) -> str:
+    async def execute_workflow(
+        self,
+        workflow_id: str,
+        args: dict,
+        user: UserModel,
+    ) -> str:
         """Executes a workflow with snapshotting."""
-
         # 1. Fetch current workflow state (Snapshot source)
         workflow_model = await self.get_by_id(workflow_id)
         if not workflow_model:
@@ -328,17 +356,20 @@ class WorkflowService:
         # Construct the fully qualified location path.
         # We use the static method from WorkflowsClient to avoid partial initialization of a sync client
         parent = workflows_v1.WorkflowsClient.workflow_path(
-            config_service.PROJECT_ID, config_service.WORKFLOWS_LOCATION, workflow_id
+            config_service.PROJECT_ID,
+            config_service.WORKFLOWS_LOCATION,
+            workflow_id,
         )
 
         execution = executions_v1.Execution(argument=json.dumps(args))
 
         # Execute the workflow.
         response = await execution_client.create_execution(
-            parent=parent, execution=execution
+            parent=parent,
+            execution=execution,
         )
 
-        execution_id = response.name.split('/')[-1]
+        execution_id = response.name.split("/")[-1]
 
         # 3. Save Snapshot
         workspace_id = args.get("workspace_id")
@@ -349,11 +380,24 @@ class WorkflowService:
             except:
                 workspace_id = None
 
-        await self._create_execution_snapshot(execution_id, workflow_id, workflow_model, user.id, workspace_id)
+        await self._create_execution_snapshot(
+            execution_id,
+            workflow_id,
+            workflow_model,
+            user.id,
+            workspace_id,
+        )
 
         return execution_id
 
-    async def _create_execution_snapshot(self, execution_id: str, workflow_id: str, snapshot: WorkflowModel, user_id: int, workspace_id: int | None = None):
+    async def _create_execution_snapshot(
+        self,
+        execution_id: str,
+        workflow_id: str,
+        snapshot: WorkflowModel,
+        user_id: int,
+        workspace_id: int | None = None,
+    ):
         """Creates a DB record for the execution with a snapshot of the workflow."""
         try:
             # workflow_snapshot field is JSON type.
@@ -361,21 +405,26 @@ class WorkflowService:
             # We must pass a DICT to the Pydantic model now that the field is Dict[str, Any]
             # We MUST include 'id' and 'user_id' so that WorkflowModel.model_validate works during rehydration.
             # We still exclude created_at/updated_at to save space/noise, as they will be re-generated (or nullable) upon validation if defaults exist.
-            snapshot_data = snapshot.model_dump(mode='json', exclude={"created_at", "updated_at"})
-            
+            snapshot_data = snapshot.model_dump(
+                mode="json",
+                exclude={"created_at", "updated_at"},
+            )
+
             workflow_run = WorkflowRunModel(
                 id=execution_id,
                 workflow_id=workflow_id,
                 user_id=user_id,
                 workspace_id=workspace_id,
                 status=WorkflowRunStatusEnum.RUNNING,
-                started_at=datetime.datetime.now(datetime.timezone.utc),
-                workflow_snapshot=snapshot_data
+                started_at=datetime.datetime.now(datetime.UTC),
+                workflow_snapshot=snapshot_data,
             )
             await self.workflow_run_repository.create(workflow_run)
-            logger.info(f"Created snapshot for execution {execution_id}")
+            logger.info("Created snapshot for execution %s", execution_id)
         except Exception as e:
-            logger.exception(f"Failed to create execution snapshot for {execution_id}: {e}")
+            logger.exception(
+                f"Failed to create execution snapshot for {execution_id}: {e}",
+            )
 
     async def batch_execute_workflow(
         self,
@@ -383,34 +432,21 @@ class WorkflowService:
         batch_dto: BatchExecutionRequestDto,
         user: UserModel,
     ) -> BatchExecutionResponseDto:
-        """
-        Executes a workflow for each item in the batch request.
+        """Executes a workflow for each item in the batch request.
         Handles GCS URI ingestion for image arguments.
         """
         results: list[BatchItemResultDto] = []
-        
-        # We can parallelize the entire row processing (Ingest + Execute)
-        # Using a semaphore/lock to serialize DB access since we share a session.
-        db_lock = asyncio.Lock()
-        
+
         async def process_row(item) -> BatchItemResultDto:
             try:
                 # 1. Process Arguments (Ingest GCS URIs)
                 processed_args = {}
                 workspace_id = item.args.get("workspace_id")
 
-                async def ingest_gcs_uri(uri: str, w_id: int):
-                    async with db_lock:
-                        asset = await self.source_asset_service.create_from_gcs_uri(
-                            user=user,
-                            workspace_id=w_id,
-                            gcs_uri=uri
-                        )
-                    # Return structure compatible with ReferenceImage pydantic model
-                    return {"sourceAssetId": asset.id, "previewUrl": uri}
-
                 for key, value in item.args.items():
-                    is_gcs_string = isinstance(value, str) and value.startswith("gs://")
+                    is_gcs_string = isinstance(value, str) and value.startswith(
+                        "gs://"
+                    )
                     is_gcs_list = (
                         isinstance(value, list)
                         and len(value) > 0
@@ -419,25 +455,46 @@ class WorkflowService:
                     )
 
                     if is_gcs_string or is_gcs_list:
-                         try:
-                             if not workspace_id: 
-                                raise ValueError("No workspace_id provided for GCS ingestion.")
-                             
-                             w_id = int(workspace_id)
-                             
-                             if is_gcs_string:
-                                 processed_args[key] = await ingest_gcs_uri(value, w_id)
-                             else:
-                                 # It's a list
-                                 processed_args[key] = [
-                                     await ingest_gcs_uri(uri, w_id) for uri in value
-                                 ]
-                         except Exception as e:
-                             return BatchItemResultDto(
-                                 row_index=item.row_index,
-                                 status="FAILED",
-                                 error=f"Invalid GCS URI in '{key}': {str(e)}"
-                             )
+                        try:
+                            if not workspace_id:
+                                raise ValueError(
+                                    "No workspace_id provided for GCS ingestion.",
+                                )
+
+                            w_id = int(workspace_id)
+                            uris = [value] if is_gcs_string else value
+
+                            assets = await asyncio.gather(
+                                *[
+                                    self.source_asset_service.create_from_gcs_uri(
+                                        user=user,
+                                        workspace_id=w_id,
+                                        gcs_uri=uri,
+                                    )
+                                    for uri in uris
+                                ],
+                            )
+
+                            ingested_results = [
+                                {"sourceAssetId": asset.id, "previewUrl": uri}
+                                for asset, uri in zip(assets, uris)
+                            ]
+
+                            processed_args[key] = (
+                                ingested_results[0]
+                                if is_gcs_string
+                                else ingested_results
+                            )
+
+                        except Exception as e:
+                            logger.exception(
+                                f"Failed to ingest GCS URI in '{key}': {e!s} from row {item.row_index}",
+                            )
+                            return BatchItemResultDto(
+                                row_index=item.row_index,
+                                status="FAILED",
+                                error=f"Invalid GCS URI in '{key}': {e!s}",
+                            )
                     else:
                         processed_args[key] = value
 
@@ -445,29 +502,31 @@ class WorkflowService:
                 execution_id = await self.execute_workflow(
                     workflow_id=workflow_id,
                     args=processed_args,
-                    user=user
+                    user=user,
                 )
-                
+
                 return BatchItemResultDto(
                     row_index=item.row_index,
                     execution_id=execution_id,
-                    status="SUCCESS"
+                    status="SUCCESS",
                 )
 
             except Exception as e:
-                 return BatchItemResultDto(
+                return BatchItemResultDto(
                     row_index=item.row_index,
                     status="FAILED",
-                    error=str(e)
+                    error=str(e),
                 )
 
         tasks = [process_row(item) for item in batch_dto.items]
         results = await asyncio.gather(*tasks)
-        
+
         return BatchExecutionResponseDto(results=results)
 
     async def get_execution_details(
-        self, workflow_id: str, execution_id: str
+        self,
+        workflow_id: str,
+        execution_id: str,
     ) -> dict | None:
         """Retrieves the details of a workflow execution."""
         client = executions_v1.ExecutionsClient()
@@ -488,14 +547,16 @@ class WorkflowService:
             return None
 
         result = None
-        user_inputs = json.loads(execution.argument) if execution.argument else {}
+        user_inputs = (
+            json.loads(execution.argument) if execution.argument else {}
+        )
         if execution.state == executions_v1.Execution.State.SUCCEEDED:
             result = execution.result
 
         # Fetch step entries using REST API
         try:
             credentials, project = google.auth.default(
-                scopes=['https://www.googleapis.com/auth/cloud-platform']
+                scopes=["https://www.googleapis.com/auth/cloud-platform"],
             )
             authed_session = AuthorizedSession(credentials)
             url = f"https://workflowexecutions.googleapis.com/v1/{execution_name}/stepEntries"
@@ -503,10 +564,12 @@ class WorkflowService:
             if response.status_code == 200:
                 step_entries = response.json().get("stepEntries", [])
             else:
-                logger.warning(f"Failed to fetch step entries: {response.text}")
-                step_entries = [] # Ensure step_entries is defined
+                logger.warning(
+                    "Failed to fetch step entries: %s", response.text
+                )
+                step_entries = []  # Ensure step_entries is defined
         except Exception as e:
-            logger.error(f"Error fetching step entries: {e}")
+            logger.error("Error fetching step entries: %s", e)
             step_entries = []
 
         # Calculate duration
@@ -518,49 +581,63 @@ class WorkflowService:
                 duration = end_timestamp - start_timestamp
             else:
                 import time
+
                 duration = time.time() - start_timestamp
 
         # Try to fetch snapshot from DB
-        logger.info(f"Attempting to fetch snapshot for execution_id: {execution_id}")
-        
+        logger.info(
+            "Attempting to fetch snapshot for execution_id: %s", execution_id
+        )
+
         # Ensure we check the short ID if a long ID is passed
         lookup_id = execution_id
-        if execution_id.startswith("projects/") or execution_id.startswith("//"):
-             lookup_id = execution_id.split('/')[-1]
-             
+        if execution_id.startswith("projects/") or execution_id.startswith(
+            "//"
+        ):
+            lookup_id = execution_id.rsplit("/", maxsplit=1)[-1]
+
         snapshot_run = await self.workflow_run_repository.get_by_id(lookup_id)
-        
+
         workflow_model = None
         if snapshot_run and snapshot_run.workflow_snapshot:
-             logger.info(f"Snapshot FOUND for execution_id: {execution_id}")
-             # Rehydrate WorkflowModel from snapshot
-             try:
-                 # snapshot_run.workflow_snapshot is a dict
-                 workflow_model = WorkflowModel.model_validate(snapshot_run.workflow_snapshot)
-             except Exception as e:
-                 logger.error(f"Failed to rehydrate snapshot: {e}")
-                 workflow_model = None
+            logger.info("Snapshot FOUND for execution_id: %s", execution_id)
+            # Rehydrate WorkflowModel from snapshot
+            try:
+                # snapshot_run.workflow_snapshot is a dict
+                workflow_model = WorkflowModel.model_validate(
+                    snapshot_run.workflow_snapshot,
+                )
+            except Exception as e:
+                logger.error("Failed to rehydrate snapshot: %s", e)
+                workflow_model = None
         else:
-            logger.warning(f"Snapshot NOT FOUND for execution_id: {execution_id}. Falling back to current workflow definition.")
+            logger.warning(
+                f"Snapshot NOT FOUND for execution_id: {execution_id}. Falling back to current workflow definition.",
+            )
             # Fallback to current definition
             workflow_model = await self.get_by_id(workflow_id)
 
         if not workflow_model:
             # If workflow definition is missing, we might still return basic execution details
-            logger.warning(f"Workflow definition {workflow_id} not found for execution {execution_id}")
+            logger.warning(
+                f"Workflow definition {workflow_id} not found for execution {execution_id}",
+            )
             return {
                 "id": execution.name,
                 "state": execution.state.name,
                 "result": result,
                 "duration": round(duration, 2),
                 "error": execution.error.context if execution.error else None,
-                "step_entries": [] # Cannot map steps without definition
+                "step_entries": [],  # Cannot map steps without definition
             }
 
         # --- Lazy Status Update Start ---
         # If we have a snapshot and its status is RUNNING but GCP says it's done, let's update the DB.
         # This acts as a lazy sync so we don't need a background poller.
-        if snapshot_run and snapshot_run.status == WorkflowRunStatusEnum.RUNNING.value:
+        if (
+            snapshot_run
+            and snapshot_run.status == WorkflowRunStatusEnum.RUNNING.value
+        ):
             final_status = None
             if execution.state == executions_v1.Execution.State.SUCCEEDED:
                 final_status = WorkflowRunStatusEnum.COMPLETED
@@ -568,18 +645,29 @@ class WorkflowService:
                 final_status = WorkflowRunStatusEnum.FAILED
             elif execution.state == executions_v1.Execution.State.CANCELLED:
                 final_status = WorkflowRunStatusEnum.CANCELED
-            
+
             if final_status:
                 try:
                     update_data = {
                         "status": final_status.value,
-                        "completed_at": execution.end_time if execution.end_time else datetime.datetime.now(datetime.timezone.utc)
+                        "completed_at": (
+                            execution.end_time
+                            if execution.end_time
+                            else datetime.datetime.now(datetime.UTC)
+                        ),
                     }
                     # We fire and forget this update essentially (await it but don't block return on failure)
-                    await self.workflow_run_repository.update(snapshot_run.id, update_data)
-                    logger.info(f"Lazily updated execution {execution_id} status to {final_status.value}")
+                    await self.workflow_run_repository.update(
+                        snapshot_run.id,
+                        update_data,
+                    )
+                    logger.info(
+                        f"Lazily updated execution {execution_id} status to {final_status.value}",
+                    )
                 except Exception as e:
-                    logger.warning(f"Failed to lazily update execution status: {e}")
+                    logger.warning(
+                        "Failed to lazily update execution status: %s", e
+                    )
         # --- Lazy Status Update End ---
 
         user_input_step_id = workflow_model.steps[0].step_id
@@ -596,22 +684,25 @@ class WorkflowService:
                 "state": "STATE_SUCCEEDED",  # User input is always considered succeeded if execution started
                 "step_inputs": {},
                 "step_outputs": user_inputs,
-                "start_time": execution.start_time.isoformat() if execution.start_time else None,  # type: ignore
+                "start_time": (
+                    execution.start_time.isoformat()
+                    if execution.start_time
+                    else None
+                ),  # type: ignore
                 "end_time": (
                     execution.start_time.isoformat()  # type: ignore
                     if execution.start_time
                     else None
                 ),  # Instant # type: ignore
-            }
+            },
         )
 
         def resolve_value(value):
             if isinstance(value, StepOutputReference):
                 return previous_outputs.get(value.step, {}).get(value.output)
-            elif isinstance(value, list):
+            if isinstance(value, list):
                 return [resolve_value(item) for item in value]
-            else:
-                return value
+            return value
 
         for entry in step_entries:
             step_id = entry.get("step")
@@ -619,7 +710,14 @@ class WorkflowService:
                 continue
 
             # Find the step definition
-            current_step = next((step for step in workflow_model.steps if step.step_id == step_id), None)
+            current_step = next(
+                (
+                    step
+                    for step in workflow_model.steps
+                    if step.step_id == step_id
+                ),
+                None,
+            )
             if not current_step:
                 continue
 
@@ -639,14 +737,16 @@ class WorkflowService:
             # Store outputs for subsequent steps
             previous_outputs[step_id] = step_outputs
 
-            formatted_step_entries.append({
-                "step_id": step_id,
-                "state": step_state,
-                "step_inputs": step_inputs,
-                "step_outputs": step_outputs,
-                "start_time": entry.get("createTime"),
-                "end_time": entry.get("updateTime")
-            })
+            formatted_step_entries.append(
+                {
+                    "step_id": step_id,
+                    "state": step_state,
+                    "step_inputs": step_inputs,
+                    "step_outputs": step_outputs,
+                    "start_time": entry.get("createTime"),
+                    "end_time": entry.get("updateTime"),
+                },
+            )
 
         return {
             "id": execution.name,
@@ -655,7 +755,11 @@ class WorkflowService:
             "duration": round(duration, 2),
             "error": execution.error.context if execution.error else None,
             "step_entries": formatted_step_entries,
-            "workflow_definition": workflow_model.model_dump(by_alias=True) if workflow_model else None
+            "workflow_definition": (
+                workflow_model.model_dump(by_alias=True)
+                if workflow_model
+                else None
+            ),
         }
 
     def list_executions(
@@ -673,7 +777,7 @@ class WorkflowService:
             parent=parent,
             page_size=limit,
             page_token=page_token,
-            filter=filter_str
+            filter=filter_str,
         )
 
         response = client.list_executions(request=request)
@@ -696,6 +800,7 @@ class WorkflowService:
                     duration = end_timestamp - start_timestamp
                 else:
                     import time
+
                     duration = time.time() - start_timestamp
 
             executions.append(
@@ -705,8 +810,10 @@ class WorkflowService:
                     "start_time": execution.start_time,
                     "end_time": execution.end_time,
                     "duration": round(duration, 2),
-                    "error": execution.error.context if execution.error else None,
-                }
+                    "error": (
+                        execution.error.context if execution.error else None
+                    ),
+                },
             )
 
         return {

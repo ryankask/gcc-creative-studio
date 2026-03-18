@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.auth.auth_guard import RoleChecker, get_current_user
 from src.common.dto.pagination_response_dto import PaginationResponseDto
-from src.users.dto.user_create_dto import UserCreateDto, UserUpdateRoleDto
+from src.users.dto.user_create_dto import UserUpdateRoleDto
 from src.users.dto.user_search_dto import UserSearchDto
 from src.users.user_model import UserModel, UserRoleEnum
 from src.users.user_service import UserService
@@ -39,8 +39,7 @@ async def get_my_profile(
     # the user and provides their UserData object here.
     current_user: UserModel = Depends(get_current_user),
 ):
-    """
-    Retrieves the profile for the currently authenticated user.
+    """Retrieves the profile for the currently authenticated user.
 
     The user's identity is determined from the JWT sent in the Authorization header.
     This endpoint demonstrates how the `get_current_user` dependency injects
@@ -62,8 +61,7 @@ async def list_all_users(
     search_params: UserSearchDto = Depends(),
     user_service: UserService = Depends(),
 ):
-    """
-    Retrieves a paginated list of all users in the system.
+    """Retrieves a paginated list of all users in the system.
     This functionality is restricted to administrators.
     """
     return await user_service.find_all_users(search_params)
@@ -76,9 +74,7 @@ async def list_all_users(
     dependencies=[admin_only],
 )
 async def get_user_by_id(user_id: int, user_service: UserService = Depends()):
-    """
-
-    Retrieves a single user's profile by their unique ID.
+    """Retrieves a single user's profile by their unique ID.
     This functionality is restricted to administrators.
     """
     user = await user_service.get_user_by_id(user_id)
@@ -98,8 +94,7 @@ async def update_user_role(
     role_data: UserUpdateRoleDto,
     user_service: UserService = Depends(),
 ):
-    """
-    Updates the role of a specific user (e.g., promote to 'admin' or 'creator').
+    """Updates the role of a specific user (e.g., promote to 'admin' or 'creator').
     This functionality is restricted to administrators.
     """
     updated_user = await user_service.update_user_role(user_id, role_data)
@@ -114,11 +109,37 @@ async def update_user_role(
     summary="Delete a User (Admin Only)",
     dependencies=[admin_only],
 )
-async def delete_user(user_id: int, user_service: UserService = Depends()):
-    """
-    Permanently deletes a user from the database.
+async def delete_user(
+    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    user_service: UserService = Depends(),
+):
+    """Soft deletes a user from the database.
     This functionality is restricted to administrators.
     """
-    if not await user_service.delete_user_by_id(user_id):
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete yourself.",
+        )
+    success = await user_service.delete_user(
+        user_id, deleted_by=current_user.id
+    )
+    if not success:
         raise HTTPException(status_code=404, detail="User not found")
-    return
+
+
+@router.post(
+    "/{user_id}/restore",
+    status_code=status.HTTP_200_OK,
+    summary="Restore a User (Admin Only)",
+    dependencies=[admin_only],
+)
+async def restore_user(user_id: int, user_service: UserService = Depends()):
+    """Restores a soft-deleted user.
+    This functionality is restricted to administrators.
+    """
+    success = await user_service.restore_user(user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User restored successfully"}

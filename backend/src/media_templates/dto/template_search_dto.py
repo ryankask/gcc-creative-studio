@@ -12,22 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, List
+from pydantic import Field
+
 from src.common.dto.base_search_dto import BaseSearchDto
 from src.media_templates.schema.media_template_model import (
     IndustryEnum,
     MimeTypeEnum,
 )
-from pydantic import Field
+
 
 class TemplateSearchDto(BaseSearchDto):
     """Defines the searchable and filterable fields for the template gallery."""
 
     # Filtering fields based on MediaTemplateModel
-    industry: Optional[IndustryEnum] = None
-    brand: Optional[str] = None
-    mime_type: Optional[MimeTypeEnum] = None
+    industry: IndustryEnum | None = None
+    brand: str | None = None
+    mime_type: MimeTypeEnum | None = None
     # For tags, we'll likely search one at a time
-    tag: Optional[str] = Field(
+    tag: str | None = Field(
         default=None, description="A single tag to filter by."
     )

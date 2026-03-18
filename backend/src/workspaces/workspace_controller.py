@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.auth.auth_guard import RoleChecker, get_current_user
-from src.users.user_model import UserModel, UserRoleEnum
+from src.auth.auth_guard import get_current_user
+from src.users.user_model import UserModel
 from src.workspaces.dto.create_workspace_dto import CreateWorkspaceDto
 from src.workspaces.dto.invite_user_dto import InviteUserDto
 from src.workspaces.schema.workspace_model import WorkspaceModel
@@ -43,8 +42,7 @@ async def create_workspace(
     current_user: UserModel = Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(),
 ):
-    """
-    Creates a new private workspace for the currently authenticated user.
+    """Creates a new private workspace for the currently authenticated user.
     The creator is automatically assigned as the 'OWNER'.
     """
     return await workspace_service.create_workspace(current_user, create_dto)
@@ -52,15 +50,14 @@ async def create_workspace(
 
 @router.get(
     "",
-    response_model=List[WorkspaceModel],
+    response_model=list[WorkspaceModel],
     summary="List Workspaces for Current User",
 )
 async def list_my_workspaces(
     current_user: UserModel = Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(),
 ):
-    """
-    Retrieves a list of all workspaces the currently authenticated user
+    """Retrieves a list of all workspaces the currently authenticated user
     is a member of.
     """
     return await workspace_service.list_workspaces_for_user(current_user)
@@ -77,8 +74,7 @@ async def invite_user(
     current_user: UserModel = Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(),
 ):
-    """
-    Invites a user (by email) to join a specific workspace with a given role.
+    """Invites a user (by email) to join a specific workspace with a given role.
 
     This action is restricted to the workspace's OWNER or a system ADMIN.
     It performs a dual-write, updating both the workspace's member list

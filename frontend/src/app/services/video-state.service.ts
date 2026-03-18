@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
 
 export interface VideoState {
   prompt: string;
@@ -34,7 +34,7 @@ export interface VideoState {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class VideoStateService {
   private initialState: VideoState = {
@@ -50,14 +50,14 @@ export class VideoStateService {
     generateAudio: true,
     negativePrompt: '',
     useBrandGuidelines: false,
-    mode: 'Text to Video'
+    mode: 'Text to Video',
   };
 
   private state = new BehaviorSubject<VideoState>(this.initialState);
   state$ = this.state.asObservable();
 
   updateState(newState: Partial<VideoState>) {
-    this.state.next({ ...this.state.value, ...newState });
+    this.state.next({...this.state.value, ...newState});
   }
 
   getState(): VideoState {

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""API endpoints for audio generation."""
 
 
 import logging
@@ -49,8 +50,8 @@ async def generate_audio(
     current_user: UserModel = Depends(get_current_user),
     audio_service: AudioService = Depends(),
 ):
-    """
-    Generates audio based on the selected model (Lyria for music, Chirp/Gemini for speech).
+    """Generates audio based on the selected model (Lyria for music,
+    Chirp/Gemini for speech).
     """
     return await audio_service.generate_audio(create_audio_dto, current_user)
 

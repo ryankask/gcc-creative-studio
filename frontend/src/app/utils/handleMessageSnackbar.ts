@@ -27,7 +27,7 @@ export const handleErrorSnackbar: (
   snackBar: MatSnackBar,
   error: any,
   context: string,
-  duration: number = 20000,
+  duration = 5000,
 ) => {
   console.error(`${context} error:`, error);
   const errorMessage =
@@ -54,7 +54,7 @@ export const handleSuccessSnackbar: (
   snackBar: MatSnackBar,
   msg: any,
   duration?: number,
-) => void = (snackBar: MatSnackBar, msg: any, duration?: number) => {
+) => void = (snackBar: MatSnackBar, msg: any, duration = 5000) => {
   try {
     const notificationService = AppInjector.get(NotificationService);
     notificationService.show(
@@ -73,7 +73,7 @@ export const handleInfoSnackbar: (
   snackBar: MatSnackBar,
   msg: any,
   duration?: number,
-) => void = (snackBar: MatSnackBar, msg: any, duration: number = 10000) => {
+) => void = (snackBar: MatSnackBar, msg: any, duration = 5000) => {
   try {
     const notificationService = AppInjector.get(NotificationService);
     notificationService.show(msg, 'info', undefined, 'info', duration);

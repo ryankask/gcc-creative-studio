@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-from src.users.user_model import UserRoleEnum
+
 from src.common.dto.base_search_dto import BaseSearchDto
+from src.users.user_model import UserRoleEnum
 
 
 class UserSearchDto(BaseSearchDto):
-    """
-    Data Transfer Object for searching and filtering users.
-    Inherits pagination fields from BaseSearchDto.
-    """
+    """DTO for searching users."""
 
-    email: Optional[str] = None
-    role: Optional[UserRoleEnum] = None
+    role: UserRoleEnum | None = None
+    email: str | None = None
+    include_deleted: bool = False

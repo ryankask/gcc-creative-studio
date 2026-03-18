@@ -119,6 +119,39 @@ To maintain code quality and consistency:
 * **Python (Backend):** We adhere to the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html), using tools like `pylint` and `black` for linting and formatting.
 * **Commit Messages:** We suggest following [Angular's Commit Message Guidelines](https://github.com/angular/angular/blob/main/contributing-docs/commit-message-guidelines.md) to create clear and descriptive commit messages.
 
+
+### 🛡️ Automatic Checks with Pre-commit (Recommended)
+
+To ensure your code passes styling, linting, and license header checks automatically before every `git commit`, we use a **fully containerized `pre-commit` pipeline**. This eliminates the need for any local installations of Node, Go, or linters on your host machine.
+
+1.  **Configure the Git Hook Handler**:
+    Run the following command once from the project root directory to link the script for intercepting commits:
+    ```bash
+    cp pre-commit-hook.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+    ```
+
+2.  **How it Works**:
+    Whenever you run `git commit`, the hook will automatically run inside an isolated Docker container in the background loaded with all linter binaries (`addlicense`, `gts`, `pylint`, `black`, `ruff`). It blocks the commit if any checks fail, enforcing consistency.
+
+3.  **One-Time Repository Cleanup**:
+    To automatically format all backend files (`black`), frontend files (`gts fix`), and add missing license headers (`addlicense`) across the **entire repository** at once (useful for initial cleanup of existing files):
+    ```bash
+    docker compose run --rm pre-commit run --all-files
+    ```
+    *💡 Tip: Inspect the resulting diff and commit it separately to keep your future feature commits focused and small.*
+
+
+### ⚙️ Continuous Integration (CI) with GitHub Actions
+
+To guarantee that only clean, tested code is merged, we run automated validation on every Pull Request or push using **GitHub Actions**:
+
+*   **Frontend Checks (`frontend-quality.yml`)**: Triggered on `frontend/**` changes. Spawns Node, installs using clean slate (`npm ci`), and verifies styling with `npx gts lint`.
+*   **Backend Checks (`backend-tests.yml`)**: Triggered on `backend/**` changes. Runs code style verification (`black --check`), static rule analysis (`pylint`), and the backend testing suite (`pytest`).
+
+If any check fails, a failure status is reported inside the PR discussion. When combined with GitHub **Branch Protection Rules** (configured in repo settings), this acts as a gatekeeper blocking unformatted or failing code from entering the default branches.
+
+
+
 ### Frontend (TypeScript with `gts`)
 
 (Assumes setup within the `frontend/` directory)
@@ -287,7 +320,22 @@ GENMEDIA_BUCKET="creative-studio-deploy-cs-development-bucket"
 SIGNING_SA_EMAIL="cs-development-read@creative-studio-deploy.iam.gserviceaccount.com"
 GOOGLE_TOKEN_AUDIENCE="XXXX-XXXXXXXXXXX.apps.googleusercontent.com"
 IDENTITY_PLATFORM_ALLOWED_ORGS=""
+
+# --- Database Configuration (Local Docker Postgres) ---
+DB_USER="studio_user"
+DB_PASS="studio_pass"
+DB_NAME="creative_studio"
+DB_HOST="postgres"
+DB_PORT="5432"
+USE_CLOUD_SQL_AUTH_PROXY=false
+ADMIN_USER_EMAIL="your-user-email"
 ```
+
+> 💡 **Best Practice Tip: Local PostgreSQL Container**
+> For local development and testing, we include a lightweight PostgreSQL Docker container to bypass the need for an actual Cloud SQL instance. This delivers key advantages:
+> - **Zero Costs**: Avoids billing accrual on cloud data lookups during validation work cycles.
+> - **Safe Experimentation**: Clear volume bindings locally without risking production states or accidental cloud data drops.
+> - **Instant Migrations Validation**: Speed runs Alembic updates completely isolated and offline.
 
 ### `frontend/src/environments/development.environment.ts` file
 
@@ -341,6 +389,13 @@ You are all set, from the root of the project, run the following command:
 
 ```bash
 docker compose up
+```
+
+### 💡 Seeding Initial Workspaces (Local Development/Testing)
+If you are running this locally for the first time or your database is fresh, you might find that the Workspaces list is empty. You should run the bootstrap script once to seed default templates and verify access:
+
+```bash
+docker exec -t creative-studio-backend sh -c "PYTHONPATH=/app uv run python -m bootstrap.bootstrap"
 ```
 
 As this uses volumes, and we use hot reload to start the services, every time you change something on the files the container will be refreshed with the changes.

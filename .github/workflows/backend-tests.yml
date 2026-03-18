@@ -1,0 +1,69 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Backend Quality
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+      - develop
+      - test
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: 'dummy-project-id'
+
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+        cache-dependency-glob: "backend/uv.lock"
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        uv sync --all-extras
+
+    - name: Run Black Formatter Check
+      run: |
+        cd backend
+        uv run black --check src tests
+
+    - name: Run Pylint
+      run: |
+        cd backend
+        uvx pylint --rcfile=pylintrc src tests
+
+    - name: Run tests
+      run: |
+        cd backend
+        uv run pytest tests -v --cov=src --cov-fail-under=80
+

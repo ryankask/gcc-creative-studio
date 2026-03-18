@@ -14,22 +14,30 @@
  * limitations under the License.
  */
 
-import {Component, OnInit, OnDestroy, ViewChild} from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  Inject,
+  PLATFORM_ID,
+} from '@angular/core';
 import {MatTableDataSource} from '@angular/material/table';
 import {MatPaginator, PageEvent} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {Subject, firstValueFrom} from 'rxjs';
-import {
-  debounceTime,
-  distinctUntilChanged,
-  takeUntil,
-} from 'rxjs/operators';
+import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
+import {isPlatformBrowser} from '@angular/common';
 import {UserService, PaginatedResponse} from './user.service';
 import {MatDialog} from '@angular/material/dialog';
 import {UserFormComponent} from './user-form.component';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {UserModel, UserRolesEnum} from '../../common/models/user.model';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
+import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
 
 @Component({
   selector: 'app-users-management',
@@ -56,11 +64,13 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
   totalUsers = 0;
   limit = 10;
   currentPageIndex = 0;
+  currentUserId: number | null = null;
 
   // --- Filtering & Destroy State ---
   private filterSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
   currentFilter = '';
+  includeDeleted = false; // Added
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -69,10 +79,17 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
     private userService: UserService,
     public dialog: MatDialog,
     private _snackBar: MatSnackBar,
+    @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
 
   ngOnInit(): void {
-    this.fetchPage(0);
+    if (isPlatformBrowser(this.platformId)) {
+      const userDetailsStr = localStorage.getItem('USER_DETAILS');
+      if (userDetailsStr) {
+        this.currentUserId = JSON.parse(userDetailsStr).id || null;
+      }
+      void this.fetchPage(0);
+    }
 
     // Debounce filter input to avoid excessive Firestore reads
     this.filterSubject
@@ -95,7 +112,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
       this.resetPaginationAndFetch();
       return;
     }
-    this.fetchPage(event.pageIndex);
+    void this.fetchPage(event.pageIndex);
   }
 
   async fetchPage(targetPageIndex: number) {
@@ -108,7 +125,9 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
           this.limit,
           this.currentFilter,
           offset,
+          this.includeDeleted, // Pass here
         ),
+        {defaultValue: {data: [], count: 0} as any},
       );
 
       this.dataSource.data = finalResponse.data;
@@ -132,7 +151,26 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
     if (this.paginator) {
       this.paginator.pageIndex = 0;
     }
-    this.fetchPage(0);
+    void this.fetchPage(0);
+  }
+
+  onIncludeDeletedChange(checked: boolean) {
+    this.includeDeleted = checked;
+    this.resetPaginationAndFetch();
+  }
+
+  async restoreUser(userId: string): Promise<void> {
+    this.isLoading = true;
+    try {
+      await firstValueFrom(this.userService.restoreUser(userId));
+      handleSuccessSnackbar(this._snackBar, 'User restored successfully!');
+      await this.fetchPage(this.currentPageIndex);
+    } catch (err) {
+      console.error(`Error restoring user ${userId}:`, err);
+      handleErrorSnackbar(this._snackBar, err, 'Restore user');
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   openUserForm(user: UserModel): void {
@@ -152,7 +190,7 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
             await firstValueFrom(this.userService.updateUser(result));
             handleSuccessSnackbar(this._snackBar, 'User updated successfully!');
             // Refetch to show updated data on the current page.
-            this.fetchPage(this.currentPageIndex);
+            await this.fetchPage(this.currentPageIndex);
           } catch (err) {
             console.error(`Error updating user ${result.id}:`, err);
             handleErrorSnackbar(this._snackBar, err, 'Update user');
@@ -163,21 +201,30 @@ export class UsersManagementComponent implements OnInit, OnDestroy {
       });
   }
 
-  async deleteUser(userId: string): Promise<void> {
-    // Simple confirmation, consider using a MatDialog for a better UX
-    if (confirm(`Are you sure you want to delete user with ID: ${userId}?`)) {
-      this.isLoading = true;
-      try {
-        await firstValueFrom(this.userService.deleteUser(userId));
-        handleSuccessSnackbar(this._snackBar, 'User deleted successfully!');
-        this.resetPaginationAndFetch();
-      } catch (err) {
-        console.error(`Error deleting user ${userId}:`, err);
-        handleErrorSnackbar(this._snackBar, err, 'Delete user');
-      } finally {
-        this.isLoading = false;
+  deleteUser(userId: string): void {
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Confirm Deletion',
+        message: `Are you sure you want to delete user with ID: ${userId}?`,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result) {
+        this.isLoading = true;
+        try {
+          await firstValueFrom(this.userService.deleteUser(userId));
+          handleSuccessSnackbar(this._snackBar, 'User deleted successfully!');
+          this.resetPaginationAndFetch();
+        } catch (err) {
+          console.error(`Error deleting user ${userId}:`, err);
+          handleErrorSnackbar(this._snackBar, err, 'Delete user');
+        } finally {
+          this.isLoading = false;
+        }
       }
-    }
+    });
   }
 
   public getRoleChipClass(role: string): string {
