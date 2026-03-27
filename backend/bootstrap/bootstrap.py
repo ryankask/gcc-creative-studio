@@ -31,7 +31,7 @@ from src.common.base_dto import AspectRatioEnum
 from src.common.schema.media_item_model import AssetRoleEnum
 from src.common.storage_service import GcsService
 from src.config.config_service import config_service
-from src.database import AsyncSessionLocal, cleanup_connector
+from src.database import async_session_local, cleanup_connector
 from src.media_templates.repository.media_template_repository import (
     MediaTemplateRepository,
 )
@@ -465,7 +465,7 @@ async def main():
 
         await run_pending_migrations()
 
-        async with AsyncSessionLocal() as db:
+        async with async_session_local() as db:
             admin_user = await ensure_admin_user_exists(db)
             await ensure_default_workspace_exists(db, admin_user)
             await seed_vto_assets(db, admin_user)

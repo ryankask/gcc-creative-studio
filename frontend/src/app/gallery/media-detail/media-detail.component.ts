@@ -49,7 +49,7 @@ export class MediaDetailComponent implements OnDestroy {
   public mediaItem: GalleryItem | undefined;
   public isAdmin = false;
   public initialSlideIndex = 0;
-  promptJson: CreatePromptMediaDto | undefined;
+  promptJson: any | undefined;
   isPromptExpanded = false;
   public isIdentityExpanded = false;
   public selectedAssetForLightbox: GalleryItem | null = null;
@@ -61,6 +61,13 @@ export class MediaDetailComponent implements OnDestroy {
     const isAsset = this.mediaItem.itemType === 'source_asset';
 
     const fields: {label: string; value: any; type: string}[] = [
+      {
+        label: 'Status',
+        value: this.mediaItem.status
+          ? this.mediaItem.status.toUpperCase()
+          : null,
+        type: 'status',
+      },
       {label: 'Mime Type', value: this.mediaItem.mimeType, type: 'text'},
       {label: 'Aspect Ratio', value: this.mediaItem.aspectRatio, type: 'text'},
       {label: 'Resolution', value: this.mediaItem.resolution, type: 'text'},
@@ -78,16 +85,33 @@ export class MediaDetailComponent implements OnDestroy {
             : undefined,
           type: 'text',
         },
-        {
-          label: 'Source Assets',
-          value: this.mediaItem.enrichedSourceAssets?.length
-            ? this.mediaItem.enrichedSourceAssets
-            : undefined,
-          type: 'assets',
-        },
       );
 
       if (!isAsset) {
+        fields.push(
+          {label: 'Voice', value: this.mediaItem.voiceName, type: 'text'},
+          {label: 'Language', value: this.mediaItem.languageCode, type: 'text'},
+          {label: 'Seed', value: this.mediaItem.seed, type: 'text'},
+          {label: 'Num Media', value: this.mediaItem.numMedia, type: 'text'},
+          {
+            label: 'Duration',
+            value: this.mediaItem.duration
+              ? `${this.mediaItem.duration}s`
+              : undefined,
+            type: 'text',
+          },
+          {
+            label: 'Google Search',
+            value:
+              this.mediaItem.googleSearch !== undefined
+                ? this.mediaItem.googleSearch
+                  ? 'Enabled'
+                  : 'Disabled'
+                : undefined,
+            type: 'text',
+          },
+        );
+
         const originalPrompt =
           this.mediaItem.originalPrompt ||
           (this.promptJson ? this.formattedPrompt : this.mediaItem.prompt);
@@ -176,19 +200,20 @@ export class MediaDetailComponent implements OnDestroy {
   }
 
   private parsePrompt(): void {
-    if (!this.mediaItem?.prompt) {
+    const rawToParse = this.mediaItem?.prompt || this.mediaItem?.originalPrompt;
+    if (!rawToParse) {
       this.promptJson = undefined;
       return;
     }
     try {
-      if (typeof this.mediaItem.prompt === 'string') {
-        const parsed = JSON.parse(this.mediaItem.prompt);
+      if (typeof rawToParse === 'string') {
+        const parsed = JSON.parse(rawToParse);
         if (parsed && typeof parsed === 'object') {
           this.promptJson = parsed;
         }
-      } else if (typeof this.mediaItem.prompt === 'object') {
+      } else if (typeof rawToParse === 'object') {
         // It's already an object, just cast it.
-        this.promptJson = this.mediaItem.prompt as CreatePromptMediaDto;
+        this.promptJson = rawToParse as CreatePromptMediaDto;
       }
     } catch (e) {
       // Not a valid JSON string.
@@ -215,7 +240,8 @@ export class MediaDetailComponent implements OnDestroy {
    * valid JSON object or stringified JSON. Otherwise, returns the original prompt.
    */
   get formattedPrompt(): string {
-    if (!this.mediaItem?.prompt) {
+    const rawPrompt = this.mediaItem?.prompt || this.mediaItem?.originalPrompt;
+    if (!rawPrompt) {
       return 'N/A';
     }
 
@@ -224,7 +250,7 @@ export class MediaDetailComponent implements OnDestroy {
     }
 
     // Return the original string if it's not an object or valid stringified JSON.
-    return this.mediaItem.prompt;
+    return rawPrompt;
   }
 
   /**

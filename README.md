@@ -1,4 +1,4 @@
-# 🚀 GCC Creative Studio
+# 🚀 Google Cloud Creative Studio Platform
 
 ![Angular](https://img.shields.io/badge/angular-%23DD0031.svg?style=for-the-badge&logo=angular&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)

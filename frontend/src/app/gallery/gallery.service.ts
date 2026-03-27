@@ -312,7 +312,11 @@ export class GalleryService implements OnDestroy {
       critique: item.critique || metadata.critique,
       rawData: item.rawData || metadata.raw_data,
       audioAnalysis: item.audioAnalysis || metadata.audio_analysis,
-      error_message: item.error_message || metadata.error_message,
+      errorMessage:
+        item.errorMessage ||
+        item.error_message ||
+        metadata.errorMessage ||
+        metadata.error_message,
       addWatermark: item.addWatermark ?? metadata.add_watermark,
       originalGcsUris: item.originalGcsUris || item.original_gcs_uris || [],
       originalPresignedUrls:

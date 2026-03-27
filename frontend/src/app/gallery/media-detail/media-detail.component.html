@@ -75,99 +75,488 @@
       <!-- Right Panel: Properties -->
       <aside class="side-panel custom-scrollbar">
         
-        <!-- DNA: File Identity (Dynamic) -->
-        <section>
-            <div class="section-header flex items-center justify-between">
-                <div class="flex items-center gap-2">
+        <!-- Tabs Wrapper -->
+        <mat-tab-group mat-align-tabs="start" animationDuration="0ms" class="w-full">
+          <!-- Main Detail Tab -->
+          <mat-tab label="Overview">
+            <div class="flex flex-col gap-6 py-4">
+
+              <!-- DNA: File Identity (Dynamic) -->
+              <section>
+                <div class="section-header flex items-center justify-between">
+                  <div class="flex items-center gap-2">
                     <mat-icon>fingerprint</mat-icon>
                     Identity
-                </div>
-                <!-- Way smaller toggle button -->
-                 <studio-button 
-                    variant="primary" 
-                    shape="circle"
-                    size="small"
-                    (click)="toggleIdentityExpansion()"
-                    [matTooltip]="isIdentityExpanded ? 'Show less' : 'Show more'"
-                >
+                  </div>
+                  <!-- Way smaller toggle button -->
+                  <studio-button variant="primary" shape="circle" size="small" (click)="toggleIdentityExpansion()"
+                    [matTooltip]="isIdentityExpanded ? 'Show less' : 'Show more'">
                     <mat-icon>{{ isIdentityExpanded ? 'unfold_less' : 'unfold_more' }}</mat-icon>
-                </studio-button>
-            </div>
-            <div class="property-card">
-                <div class="prop-row" *ngFor="let field of identityFields">
-                  <ng-container [ngSwitch]="field.type">
-                    
-                    <!-- Assets Grid -->
-                    <div *ngSwitchCase="'assets'" class="w-full">
-                      <div class="label mb-2">{{ field.label }}</div>
-                      <div class="source-grid">
-                        <div *ngFor="let asset of field.value" 
-                             class="source-item" 
-                             (click)="openSourceAssetInLightbox(asset, $event)"
-                             matTooltip="Source Asset: {{ asset.role }}">
-                            <img [src]="asset.presignedThumbnailUrl || asset.presignedUrl" alt="Source">
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Prompt Display -->
-                    <div *ngSwitchCase="'prompt'" class="w-full">
-                      <div class="label mb-1">{{ field.label }}</div>
-                      <div class="prompt-preview mini mb-2">
-                        {{ field.value }}
-                      </div>
-                    </div>
-
-                    <!-- Date formatting -->
-                    <ng-container *ngSwitchCase="'date'">
-                      <span class="label">{{ field.label }}</span>
-                      <span class="value">{{ field.value | date:'MMM d, y, h:mm a' }}</span>
-                    </ng-container>
-
-                    <!-- Default Text -->
-                    <ng-container *ngSwitchDefault>
-                      <span class="label">{{ field.label }}</span>
-                      <span class="value">{{ field.value }}</span>
-                    </ng-container>
-
-                  </ng-container>
+                  </studio-button>
                 </div>
-            </div>
-        </section>
+                <div class="property-card">
+                  <div class="prop-row" *ngFor="let field of identityFields">
+                    <ng-container [ngSwitch]="field.type">
+                          <!-- Prompt Display -->
+                          <div *ngSwitchCase="'prompt'" class="w-full">
+                            <div class="label mb-1">{{ field.label }}</div>
+                            <div class="prompt-preview mini mb-2">
+                              {{ field.value }}
+                            </div>
+                          </div>
 
-        <!-- STORAGE: Technical Links (Kept as requested or implicit) -->
-        <section>
-            <div class="section-header">
-                <mat-icon>cloud</mat-icon>
-                Storage
-            </div>
-            <div class="property-card">
-                <div class="prop-row" *ngFor="let uri of mediaItem.gcsUris; let i = index">
+                          <!-- Date formatting -->
+                          <ng-container *ngSwitchCase="'date'">
+                            <span class="label">{{ field.label }}</span>
+                            <span class="value">{{ field.value | date:'MMM d, y, h:mm a' }}</span>
+                          </ng-container>
+
+                          <!-- Status field with color -->
+                          <ng-container *ngSwitchCase="'status'">
+                            <span class="label mb-2 block">{{ field.label }}</span>
+                            <mat-chip-set>
+                              <mat-chip [ngClass]="{
+                                                                'status-chip-failed': field.value === 'FAILED',
+                                                                'status-chip-completed': field.value === 'COMPLETED',
+                                                                'status-chip-pending': field.value === 'PENDING' || field.value === 'PROCESSING'
+                                                            }">{{ field.value }}</mat-chip>
+                            </mat-chip-set>
+                          </ng-container>
+
+                          <!-- Default Text -->
+                          <ng-container *ngSwitchDefault>
+                            <span class="label">{{ field.label }}</span>
+                            <span class="value">{{ field.value }}</span>
+                          </ng-container>
+
+                        </ng-container>
+                        </div>
+                        </div>
+                        </section>
+
+              <!-- SOURCE ASSETS: Reference Assets -->
+              <section *ngIf="mediaItem.enrichedSourceAssets?.length || mediaItem.enrichedSourceMediaItems?.length">
+                <div class="section-header">
+                  <mat-icon>link</mat-icon>
+                  Source Assets
+                </div>
+                <div class="property-card">
+                  <div class="source-grid">
+                    <!-- From uploaded assets -->
+                    <div *ngFor="let asset of mediaItem.enrichedSourceAssets" class="source-item"
+                      (click)="openSourceAssetInLightbox(asset, $event)" matTooltip="Source Asset: {{ asset.role }}">
+                      <img [src]="asset.presignedThumbnailUrl || asset.presignedUrl" alt="Source">
+                    </div>
+                    <!-- From previously generated media -->
+                    <a *ngFor="let source of mediaItem.enrichedSourceMediaItems" [routerLink]="['/gallery', source.mediaItemId]"
+                      [queryParams]="{img_index: source.mediaIndex}" class="source-item" matTooltip="Source Media: {{ source.role }}">
+                      <img [src]="source.presignedThumbnailUrl || source.presignedUrl" alt="Source">
+                    </a>
+                  </div>
+                </div>
+              </section>
+
+              <!-- STORAGE: Technical Links (Kept as requested or implicit) -->
+              <section>
+                <div class="section-header">
+                  <mat-icon>cloud</mat-icon>
+                  Storage
+                </div>
+                <div class="property-card">
+                  <div class="prop-row" *ngFor="let uri of mediaItem.gcsUris; let i = index">
                     <span class="label">Object {{ i + 1 }}</span>
                     <a [href]="getGcsLink(uri)" target="_blank" class="value value-link truncate max-w-[200px]">
-                        {{ uri }}
+                      {{ uri }}
                     </a>
+                  </div>
                 </div>
-            </div>
-        </section>
+              </section>
 
-        <!-- FEEDBACK: Critique / Comments (Kept) -->
-        <section *ngIf="mediaItem.comment || mediaItem.critique">
-            <div class="section-header">
-                <mat-icon>comment</mat-icon>
-                Studio Notes
-            </div>
-            <div class="property-card">
-                <div *ngIf="mediaItem.comment">
+              <!-- FEEDBACK: Critique / Comments (Kept) -->
+              <section *ngIf="mediaItem.comment || mediaItem.critique">
+                <div class="section-header">
+                  <mat-icon>comment</mat-icon>
+                  Studio Notes
+                </div>
+                <div class="property-card">
+                  <div *ngIf="mediaItem.comment">
                     <div class="label text-xs mb-1">Comment</div>
                     <div class="value !text-left !text-white/70 italic text-sm">{{ mediaItem.comment }}</div>
-                </div>
-                <div *ngIf="mediaItem.critique" [class.mt-3]="mediaItem.comment">
+                  </div>
+                  <div *ngIf="mediaItem.critique" [class.mt-3]="mediaItem.comment">
                     <div class="label text-xs mb-1">Critique</div>
                     <div class="value !text-left !text-white/70 text-sm">{{ mediaItem.critique }}</div>
+                  </div>
                 </div>
-            </div>
-        </section>
+              </section>
+
+              <!-- NEW: Grounding Information -->
+              <section *ngIf="mediaItem.groundingMetadata">
+                <div class="section-header">
+                  <mat-icon>public</mat-icon>
+                  Grounding Information
+                </div>
+                <div class="property-card">
+                  <div *ngIf="mediaItem.groundingMetadata.webSearchQueries" class="prop-row block border-b-0 pb-0 mb-3">
+                    <div class="label mb-2">Search Queries</div>
+                    <div class="flex flex-wrap gap-2">
+                      <span *ngFor="let query of mediaItem.groundingMetadata.webSearchQueries"
+                        class="px-2 py-1 bg-white/10 rounded-md text-xs text-white/80">
+                        {{ query }}
+                      </span>
+                    </div>
+                  </div>
+                  <div *ngIf="mediaItem.groundingMetadata.groundingChunks" class="prop-row block border-b-0 pb-0 mb-3">
+                    <div class="label mb-2">Sources</div>
+                    <ul class="space-y-2">
+                      <li *ngFor="let chunk of mediaItem.groundingMetadata.groundingChunks">
+                        <a *ngIf="chunk.web" [href]="chunk.web.uri" target="_blank"
+                          class="value-link flex items-center gap-2 text-sm text-blue-400">
+                          <mat-icon class="!text-sm !w-4 !h-4">open_in_new</mat-icon>
+                          {{ chunk.web.title || chunk.web.uri }}
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div *ngIf="mediaItem.groundingMetadata.searchEntryPoint" class="prop-row block">
+                    <div class="label mb-2">Search Entry Point</div>
+                    <div [innerHTML]="getSafeHtml(mediaItem.groundingMetadata.searchEntryPoint.renderedContent)"
+                      class="bg-black/20 rounded-md p-3 max-h-[200px] overflow-auto">
+                    </div>
+                  </div>
+                </div>
+              </section>
+              
+              <!-- NEW: Style Section for properties -->
+              <section
+                *ngIf="mediaItem.style || mediaItem.lighting || mediaItem.colorAndTone || mediaItem.composition || mediaItem.modifiers?.length">
+                <div class="section-header">
+                  <mat-icon>palette</mat-icon>
+                  Style
+                </div>
+                <div class="property-card">
+                  <div *ngIf="mediaItem.style" class="prop-row">
+                    <span class="label">Image Style</span>
+                    <span class="value">{{ mediaItem.style }}</span>
+                  </div>
+                  <div *ngIf="mediaItem.lighting" class="prop-row">
+                    <span class="label">Lighting</span>
+                    <span class="value">{{ mediaItem.lighting }}</span>
+                  </div>
+                  <div *ngIf="mediaItem.colorAndTone" class="prop-row">
+                    <span class="label">Color & Tone</span>
+                    <span class="value">{{ mediaItem.colorAndTone }}</span>
+                  </div>
+                  <div *ngIf="mediaItem.composition" class="prop-row">
+                    <span class="label">Composition</span>
+                    <span class="value">{{ mediaItem.composition }}</span>
+                  </div>
+                  <div *ngIf="mediaItem.modifiers?.length" class="prop-row block border-t-0 pt-2 mt-2">
+                    <div class="label mb-2">Modifiers</div>
+                    <mat-chip-set>
+                      <mat-chip *ngFor="let modifier of mediaItem.modifiers">{{ modifier }}</mat-chip>
+                    </mat-chip-set>
+                  </div>
+                </div>
+              </section>
+              
+              </div>
+              </mat-tab>
+              
+              <!-- Prompt Details Tab -->
+              <mat-tab label="Prompt Details" *ngIf="promptJson || mediaItem.rewrittenPrompt || mediaItem.negativePrompt">
+                <div class="flex flex-col gap-6 py-4">
+              
+                  <!-- Other Prompts -->
+                  <section *ngIf="mediaItem.rewrittenPrompt || mediaItem.negativePrompt">
+                    <div class="section-header">
+                      <mat-icon>edit_note</mat-icon>
+                      Generated Prompts
+                    </div>
+                    <div class="property-card">
+                      <div *ngIf="mediaItem.rewrittenPrompt" class="mb-4">
+                        <div class="label text-xs text-white/40 mb-1">Rewritten Prompt</div>
+                        <div class="prompt-preview">{{ mediaItem.rewrittenPrompt }}</div>
+                      </div>
+                      <div *ngIf="mediaItem.negativePrompt">
+                        <div class="label text-xs text-white/40 mb-1">Negative Prompt</div>
+                        <div class="prompt-preview">{{ mediaItem.negativePrompt }}</div>
+                      </div>
+                    </div>
+                  </section>
+              
+                  <!-- Raw JSON Prompt -->
+                  <mat-expansion-panel class="custom-expansion" *ngIf="promptJson">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>Raw JSON Prompt Sent</mat-panel-title>
+                    </mat-expansion-panel-header>
+                    <div class="pb-3">
+                      <pre class="prompt-preview mini whitespace-pre-wrap break-words mt-2">{{ formattedPrompt }}</pre>
+                    </div>
+                  </mat-expansion-panel>
+              
+                  <ng-container *ngIf="promptJson">
+                    <!-- Metadata -->
+                    <section *ngIf="promptJson.metadata">
+                      <div class="section-header"><mat-icon>info</mat-icon> Metadata</div>
+                      <div class="property-card">
+                        <div class="prop-row">
+                          <span class="label">Prompt Name</span>
+                          <span class="value">{{ promptJson.metadata.prompt_name || 'N/A' }}</span>
+                        </div>
+                        <div class="prop-row">
+                          <span class="label">Version</span>
+                          <span class="value">{{ promptJson.metadata.version || 'N/A' }}</span>
+                        </div>
+                        <div class="prop-row">
+                          <span class="label">Target Model</span>
+                          <span class="value">{{ promptJson.metadata.target_model || 'N/A' }}</span>
+                        </div>
+                        <div class="prop-row block mt-2 pt-2 border-t border-white/5">
+                          <div class="label mb-1">Core Concept</div>
+                          <div class="prompt-preview mini">{{ promptJson.metadata.core_concept || 'N/A' }}</div>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Scene Setup -->
+                    <section *ngIf="promptJson.scene_setup">
+                      <div class="section-header"><mat-icon>movie_creation</mat-icon> Scene Setup</div>
+                      <div class="property-card">
+                        <div class="prop-row">
+                          <span class="label">Temporal Elements</span>
+                          <span class="value">{{ promptJson.scene_setup.temporal_elements || 'N/A' }}</span>
+                        </div>
+                        <div class="prop-row block mt-2">
+                          <div class="label mb-1">Environment</div>
+                          <div class="value !text-left text-sm whitespace-pre-wrap">{{ promptJson.scene_setup.environment || 'N/A' }}
+                          </div>
+                        </div>
+                        <div class="prop-row block mt-2">
+                          <div class="label mb-1">Mood</div>
+                          <div class="value !text-left text-sm whitespace-pre-wrap">{{ promptJson.scene_setup.mood || 'N/A' }}</div>
+                        </div>
+                        <div *ngIf="promptJson.scene_setup.key_objects?.length" class="prop-row block mt-2">
+                          <div class="label mb-2">Key Objects</div>
+                          <mat-chip-set>
+                            <mat-chip *ngFor="let obj of promptJson.scene_setup.key_objects">{{ obj }}</mat-chip>
+                          </mat-chip-set>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Subject -->
+                    <section *ngIf="promptJson.subject">
+                      <div class="section-header"><mat-icon>person</mat-icon> Subject</div>
+                      <div class="property-card">
+                        <div class="prop-row block">
+                          <div class="label mb-1">Main Subject</div>
+                          <div class="value !text-left text-sm">{{ promptJson.subject.main_subject || 'N/A' }}</div>
+                        </div>
+                        <div *ngIf="promptJson.subject.character_details" class="prop-row block mt-3">
+                          <div class="label mb-1">Character Details</div>
+                          <div class="value !text-left text-sm">{{ promptJson.subject.character_details }}</div>
+                        </div>
+                        <div *ngIf="promptJson.subject.key_objects?.length" class="prop-row block mt-3">
+                          <div class="label mb-2">Key Objects</div>
+                          <mat-chip-set>
+                            <mat-chip *ngFor="let obj of promptJson.subject.key_objects">{{ obj }}</mat-chip>
+                          </mat-chip-set>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Subject & Scene (Alternative schema) -->
+                    <section *ngIf="promptJson.subject_and_scene">
+                      <div class="section-header"><mat-icon>nature_people</mat-icon> Subject & Scene</div>
+                      <div class="property-card">
+                        <div *ngIf="promptJson.subject_and_scene.main_subject" class="prop-row block">
+                          <div class="label mb-1">Main Subject</div>
+                          <div class="value !text-left text-sm">{{ promptJson.subject_and_scene.main_subject }}</div>
+                        </div>
+                        <div *ngIf="promptJson.subject_and_scene.subject_details" class="prop-row block mt-3">
+                          <div class="label mb-1">Subject Details</div>
+                          <div class="value !text-left text-sm">{{ promptJson.subject_and_scene.subject_details }}</div>
+                        </div>
+                        <div *ngIf="promptJson.subject_and_scene.environment" class="prop-row block mt-3">
+                          <div class="label mb-1">Environment</div>
+                          <div class="value !text-left text-sm">{{ promptJson.subject_and_scene.environment }}</div>
+                        </div>
+                        <div *ngIf="promptJson.subject_and_scene.mood_and_atmosphere" class="prop-row block mt-3">
+                          <div class="label mb-1">Mood & Atmosphere</div>
+                          <div class="value !text-left text-sm">{{ promptJson.subject_and_scene.mood_and_atmosphere }}</div>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Visual Style -->
+                    <section *ngIf="promptJson.visual_style">
+                      <div class="section-header"><mat-icon>brush</mat-icon> Visual Style</div>
+                      <div class="property-card">
+                        <div *ngIf="promptJson.visual_style.resolution_and_format" class="prop-row">
+                          <span class="label">Resolution & Format</span>
+                          <span class="value">{{ promptJson.visual_style.resolution_and_format }}</span>
+                        </div>
+                        <div *ngIf="promptJson.visual_style.aesthetic" class="prop-row block mt-2">
+                          <div class="label mb-1">Aesthetic</div>
+                          <div class="value !text-left text-sm">{{ promptJson.visual_style.aesthetic }}</div>
+                        </div>
+                        <div *ngIf="promptJson.visual_style.color_palette" class="prop-row block mt-2">
+                          <div class="label mb-1">Color Palette</div>
+                          <div class="value !text-left text-sm">{{ promptJson.visual_style.color_palette }}</div>
+                        </div>
+                        <div *ngIf="promptJson.visual_style.artistic_influences" class="prop-row block mt-2">
+                          <div class="label mb-1">Artistic Influences</div>
+                          <div class="value !text-left text-sm">{{ promptJson.visual_style.artistic_influences }}</div>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Camera Directives -->
+                    <section *ngIf="promptJson.camera_directives">
+                      <div class="section-header"><mat-icon>videocam</mat-icon> Camera Directives</div>
+                      <div class="property-card">
+                        <div *ngIf="promptJson.camera_directives.lens_and_optical_effects" class="prop-row block border-b-0 pb-0">
+                          <div class="label mb-1">Lens & Optical Effects</div>
+                          <div class="value !text-left text-sm mb-3">{{ promptJson.camera_directives.lens_and_optical_effects }}</div>
+                        </div>
+                        <div *ngIf="promptJson.camera_directives.overall_movement" class="prop-row block border-b-0 pb-0">
+                          <div class="label mb-1">Overall Movement</div>
+                          <div class="value !text-left text-sm mb-3">{{ promptJson.camera_directives.overall_movement }}</div>
+                        </div>
+                        <div *ngIf="promptJson.camera_directives.shot_types" class="prop-row block border-b-0 pb-0">
+                          <div class="label mb-1">Shot Types</div>
+                          <div class="value !text-left text-sm mb-3">{{ promptJson.camera_directives.shot_types }}</div>
+                        </div>
+                        <div *ngIf="promptJson.camera_directives.camera_angles?.length" class="prop-row block mt-2">
+                          <div class="label mb-2">Camera Angles</div>
+                          <mat-chip-set>
+                            <mat-chip *ngFor="let angle of promptJson.camera_directives.camera_angles">{{ angle }}</mat-chip>
+                          </mat-chip-set>
+                        </div>
+                        <div *ngIf="promptJson.camera_directives.camera_movements?.length" class="prop-row block mt-2">
+                          <div class="label mb-2">Camera Movements</div>
+                          <mat-chip-set>
+                            <mat-chip *ngFor="let move of promptJson.camera_directives.camera_movements">{{ move }}</mat-chip>
+                          </mat-chip-set>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Photography Directives (Alternative schema) -->
+                    <section *ngIf="promptJson.photography_directives">
+                      <div class="section-header"><mat-icon>camera_alt</mat-icon> Photography Directives</div>
+                      <div class="property-card">
+                        <div *ngIf="promptJson.photography_directives.shot_type" class="prop-row block mt-2">
+                          <div class="label mb-1">Shot Type</div>
+                          <div class="value !text-left text-sm">{{ promptJson.photography_directives.shot_type }}</div>
+                        </div>
+                        <div *ngIf="promptJson.photography_directives.lighting_style" class="prop-row block mt-3">
+                          <div class="label mb-1">Lighting Style</div>
+                          <div class="value !text-left text-sm">{{ promptJson.photography_directives.lighting_style }}</div>
+                        </div>
+                        <div *ngIf="promptJson.photography_directives.aspect_ratio" class="prop-row block mt-3">
+                          <div class="label mb-1">Aspect Ratio</div>
+                          <div class="value !text-left text-sm">{{ promptJson.photography_directives.aspect_ratio }}</div>
+                        </div>
+                        <div *ngIf="promptJson.photography_directives.composition" class="prop-row block mt-3">
+                          <div class="label mb-1">Composition</div>
+                          <div class="value !text-left text-sm">{{ promptJson.photography_directives.composition }}</div>
+                        </div>
+                        <div *ngIf="promptJson.photography_directives.lens_and_effects" class="prop-row block mt-3">
+                          <div class="label mb-1">Lens & Effects</div>
+                          <div class="value !text-left text-sm">{{ promptJson.photography_directives.lens_and_effects }}</div>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Timeline Section -->
+                    <section *ngIf="promptJson.timeline?.length">
+                      <div class="section-header"><mat-icon>timeline</mat-icon> Timeline</div>
+                      <mat-accordion class="custom-accordion">
+                        <mat-expansion-panel *ngFor="let event of promptJson.timeline" class="custom-expansion mb-2">
+                          <mat-expansion-panel-header>
+                            <mat-panel-title>Sequence {{ event.sequence_id }} ({{ event.timestamp }})</mat-panel-title>
+                          </mat-expansion-panel-header>
+                          <div class="property-card mt-2 border-none bg-black/20 pb-3">
+                            <div class="prop-row block !p-0 mb-3 border-none">
+                              <div class="label mb-1">Action</div>
+                              <div class="value !text-left text-sm">{{ event.action }}</div>
+                            </div>
+                            <div class="prop-row block !p-0 mb-3 border-none">
+                              <div class="label mb-1">Camera Instruction</div>
+                              <div class="value !text-left text-sm">{{ event.camera_instruction || 'N/A' }}</div>
+                            </div>
+                            <div class="prop-row block !p-0 border-none">
+                              <div class="label mb-1">Audio Description</div>
+                              <div class="value !text-left text-sm">{{ event.audio_description || 'N/A' }}</div>
+                            </div>
+                          </div>
+                        </mat-expansion-panel>
+                      </mat-accordion>
+                    </section>
+              
+                    <!-- Constraints Section -->
+                    <section *ngIf="promptJson.constraints?.negative_prompts as negativePrompts">
+                      <div class="section-header"><mat-icon>block</mat-icon> Constraints</div>
+                      <div class="property-card">
+                        <div class="prop-row block border-none">
+                          <div class="label mb-2">Negative Prompts</div>
+                          <mat-chip-set>
+                            <mat-chip *ngFor="let prompt of negativePrompts">{{ prompt }}</mat-chip>
+                          </mat-chip-set>
+                        </div>
+                      </div>
+                    </section>
+              
+                    <!-- Final Summary Prompt -->
+                    <section *ngIf="promptJson.final_summary_prompt">
+                      <div class="section-header"><mat-icon>summarize</mat-icon> Final Summary</div>
+                      <div class="property-card">
+                        <div class="prompt-preview">{{ promptJson.final_summary_prompt }}</div>
+                      </div>
+                    </section>
+                  </ng-container>
+              
+                </div>
+              </mat-tab>
+              
+              <!-- Debug Tab -->
+              <mat-tab label="Debug"
+                *ngIf="mediaItem.rawData || mediaItem.audioAnalysis || mediaItem.errorMessage || mediaItem.status === 'failed'">
+                <div class="flex flex-col gap-6 py-4">
+                  <section *ngIf="mediaItem.errorMessage || mediaItem.status === 'failed'">
+                    <div class="section-header text-red-400"><mat-icon class="text-red-400">error</mat-icon> {{ mediaItem.errorMessage
+                      ? 'Error Message' : 'Generation Failed' }}</div>
+                    <div class="property-card border-red-500/30 bg-red-500/10" *ngIf="mediaItem.errorMessage">
+                      <div class="value !text-left text-red-200 whitespace-pre-wrap break-words">{{ mediaItem.errorMessage }}</div>
+                    </div>
+                    <div class="property-card border-red-500/30 bg-red-500/10" *ngIf="!mediaItem.errorMessage">
+                      <div class="value !text-left text-red-200">The generation failed but no detailed error message was provided from
+                        the backend.</div>
+                    </div>
+                  </section>
+              
+                  <mat-expansion-panel class="custom-expansion" *ngIf="mediaItem.rawData">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>Raw Data</mat-panel-title>
+                    </mat-expansion-panel-header>
+                    <div class="pb-3">
+                      <pre class="prompt-preview mini whitespace-pre-wrap break-words mt-2">{{ mediaItem.rawData | json }}</pre>
+                    </div>
+                  </mat-expansion-panel>
+              
+                  <mat-expansion-panel class="custom-expansion" *ngIf="mediaItem.audioAnalysis">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>Audio Analysis</mat-panel-title>
+                    </mat-expansion-panel-header>
+                    <div class="pb-3">
+                      <pre class="prompt-preview mini whitespace-pre-wrap break-words mt-2">{{ mediaItem.audioAnalysis | json }}</pre>
+                    </div>
+                  </mat-expansion-panel>
+                </div>
+              </mat-tab>
+              </mat-tab-group>
 
       </aside>
 

@@ -107,6 +107,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     addWatermark: false,
     negativePrompt: '',
     useBrandGuidelines: false,
+    enhancePrompt: false,
     googleSearch: false,
     resolution: '4K',
   };
@@ -414,6 +415,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.searchRequest.numberOfMedia = state.numberOfMedia;
       this.searchRequest.composition = state.composition;
       this.searchRequest.useBrandGuidelines = state.useBrandGuidelines;
+      this.searchRequest.enhancePrompt = state.enhancePrompt;
       this.currentMode = state.mode;
 
       // Update local variables to reflect state
@@ -450,6 +452,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       numberOfMedia: this.searchRequest.numberOfMedia,
       composition: this.searchRequest.composition || null,
       useBrandGuidelines: this.searchRequest.useBrandGuidelines,
+      enhancePrompt: this.searchRequest.enhancePrompt || false,
       mode: this.currentMode,
     });
   }
@@ -474,6 +477,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.searchRequest.numberOfMedia = state.numberOfMedia;
     this.searchRequest.composition = state.composition;
     this.searchRequest.useBrandGuidelines = state.useBrandGuidelines;
+    this.searchRequest.enhancePrompt = state.enhancePrompt;
 
     this.negativePhrases = state.negativePrompt
       ? state.negativePrompt.split(', ').filter(Boolean)

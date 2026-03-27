@@ -100,6 +100,7 @@ def fixture_sample_create_veo_dto():
         generation_model=GenerationModelEnum.VEO_3_QUALITY,
         aspect_ratio="16:9",
         duration_seconds=5,
+        enhance_prompt=True,
     )
 
 
@@ -285,6 +286,7 @@ class TestBackgroundWorkers:
             generation_model=GenerationModelEnum.VEO_3_QUALITY,
             aspect_ratio="16:9",
             duration_seconds=5,
+            enhance_prompt=True,
         )
 
         # Mock WorkerDatabase Context
@@ -480,6 +482,7 @@ class TestBackgroundWorkers:
                     reference_type=ReferenceImageTypeEnum.ASSET,
                 ),
             ],
+            enhance_prompt=True,
         )
 
         mock_db_context = AsyncMock()

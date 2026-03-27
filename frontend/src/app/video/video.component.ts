@@ -138,6 +138,7 @@ export class VideoComponent implements OnInit, AfterViewInit {
     generateAudio: true,
     durationSeconds: 8,
     useBrandGuidelines: false,
+    enhancePrompt: false,
     referenceImages: [],
   };
 
@@ -280,6 +281,7 @@ export class VideoComponent implements OnInit, AfterViewInit {
       generateAudio: this.searchRequest.generateAudio,
       negativePrompt: this.searchRequest.negativePrompt || '',
       useBrandGuidelines: this.searchRequest.useBrandGuidelines,
+      enhancePrompt: this.searchRequest.enhancePrompt || false,
       mode: this.currentMode,
     });
   }
@@ -298,6 +300,7 @@ export class VideoComponent implements OnInit, AfterViewInit {
     this.searchRequest.generateAudio = state.generateAudio;
     this.searchRequest.negativePrompt = state.negativePrompt;
     this.searchRequest.useBrandGuidelines = state.useBrandGuidelines;
+    this.searchRequest.enhancePrompt = state.enhancePrompt;
     this.currentMode = state.mode || 'Text to Video';
 
     this.negativePhrases = state.negativePrompt
@@ -759,6 +762,7 @@ export class VideoComponent implements OnInit, AfterViewInit {
       generateAudio: true,
       durationSeconds: 8,
       useBrandGuidelines: false,
+      enhancePrompt: false,
     };
     this.videoStateService.resetState();
   }

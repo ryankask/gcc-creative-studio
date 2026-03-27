@@ -170,6 +170,15 @@ export class GalleryCardComponent implements OnDestroy {
     event.preventDefault();
     event.stopPropagation();
 
+    if (this.isSelectionMode) {
+      this.mediaItemSelected.emit({
+        mediaItem: this.item as unknown as MediaItem,
+        selectedIndex: this.currentImageIndex,
+      });
+      this.selectionToggled.emit({item: this.item, event});
+      return;
+    }
+
     if (this.anyItemSelected) {
       this.selectionToggled.emit({item: this.item, event});
       return;

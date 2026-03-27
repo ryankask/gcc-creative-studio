@@ -41,7 +41,7 @@ repos:
   - id: pylint
     name: pylint
     entry: pylint
-    args: [ "--rcfile=backend/pylintrc" ]
+    args: [ "--rcfile=backend/pylintrc", "--fail-under=9.0" ]
     language: system
     files: ^backend/
     stages: [manual]

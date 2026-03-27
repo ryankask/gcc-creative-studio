@@ -40,7 +40,7 @@ export interface BaseGalleryItem {
   originalPresignedUrls?: string[];
   presignedThumbnailUrls?: string[];
 
-  error_message?: string;
+  errorMessage?: string;
 
   // Flat fields for backwards compatibility with older components
   enrichedSourceAssets?: any[];

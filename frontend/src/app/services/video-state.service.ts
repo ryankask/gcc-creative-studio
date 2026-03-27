@@ -30,6 +30,7 @@ export interface VideoState {
   generateAudio: boolean;
   negativePrompt: string;
   useBrandGuidelines: boolean;
+  enhancePrompt: boolean;
   mode: string;
 }
 
@@ -50,6 +51,7 @@ export class VideoStateService {
     generateAudio: true,
     negativePrompt: '',
     useBrandGuidelines: false,
+    enhancePrompt: false,
     mode: 'Text to Video',
   };
 

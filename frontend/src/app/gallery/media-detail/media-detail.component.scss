@@ -284,11 +284,107 @@
 /* Material overrides */
 ::ng-deep {
     .side-panel {
-        .mat-mdc-chip-set { padding: 4px 0; }
+        .mat-mdc-chip-set {
+                padding: 4px 0;
+                border: none;
+            }
         .mat-mdc-standard-chip {
             background-color: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             .mdc-evolution-chip__text-label { color: rgba(255, 255, 255, 0.8) !important; font-size: 0.75rem; }
+&.status-chip-completed,
+&.status-chip-failed,
+&.status-chip-pending {
+    .mdc-evolution-chip__action--primary::before {
+        border-width: 0 !important;
+    }
+}
+
+&.status-chip-completed {
+    background-color: rgba(74, 222, 128, 0.2) !important;
+    border: 1px solid rgba(74, 222, 128, 0.4) !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    .mdc-evolution-chip__text-label {
+        color: rgb(74, 222, 128) !important;
+        font-weight: bold;
+    }
+}
+
+&.status-chip-failed {
+    background-color: rgba(248, 113, 113, 0.2) !important;
+    border: 1px solid rgba(248, 113, 113, 0.4) !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    .mdc-evolution-chip__text-label {
+        color: rgb(248, 113, 113) !important;
+        font-weight: bold;
+    }
+}
+
+&.status-chip-pending {
+    background-color: rgba(96, 165, 250, 0.2) !important;
+    border: 1px solid rgba(96, 165, 250, 0.4) !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    .mdc-evolution-chip__text-label {
+        color: rgb(96, 165, 250) !important;
+        font-weight: bold;
+    }
+}
+}
+
+.mat-mdc-tab-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+    --mdc-tab-indicator-active-indicator-color: #fff;
+}
+
+.mdc-tab {
+    background-color: transparent !important;
+    min-width: unset;
+    padding: 0 16px;
+}
+
+.mdc-tab__text-label {
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-family: 'Outfit', sans-serif !important;
+}
+
+.mdc-tab--active .mdc-tab__text-label {
+    color: #fff !important;
+}
+
+.custom-expansion {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 1.25rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: none !important;
+    color: #fff;
+
+    .mat-expansion-panel-header {
+        font-family: 'Outfit', sans-serif;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.9);
+        padding: 0 1.25rem;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.02) !important;
+        }
+    }
+
+    .mat-expansion-indicator::after {
+        color: rgba(255, 255, 255, 0.5);
+    }
+}
+
+.custom-accordion {
+    .mat-expansion-panel {
+        margin-bottom: 0.5rem;
+    }
         }
     }
 }

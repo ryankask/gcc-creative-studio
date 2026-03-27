@@ -60,7 +60,7 @@ jobs:
     - name: Run Pylint
       run: |
         cd backend
-        uvx pylint --rcfile=pylintrc src tests
+        uvx pylint --rcfile=pylintrc --fail-under=9.0 src tests
 
     - name: Run tests
       run: |

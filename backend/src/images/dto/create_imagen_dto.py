@@ -96,6 +96,10 @@ class CreateImagenDto(BaseDto):
         default=False,
         description="Whether to prepend brand guidelines to the prompt.",
     )
+    enhance_prompt: bool = Field(
+        default=False,
+        description="Whether to enhance the prompt using Gemini.",
+    )
     google_search: bool = Field(
         default=False,
         description="Whether to use Google Search for image generation.",

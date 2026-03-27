@@ -118,6 +118,10 @@ class CreateVeoDto(BaseDto):
         default=False,
         description="Whether to prepend brand guidelines to the prompt.",
     )
+    enhance_prompt: bool = Field(
+        default=False,
+        description="Whether to enhance the prompt using Gemini.",
+    )
     reference_images: list[ReferenceImageDto] | None = Field(
         default=None,
         max_length=3,

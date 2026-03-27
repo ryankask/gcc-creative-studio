@@ -31,6 +31,7 @@ export interface ImageState {
   numberOfMedia: number;
   composition: string | null;
   useBrandGuidelines: boolean;
+  enhancePrompt: boolean;
   mode: string;
 }
 
@@ -52,6 +53,7 @@ export class ImageStateService {
     numberOfMedia: 4,
     composition: null,
     useBrandGuidelines: false,
+    enhancePrompt: false,
     mode: 'Text to Image',
   };
 
