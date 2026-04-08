@@ -35,10 +35,9 @@ export interface PaginatedResponse {
 }
 
 @Injectable({
-  providedIn: 'root', // Or provide it specifically in AdminModule if preferred
+  providedIn: 'root',
 })
 export class UserService {
-  // Define the structure of the paginated response from the backend
   private usersApiUrl = `${environment.backendURL}/users`;
 
   private httpOptions = {
@@ -54,10 +53,15 @@ export class UserService {
     limit: number,
     filter: string,
     offset?: number,
+    includeDeleted = false,
   ): Observable<PaginatedResponse> {
     let params = new HttpParams()
       .set('limit', limit.toString())
       .set('email', filter);
+
+    if (includeDeleted) {
+      params = params.set('include_deleted', 'true');
+    }
 
     if (offset !== undefined) params = params.set('offset', offset.toString());
 
@@ -83,9 +87,7 @@ export class UserService {
 
   // PUT: Update an existing user
   updateUser(user: UserModel): Observable<any> {
-    // FastAPI might return the updated user or just a success status
     const url = `${this.usersApiUrl}/${user.id}`;
-    // The backend expects UserUpdateRoleDto which only has 'roles'
     const payload = {roles: user.roles};
     return this.http
       .put(url, payload, this.httpOptions)
@@ -94,10 +96,17 @@ export class UserService {
 
   // DELETE: Delete a user
   deleteUser(id: number | string): Observable<UserModel> {
-    // Or Observable<{}> if backend returns empty on delete
     const url = `${this.usersApiUrl}/${id}`;
     return this.http
       .delete<UserModel>(url, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  // POST: Restore a deleted user
+  restoreUser(id: number | string): Observable<UserModel> {
+    const url = `${this.usersApiUrl}/${id}/restore`;
+    return this.http
+      .post<UserModel>(url, {}, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -105,11 +114,8 @@ export class UserService {
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'An unknown error occurred!';
     if (error.error instanceof HttpErrorResponse) {
-      // A client-side or network error occurred. Handle it accordingly.
       errorMessage = `Error: ${error.error.message}`;
     } else {
-      // The backend returned an unsuccessful response code.
-      // The response body may contain clues as to what went wrong.
       errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
       if (
         error.error &&

@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 [project]
 name = "creative-studio"
 version = "0.1.0"
@@ -46,25 +60,6 @@ dev = [
     "pytest-watch",
 ]
 
-[tool.ruff]
-# Python version (optional, defaults to auto-detect)
-# target-version = "py310"
-
-[tool.ruff.lint]
-# Enable Pyflakes ("F") and Pycodestyle ("E", "W") categories by default.
-# select = ["E", "F", "W", "I"]  # I for isort
-# Can be more specific or add more rules later
-# For example, to emulate Flake8:
-select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "ANN", "S", "BLE", "A", "COM", "LOG", "PT", "Q", "RET", "SIM", "TID", "ARG", "PTH", "ERA", "PD", "PGH", "PIE", "PL", "TRY", "FLY", "NPY", "PERF", "RUF"]
-ignore = ["E501"] # Ignore line too long for now, can be addressed later
-
-[tool.ruff.format]
-# Use black-compatible formatting
-quote-style = "double"
-indent-style = "space"
-#skip-string-normalization = false
-line-ending = "auto"
-
 [tool.coverage.run]
 source = ["livecov"]
 
@@ -78,3 +73,12 @@ profile = "black"
 name = "pypi"
 url = "https://pypi.org/simple"
 default = true
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "pre-commit>=4.5.1",
+]
+
+[tool.black]
+line-length = 80

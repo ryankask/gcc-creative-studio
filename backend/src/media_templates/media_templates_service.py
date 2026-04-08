@@ -13,10 +13,7 @@
 # limitations under the License.
 
 import asyncio
-import hashlib
 import io
-import os
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, UploadFile, status
 from starlette.datastructures import Headers
@@ -26,7 +23,6 @@ from src.common.base_dto import MimeTypeEnum
 from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.common.schema.media_item_model import (
     SourceAssetLink,
-    SourceMediaItemLink,
 )
 from src.common.storage_service import GcsService
 from src.galleries.dto.gallery_response_dto import SourceAssetLinkResponse
@@ -90,11 +86,10 @@ class MediaTemplateService:
         self.workspace_repo = workspace_repo
 
     async def _enrich_source_asset_link(
-        self, link: SourceAssetLink
-    ) -> Optional[SourceAssetLinkResponse]:
-        """
-        Fetches the source asset document and generates a presigned URL for it.
-        """
+        self,
+        link: SourceAssetLink,
+    ) -> SourceAssetLinkResponse | None:
+        """Fetches the source asset document and generates a presigned URL for it."""
         asset_doc = await self.source_asset_repo.get_by_id(link.asset_id)
         if not asset_doc:
             return None
@@ -111,10 +106,10 @@ class MediaTemplateService:
         )
 
     async def _create_media_template_response(
-        self, item: MediaTemplateModel
+        self,
+        item: MediaTemplateModel,
     ) -> MediaTemplateResponse:
-        """
-        Helper function to convert a MediaItem into a GalleryItemResponse
+        """Helper function to convert a MediaItem into a GalleryItemResponse
         by generating presigned URLs in parallel for its GCS URIs.
         """
         all_gcs_uris = item.gcs_uris or []
@@ -167,13 +162,15 @@ class MediaTemplateService:
         )
 
     async def get_template_by_id(
-        self, template_id: int
-    ) -> Optional[MediaTemplateModel]:
+        self,
+        template_id: int,
+    ) -> MediaTemplateModel | None:
         """Fetches a single template by its ID."""
         return await self.template_repo.get_by_id(template_id)
 
     async def find_all_templates(
-        self, search_dto: TemplateSearchDto
+        self,
+        search_dto: TemplateSearchDto,
     ) -> PaginationResponseDto[MediaTemplateResponse]:
         """Finds all templates with optional filtering and pagination."""
         # Run the synchronous database query in a separate thread
@@ -200,8 +197,10 @@ class MediaTemplateService:
         return await self.template_repo.delete(template_id)
 
     async def update_template(
-        self, template_id: int, update_dto: UpdateTemplateDto
-    ) -> Optional[MediaTemplateModel]:
+        self,
+        template_id: int,
+        update_dto: UpdateTemplateDto,
+    ) -> MediaTemplateModel | None:
         """Updates a template's information. (Admin only)"""
         # model_dump with exclude_unset=True creates a dict with only the provided fields
         update_data = update_dto.model_dump(exclude_unset=True)
@@ -216,9 +215,8 @@ class MediaTemplateService:
         self,
         media_item_id: int,
         user: UserModel,
-    ) -> Optional[MediaTemplateModel]:
-        """
-        Creates a new MediaTemplate by copying properties from an existing MediaItem
+    ) -> MediaTemplateModel | None:
+        """Creates a new MediaTemplate by copying properties from an existing MediaItem
         and using Gemini to generate a creative name and description. (Admin only)
         """
         media_item = await self.media_item_repo.get_by_id(media_item_id)
@@ -249,7 +247,7 @@ class MediaTemplateService:
         metadata = CreatePromptTemplateDto.model_validate_json(generated_text)
 
         # --- Convert all source inputs into new, permanent System Assets ---
-        new_source_asset_links: List[SourceAssetLink] = []
+        new_source_asset_links: list[SourceAssetLink] = []
         public_workspace = await self.workspace_repo.get_public_workspace()
         if not public_workspace:
             # This should not happen if bootstrap script has run
@@ -261,11 +259,15 @@ class MediaTemplateService:
         # 1. Handle source assets from the 'user_assets' collection
         if media_item.source_assets:
             for link in media_item.source_assets:
-                source_asset = await self.source_asset_repo.get_by_id(link.asset_id)
+                source_asset = await self.source_asset_repo.get_by_id(
+                    link.asset_id
+                )
                 if source_asset and source_asset.gcs_uri:
                     # Download the asset content
                     blob_name = source_asset.gcs_uri.replace(
-                        f"gs://{self.gcs_service.bucket_name}/", "", 1
+                        f"gs://{self.gcs_service.bucket_name}/",
+                        "",
+                        1,
                     )
                     blob = self.gcs_service.bucket.blob(blob_name)
                     content_bytes = await asyncio.to_thread(
@@ -295,13 +297,15 @@ class MediaTemplateService:
                     new_source_asset_links.append(
                         SourceAssetLink(
                             asset_id=new_asset_response.id, role=link.role
-                        )
+                        ),
                     )
 
         # 2. Handle source media items from the 'media_library' collection
         if media_item.source_media_items:
             for link in media_item.source_media_items:
-                source_media_item = await self.media_item_repo.get_by_id(link.media_item_id)
+                source_media_item = await self.media_item_repo.get_by_id(
+                    link.media_item_id,
+                )
                 if (
                     source_media_item
                     and source_media_item.gcs_uris
@@ -309,7 +313,9 @@ class MediaTemplateService:
                 ):
                     gcs_uri = source_media_item.gcs_uris[link.media_index]
                     blob_name = gcs_uri.replace(
-                        f"gs://{self.gcs_service.bucket_name}/", "", 1
+                        f"gs://{self.gcs_service.bucket_name}/",
+                        "",
+                        1,
                     )
                     blob = self.gcs_service.bucket.blob(blob_name)
                     content_bytes = await asyncio.to_thread(
@@ -337,7 +343,7 @@ class MediaTemplateService:
                     new_source_asset_links.append(
                         SourceAssetLink(
                             asset_id=new_asset_response.id, role=link.role
-                        )
+                        ),
                     )
 
         # Create the new template by mapping fields

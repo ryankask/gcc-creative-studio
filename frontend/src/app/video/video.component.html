@@ -68,15 +68,18 @@
         </div>
 
         <!-- Video Gallery -->
-        <app-media-lightbox
-          *ngIf="job.status === JobStatus.COMPLETED"
-          [mediaItem]="job"
-          [initialIndex]="0"
-          [showSeeMoreInfoButton]="true"
-          (extendWithAiClicked)="handleExtendWithAi($event)"
-          (concatenateClicked)="handleConcatenate($event)"
-          style="max-height: 60vh"
-        ></app-media-lightbox>
+        <div style="height: 80vh;" *ngIf="job.status === JobStatus.COMPLETED">
+          <app-media-lightbox
+            [mediaItem]="job"
+            [initialIndex]="0"
+            [showSeeMoreInfoButton]="true"
+            [showDeleteButton]="true"
+            (extendWithAiClicked)="handleExtendWithAi($event)"
+            (concatenateClicked)="handleConcatenate($event)"
+            (deleteClicked)="deleteGeneratedMedia()"
+            style="height: 100%"
+          ></app-media-lightbox>
+        </div>
       </ng-container>
 
       <ng-container
@@ -335,6 +338,21 @@
         </mat-slide-toggle>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           Brand Guidelines
+        </div>
+      </div>
+
+      <div
+        matTooltip="Enhance Prompt with AI"
+        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
+      >
+        <mat-slide-toggle
+          [(ngModel)]="searchRequest.enhancePrompt"
+          (ngModelChange)="saveState()"
+          class="!w-16 !h-16 !shadow-none text-center !flex justify-center items-center text-stone-300"
+        >
+        </mat-slide-toggle>
+        <div class="text-center justify-center text-neutral-200 text-base mt-2">
+          Enhance Prompt
         </div>
       </div>
     </div>

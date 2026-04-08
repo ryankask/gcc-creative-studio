@@ -47,11 +47,15 @@ import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatCardModule} from '@angular/material/card';
 import {ScrollingModule} from '@angular/cdk/scrolling';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {MatDatepickerModule} from '@angular/material/datepicker';
+import {MatNativeDateModule} from '@angular/material/core';
 import {MediaTemplateFormComponent} from './media-templates-management/media-template-form/media-template-form.component';
 import {SourceAssetsManagementComponent} from './source-assets-management/source-assets-management.component';
 import {SourceAssetFormComponent} from './source-assets-management/source-asset-form/source-asset-form.component';
 import {SourceAssetUploadFormComponent} from './source-assets-management/source-asset-upload-form/source-asset-upload-form.component';
 import {SharedModule} from '../common/shared.module';
+import {MediaGalleryManagementComponent} from './media-gallery-management/media-gallery-management.component';
+import {TagsManagementComponent} from './tags-management/tags-management.component';
 
 @NgModule({
   declarations: [
@@ -63,6 +67,8 @@ import {SharedModule} from '../common/shared.module';
     SourceAssetsManagementComponent,
     SourceAssetFormComponent,
     SourceAssetUploadFormComponent,
+    MediaGalleryManagementComponent,
+    TagsManagementComponent,
   ],
   imports: [
     CommonModule,
@@ -95,6 +101,8 @@ import {SharedModule} from '../common/shared.module';
     MatProgressBarModule,
     MatExpansionModule,
     MatTabsModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
 })
 export class AdminModule {}

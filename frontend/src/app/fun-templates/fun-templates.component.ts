@@ -15,7 +15,8 @@
  */
 import {EnrichedSourceAsset} from './media-template.model';
 
-import {Component, inject, OnDestroy, OnInit} from '@angular/core';
+import {Component, inject, OnDestroy, OnInit, PLATFORM_ID} from '@angular/core';
+import {isPlatformBrowser} from '@angular/common';
 import {MatIconRegistry} from '@angular/material/icon';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {
@@ -34,6 +35,7 @@ import {MediaTemplatesService} from '../admin/media-templates-management/media-t
   styleUrl: './fun-templates.component.scss',
 })
 export class FunTemplatesComponent implements OnInit, OnDestroy {
+  private platformId = inject(PLATFORM_ID);
   public isLoading = true;
   public allTemplates: MediaTemplate[] = [];
   public filteredTemplates: MediaTemplate[] = [];
@@ -205,7 +207,7 @@ export class FunTemplatesComponent implements OnInit, OnDestroy {
    */
   useTemplate(template: MediaTemplate): void {
     // Navigate to the homepage (or your generator page) and pass the parameters
-    this.router.navigate(
+    void this.router.navigate(
       [template.mimeType === MimeTypeEnum.VIDEO ? '/video' : '/'],
       {
         state: {
@@ -246,6 +248,7 @@ export class FunTemplatesComponent implements OnInit, OnDestroy {
   }
 
   public startAutoSlide(template: MediaTemplate): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     const urls = template.presignedUrls;
     if (urls && urls.length > 1) {
       if (this.autoSlideIntervals[template.id]) {
@@ -326,7 +329,7 @@ export class FunTemplatesComponent implements OnInit, OnDestroy {
       presignedUrls: [sourceAsset.presignedUrl],
       presignedThumbnailUrls: [sourceAsset.presignedUrl],
       originalPrompt: `Input: ${sourceAsset.role}`,
-      gcsUris: [sourceAsset.presignedUrl]
+      gcsUris: [sourceAsset.presignedUrl],
       // Add any other required fields for MediaItem with default values
     };
 

@@ -12,19 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from src.common.base_dto import BaseDto
 
 
 class CustomImagenResult(BaseDto):
-    gcs_uri: Optional[str]
+    gcs_uri: str | None
     mime_type: str
     encoded_image: str
     presigned_url: str
 
 
 class ImageGenerationResult(BaseDto):
-    enhanced_prompt: Optional[str]
-    rai_filtered_reason: Optional[str]
+    enhanced_prompt: str | None
+    rai_filtered_reason: str | None
     image: CustomImagenResult

@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Subscription } from 'rxjs';
-import { ASPECT_RATIO_LABELS, MODEL_CONFIGS } from '../../../../common/config/model-config';
-import { StepConfig } from './step.model';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnInit,
+  Output,
+  SimpleChanges,
+} from '@angular/core';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {Subscription} from 'rxjs';
+import {
+  ASPECT_RATIO_LABELS,
+  MODEL_CONFIGS,
+} from '../../../../common/config/model-config';
+import {StepConfig} from './step.model';
 
 @Component({
   selector: 'app-generic-step',
@@ -40,12 +51,10 @@ export class GenericStepComponent implements OnInit, OnChanges {
   currentMaxReferenceImages = 1;
 
   isCollapsed = true;
-  inputModes: { [key: string]: 'fixed' | 'linked' | 'mixed' } = {};
-  compatibleOutputs: { [key: string]: any[] } = {};
+  inputModes: {[key: string]: 'fixed' | 'linked' | 'mixed'} = {};
+  compatibleOutputs: {[key: string]: any[]} = {};
 
-  constructor(
-    private fb: FormBuilder,
-  ) { }
+  constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
     this.initializeStepState();
@@ -95,7 +104,12 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
       // Determine if the input is linked (StepOutputReference)
       // It must be an object, not an array, and have 'step' and 'output' properties
-      const isLinked = value && typeof value === 'object' && !Array.isArray(value) && 'step' in value && 'output' in value;
+      const isLinked =
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        'step' in value &&
+        'output' in value;
 
       if (isLinked) {
         this.inputModes[input.name] = 'linked';
@@ -110,7 +124,10 @@ export class GenericStepComponent implements OnInit, OnChanges {
     if (settings) {
       this.config.settings.forEach(setting => {
         if (!settings.contains(setting.name)) {
-          settings.addControl(setting.name, this.fb.control(setting.defaultValue));
+          settings.addControl(
+            setting.name,
+            this.fb.control(setting.defaultValue),
+          );
         }
       });
 
@@ -120,9 +137,11 @@ export class GenericStepComponent implements OnInit, OnChanges {
         if (this.settingsSubscription) {
           this.settingsSubscription.unsubscribe();
         }
-        this.settingsSubscription = modelControl?.valueChanges.subscribe(value => {
-          this.updateDynamicConfig(value);
-        });
+        this.settingsSubscription = modelControl?.valueChanges.subscribe(
+          value => {
+            this.updateDynamicConfig(value);
+          },
+        );
 
         // Initial update
         this.updateDynamicConfig(modelControl?.value);
@@ -144,7 +163,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
     if (outputs) {
       this.localConfig.outputs.forEach(output => {
         if (!outputs.contains(output.name)) {
-          outputs.addControl(output.name, this.fb.control({ type: output.type }));
+          outputs.addControl(output.name, this.fb.control({type: output.type}));
         }
       });
     }
@@ -165,17 +184,26 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
     // 1. Update Aspect Ratio options
     if (modelMeta.supportedAspectRatios) {
-      const aspectRatioSetting = this.localConfig.settings.find(s => s.name === 'aspect_ratio');
+      const aspectRatioSetting = this.localConfig.settings.find(
+        s => s.name === 'aspect_ratio',
+      );
       if (aspectRatioSetting) {
         // Generate options dynamically using ASPECT_RATIO_LABELS
-        aspectRatioSetting.options = modelMeta.supportedAspectRatios.map(ratio => ({
-          value: ratio,
-          label: ASPECT_RATIO_LABELS[ratio] || ratio
-        }));
+        aspectRatioSetting.options = modelMeta.supportedAspectRatios.map(
+          ratio => ({
+            value: ratio,
+            label: ASPECT_RATIO_LABELS[ratio] || ratio,
+          }),
+        );
 
         // Reset value if current value is invalid
-        const currentAspectRatio = this.stepForm.get('settings.aspect_ratio')?.value;
-        if (currentAspectRatio && !modelMeta.supportedAspectRatios.includes(currentAspectRatio)) {
+        const currentAspectRatio = this.stepForm.get(
+          'settings.aspect_ratio',
+        )?.value;
+        if (
+          currentAspectRatio &&
+          !modelMeta.supportedAspectRatios.includes(currentAspectRatio)
+        ) {
           // Set to first available option
           const firstOption = aspectRatioSetting.options?.[0]?.value;
           if (firstOption) {
@@ -187,18 +215,22 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
     // 2. Update Generation Mode (input_mode)
     if (modelMeta.supportedModes) {
-      const modeSetting = this.localConfig.settings.find(s => s.name === 'input_mode');
+      const modeSetting = this.localConfig.settings.find(
+        s => s.name === 'input_mode',
+      );
       if (modeSetting) {
         modeSetting.options = modelMeta.supportedModes.map(mode => ({
           value: mode,
-          label: mode
+          label: mode,
         }));
 
         // Default to first mode if current is invalid
         const currentMode = this.stepForm.get('settings.input_mode')?.value;
         if (!currentMode || !modelMeta.supportedModes.includes(currentMode)) {
           // Prefer 'Text to Video' if available, else first
-          const defaultMode = modelMeta.supportedModes.includes('Text to Video') ? 'Text to Video' : modelMeta.supportedModes[0];
+          const defaultMode = modelMeta.supportedModes.includes('Text to Video')
+            ? 'Text to Video'
+            : modelMeta.supportedModes[0];
           this.stepForm.get('settings.input_mode')?.setValue(defaultMode);
         }
       }
@@ -233,7 +265,10 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
     this.localConfig.inputs.forEach(input => {
       // Logic for specific inputs
-      if (this.localConfig.type === 'generate-video' && (input.name === 'input_images' || input.name === 'reference_images')) {
+      if (
+        this.localConfig.type === 'generate-video' &&
+        (input.name === 'input_images' || input.name === 'reference_images')
+      ) {
         const showIngredients = currentMode === 'Ingredients to Video';
 
         if (showIngredients && maxRefs > 0) {
@@ -270,16 +305,16 @@ export class GenericStepComponent implements OnInit, OnChanges {
   private updateCompatibleOutputs(): void {
     this.localConfig.inputs.forEach(input => {
       this.compatibleOutputs[input.name] = this.availableOutputs.filter(
-        output => (output.type === input.type) || (output.type === "text" && input.type === "textarea") || (output.type === 'image' && input.type === 'image')
+        output =>
+          output.type === input.type ||
+          (output.type === 'text' && input.type === 'textarea') ||
+          (output.type === 'image' && input.type === 'image'),
       );
     });
   }
 
   toggleInputMode(inputName: string, mode: 'fixed' | 'linked' | 'mixed') {
     this.inputModes[inputName] = mode;
-    this.stepForm
-      .get('inputs')
-      ?.get(inputName)
-      ?.setValue(null);
+    this.stepForm.get('inputs')?.get(inputName)?.setValue(null);
   }
 }

@@ -51,6 +51,7 @@ export interface MediaItem {
   userEmail?: string;
   createdAt?: string; // ISO 8601 date string
   updatedAt?: string; // ISO 8601 date string
+  // itemType and assetType removed as per refactoring
 
   // Common fields across media types
   prompt?: string;
@@ -66,7 +67,6 @@ export interface MediaItem {
 
   // URI and URL fields
   gcsUris: string[];
-  sourceImagesGcs?: string[];
   presignedUrls?: string[];
   originalPresignedUrls?: string[];
   presignedThumbnailUrls?: string[];

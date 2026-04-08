@@ -14,23 +14,25 @@
  * limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-import { SourceAssetResponseDto, SourceAssetService } from '../../common/services/source-asset.service';
-import { GalleryService } from '../../gallery/gallery.service';
-import { NodeTypes } from '../workflow.models';
-import { STEP_CONFIGS_MAP } from './step-configs.map';
+import {Injectable} from '@angular/core';
+import {forkJoin, of} from 'rxjs';
+import {catchError, map} from 'rxjs/operators';
+import {
+  SourceAssetResponseDto,
+  SourceAssetService,
+} from '../../common/services/source-asset.service';
+import {GalleryService} from '../../gallery/gallery.service';
+import {NodeTypes} from '../workflow.models';
+import {STEP_CONFIGS_MAP} from './step-configs.map';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class MediaResolutionService {
-
   constructor(
     private galleryService: GalleryService,
-    private sourceAssetService: SourceAssetService
-  ) { }
+    private sourceAssetService: SourceAssetService,
+  ) {}
 
   /**
    * Resolves media URLs for the given step entries.
@@ -38,7 +40,11 @@ export class MediaResolutionService {
    * @param stepTypeMap A map of stepId -> stepType (NodeTypes | string).
    * @param mediaUrlMap The map to populate with resolved URLs (key format: "type:id").
    */
-  resolveMediaUrls(stepEntries: any[], stepTypeMap: Map<string, NodeTypes | string>, mediaUrlMap: Map<string, string>): void {
+  resolveMediaUrls(
+    stepEntries: any[],
+    stepTypeMap: Map<string, NodeTypes | string>,
+    mediaUrlMap: Map<string, string>,
+  ): void {
     if (!stepEntries) return;
 
     const mediaItemIds = new Set<string | number>();
@@ -62,7 +68,12 @@ export class MediaResolutionService {
         if (!sourceData) return;
         ioConfig.forEach(item => {
           if (['image', 'audio', 'video'].includes(item.type)) {
-            this.collectMediaIds(sourceData[item.name], mediaItemIds, sourceAssetIds, stepOutputsMap);
+            this.collectMediaIds(
+              sourceData[item.name],
+              mediaItemIds,
+              sourceAssetIds,
+              stepOutputsMap,
+            );
           }
         });
       };
@@ -72,30 +83,37 @@ export class MediaResolutionService {
     });
 
     // Filter out already resolved IDs using namespaced keys
-    const mediaIdsToFetch = Array.from(mediaItemIds).filter(id => !mediaUrlMap.has(`media:${id}`));
-    const sourceIdsToFetch = Array.from(sourceAssetIds).filter(id => !mediaUrlMap.has(`asset:${id}`));
+    const mediaIdsToFetch = Array.from(mediaItemIds).filter(
+      id => !mediaUrlMap.has(`media:${id}`),
+    );
+    const sourceIdsToFetch = Array.from(sourceAssetIds).filter(
+      id => !mediaUrlMap.has(`asset:${id}`),
+    );
 
     if (mediaIdsToFetch.length === 0 && sourceIdsToFetch.length === 0) return;
 
     const requests = [
       ...mediaIdsToFetch.map(id =>
         this.galleryService.getMedia(id as number).pipe(
-          map(mediaItem => ({ key: `media:${id}`, url: mediaItem.presignedUrls?.[0] })),
+          map(mediaItem => ({
+            key: `media:${id}`,
+            url: mediaItem.presignedUrls?.[0],
+          })),
           catchError(err => {
             console.error(`Failed to resolve media ID ${id}`, err);
             return of(null);
-          })
-        )
+          }),
+        ),
       ),
       ...sourceIdsToFetch.map(id =>
         this.sourceAssetService.getAsset(id as any).pipe(
-          map(asset => ({ key: `asset:${id}`, url: asset.presignedUrl })),
+          map(asset => ({key: `asset:${id}`, url: asset.presignedUrl})),
           catchError(err => {
             console.error(`Failed to resolve source asset ID ${id}`, err);
             return of(null);
-          })
-        )
-      )
+          }),
+        ),
+      ),
     ];
 
     // Execute all requests in parallel
@@ -108,13 +126,20 @@ export class MediaResolutionService {
     });
   }
 
-  private collectMediaIds(val: any, mediaItemIds: Set<string | number>, sourceAssetIds: Set<string | number>, stepOutputsMap: Map<string, any>): void {
+  private collectMediaIds(
+    val: any,
+    mediaItemIds: Set<string | number>,
+    sourceAssetIds: Set<string | number>,
+    stepOutputsMap: Map<string, any>,
+  ): void {
     if (!val) return;
 
     if (typeof val === 'number') {
       mediaItemIds.add(val);
     } else if (Array.isArray(val)) {
-      val.forEach(v => this.collectMediaIds(v, mediaItemIds, sourceAssetIds, stepOutputsMap));
+      val.forEach(v =>
+        this.collectMediaIds(v, mediaItemIds, sourceAssetIds, stepOutputsMap),
+      );
     } else if (typeof val === 'object') {
       // Check if it's a reference to another step's output
       if (val.step && val.output) {
@@ -125,7 +150,12 @@ export class MediaResolutionService {
           // Attach resolved value to the reference object for UI usage
           val._resolvedValue = resolvedValue;
           // Recurse on the resolved value
-          this.collectMediaIds(resolvedValue, mediaItemIds, sourceAssetIds, stepOutputsMap);
+          this.collectMediaIds(
+            resolvedValue,
+            mediaItemIds,
+            sourceAssetIds,
+            stepOutputsMap,
+          );
         }
       } else {
         const assetId = val.sourceAssetId ?? val.source_asset_id;

@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from fastapi import Query
-from google.genai import types
 from pydantic import Field, field_validator, model_validator
 
 from src.common.base_dto import (
@@ -31,16 +30,16 @@ from src.common.schema.media_item_model import SourceMediaItemLink
 
 
 class CreateImagenDto(BaseDto):
-    """
-    The refactored request model. Defaults are defined here to make the API
+    """The refactored request model. Defaults are defined here to make the API
     contract explicit and self-documenting.
     """
 
     prompt: Annotated[str, Query(max_length=10000)] = Field(
-        description="Prompt term to be passed to the model"
+        description="Prompt term to be passed to the model",
     )
     workspace_id: int = Field(
-        ge=1, description="The ID of the workspace for this generation."
+        ge=1,
+        description="The ID of the workspace for this generation.",
     )
     generation_model: GenerationModelEnum = Field(
         default=GenerationModelEnum.IMAGEN_4_ULTRA,
@@ -56,21 +55,24 @@ class CreateImagenDto(BaseDto):
         le=4,
         description="Number of images to generate (between 1 and 4).",
     )
-    style: Optional[StyleEnum] = Field(
+    style: StyleEnum | None = Field(
         default=None, description="Style of the image."
     )
     negative_prompt: str = Field(
-        default="", description="Negative prompt for the image."
+        default="",
+        description="Negative prompt for the image.",
     )
-    color_and_tone: Optional[ColorAndToneEnum] = Field(
+    color_and_tone: ColorAndToneEnum | None = Field(
         default=None,
         description="The desired color and tone style for the image.",
     )
-    lighting: Optional[LightingEnum] = Field(
-        default=None, description="The desired lighting style for the image."
+    lighting: LightingEnum | None = Field(
+        default=None,
+        description="The desired lighting style for the image.",
     )
-    composition: Optional[CompositionEnum] = Field(
-        default=None, description="The desired lighting style for the image."
+    composition: CompositionEnum | None = Field(
+        default=None,
+        description="The desired lighting style for the image.",
     )
     add_watermark: bool = Field(
         default=False,
@@ -80,21 +82,23 @@ class CreateImagenDto(BaseDto):
         default="",
         description="""Factor of the upscale, either x2, x3 or x4. If empty it will not upscale""",
     )
-    source_asset_ids: Optional[Annotated[list[int], Field(max_length=14)]] = (
-        Field(
-            default=None,
-            description="A list of source asset IDs to be used as input for image-to-image generation.",
-        )
+    source_asset_ids: Annotated[list[int], Field(max_length=14)] | None = Field(
+        default=None,
+        description="A list of source asset IDs to be used as input for image-to-image generation.",
     )
-    source_media_items: Optional[
-        Annotated[list[SourceMediaItemLink], Field(max_length=14)]
-    ] = Field(
+    source_media_items: (
+        Annotated[list[SourceMediaItemLink], Field(max_length=14)] | None
+    ) = Field(
         default=None,
         description="A list of previously generated media items (from the gallery) to be used as inputs for the new generation.",
     )
     use_brand_guidelines: bool = Field(
         default=False,
         description="Whether to prepend brand guidelines to the prompt.",
+    )
+    enhance_prompt: bool = Field(
+        default=False,
+        description="Whether to enhance the prompt using Gemini.",
     )
     google_search: bool = Field(
         default=False,
@@ -113,7 +117,8 @@ class CreateImagenDto(BaseDto):
 
     @field_validator("generation_model")
     def validate_imagen_generation_model(
-        cls, value: GenerationModelEnum
+        cls,
+        value: GenerationModelEnum,
     ) -> GenerationModelEnum:
         """Ensures that only supported generation models for imagen are used."""
         valid_generation_models = [
@@ -138,8 +143,7 @@ class CreateImagenDto(BaseDto):
 
     @model_validator(mode="after")
     def validate_inputs(self) -> "CreateImagenDto":
-        """
-        Validates the total number of inputs and model compatibility.
+        """Validates the total number of inputs and model compatibility.
         - The total number of inputs (source_asset_ids + source_media_items) cannot exceed 14 for Gemini 3 Pro.
         - For non-Gemini models, only one input is allowed, and the model must support editing.
         - Aspect ratio validation based on model.
@@ -156,7 +160,7 @@ class CreateImagenDto(BaseDto):
         # Aspect Ratio Validation
         if self.aspect_ratio not in model.valid_aspect_ratios:
             raise ValueError(
-                f"Aspect ratio {self.aspect_ratio} is not supported for model {model.value}."
+                f"Aspect ratio {self.aspect_ratio} is not supported for model {model.value}.",
             )
 
         if total_inputs == 0:
@@ -166,7 +170,7 @@ class CreateImagenDto(BaseDto):
         max_inputs = model.max_total_inputs
         if total_inputs > max_inputs:
             raise ValueError(
-                f"A maximum of {max_inputs} total inputs are allowed for model {model.value}."
+                f"A maximum of {max_inputs} total inputs are allowed for model {model.value}.",
             )
 
         # Imagen-specific editing validation
@@ -178,7 +182,7 @@ class CreateImagenDto(BaseDto):
             if model not in allowed_editing_models:
                 raise ValueError(
                     f"Model '{model.value}' does not support image editing with Imagen. "
-                    "Please use 'imagen-3.0-fast-generate-001' or 'imagen-3.0-generate-002'."
+                    "Please use 'imagen-3.0-fast-generate-001' or 'imagen-3.0-generate-002'.",
                 )
 
         return self

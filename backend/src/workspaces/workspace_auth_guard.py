@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from src.auth.auth_guard import get_current_user
 from src.users.user_model import UserModel, UserRoleEnum
 from src.workspaces.repository.workspace_repository import WorkspaceRepository
 from src.workspaces.schema.workspace_model import (
@@ -26,9 +24,8 @@ from src.workspaces.schema.workspace_model import (
 
 
 class WorkspaceAuth:
-    """
-    A dependency class that centralizes workspace authorization logic.
-    """
+    """A dependency class that centralizes workspace authorization logic."""
+
     def __init__(self, workspace_repo: WorkspaceRepository = Depends()):
         self.workspace_repo = workspace_repo
 
@@ -37,8 +34,7 @@ class WorkspaceAuth:
         workspace_id: int,
         user: UserModel,
     ) -> WorkspaceModel:
-        """
-        The core authorization logic. Checks if a user has rights to a workspace.
+        """The core authorization logic. Checks if a user has rights to a workspace.
 
         Raises HTTPException if unauthorized.
         Returns the WorkspaceModel if authorized.
@@ -55,9 +51,11 @@ class WorkspaceAuth:
         # Authorization checks
         is_admin = UserRoleEnum.ADMIN in user.roles
         is_public = scope == WorkspaceScopeEnum.PUBLIC
-        
+
         if not (is_admin or is_public):
-            is_member = await self.workspace_repo.is_member(workspace_id, user.id)
+            is_member = await self.workspace_repo.is_member(
+                workspace_id, user.id
+            )
             if not is_member:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

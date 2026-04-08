@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""API endpoints for audio generation."""
 
 
 import logging
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from google.cloud import speech
 
 from src.audios.audio_service import AudioService
@@ -23,6 +24,7 @@ from src.audios.dto.create_audio_dto import CreateAudioDto
 from src.auth.auth_guard import RoleChecker, get_current_user
 from src.galleries.dto.gallery_response_dto import MediaItemResponse
 from src.users.user_model import UserModel, UserRoleEnum
+from src.workspaces.workspace_auth_guard import WorkspaceAuth
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +48,25 @@ router = APIRouter(
 @router.post("/generate", response_model=MediaItemResponse)
 async def generate_audio(
     create_audio_dto: CreateAudioDto,
+    request: Request,
     current_user: UserModel = Depends(get_current_user),
     audio_service: AudioService = Depends(),
+    workspace_auth: WorkspaceAuth = Depends(),
 ):
+    """Generates audio based on the selected model (Lyria for music,
+    Chirp/Gemini for speech).
     """
-    Generates audio based on the selected model (Lyria for music, Chirp/Gemini for speech).
-    """
-    return await audio_service.generate_audio(create_audio_dto, current_user)
+    await workspace_auth.authorize(
+        workspace_id=create_audio_dto.workspace_id,
+        user=current_user,
+    )
+
+    executor = request.app.state.executor
+    return await audio_service.start_audio_generation_job(
+        request_dto=create_audio_dto,
+        user=current_user,
+        executor=executor,
+    )
 
 
 @router.post("/transcribe")

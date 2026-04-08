@@ -30,6 +30,7 @@ export type ImagenRequest = {
   sourceMediaItems?: SourceMediaItemLink[];
   workspaceId?: number;
   useBrandGuidelines: boolean;
+  enhancePrompt?: boolean;
   googleSearch?: boolean;
   resolution?: '1K' | '2K' | '4K';
 };
@@ -70,6 +71,7 @@ export type VeoRequest = {
   sourceMediaItems?: SourceMediaItemLink[];
   workspaceId?: number;
   useBrandGuidelines: boolean;
+  enhancePrompt?: boolean;
   referenceImages?: ReferenceImageDto[];
 };
 
@@ -115,4 +117,10 @@ export interface GallerySearchDto {
   model?: string;
   status?: string;
   workspaceId?: number;
+  includeDeleted?: boolean;
+  startDate?: string;
+  endDate?: string;
+  itemType?: string;
+  query?: string;
+  tags?: string[];
 }

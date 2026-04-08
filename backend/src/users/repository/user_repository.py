@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from fastapi import Depends
 from sqlalchemy import func, select
@@ -26,19 +25,15 @@ from src.users.user_model import User, UserModel
 
 
 class UserRepository(BaseRepository[User, UserModel]):
-    """
-    Handles all database operations for the User table.
-    """
+    """Handles all database operations for the User table."""
 
     def __init__(self, db: AsyncSession = Depends(get_db)):
         super().__init__(model=User, schema=UserModel, db=db)
 
-    async def get_by_email(self, email: str) -> Optional[UserModel]:
-        """
-        Finds a single user by their email address.
-        """
+    async def get_by_email(self, email: str) -> UserModel | None:
+        """Finds a single user by their email address."""
         result = await self.db.execute(
-            select(self.model).where(self.model.email == email)
+            select(self.model).where(self.model.email == email),
         )
         user = result.scalar_one_or_none()
         if not user:
@@ -46,22 +41,26 @@ class UserRepository(BaseRepository[User, UserModel]):
         return self.schema.model_validate(user)
 
     async def query(
-        self, search_dto: UserSearchDto
+        self,
+        search_dto: UserSearchDto,
     ) -> PaginationResponseDto[UserModel]:
-        """
-        Performs a paginated query that includes the total document count.
-        """
-        # 1. Build the base query
+        """Performs a paginated query that includes the total document count."""
+        # 1. Start with select
         query = select(self.model)
-        
-        if search_dto.email:
-            query = query.where(self.model.email == search_dto.email)
-        
-        if search_dto.role:
-            # Postgres ARRAY contains check
-            query = query.where(self.model.roles.contains([search_dto.role.value]))
 
-        # 2. Get total count
+        # 2. Apply filters
+        if search_dto.email:
+            query = query.where(self.model.email.ilike(f"%{search_dto.email}%"))
+
+        if search_dto.role:
+            query = query.where(
+                self.model.roles.contains([search_dto.role.value])
+            )
+
+        if not search_dto.include_deleted:
+            query = query.where(self.model.deleted_at.is_(None))
+
+        # Count total documents matching filters
         count_query = select(func.count()).select_from(query.subquery())
         count_result = await self.db.execute(count_query)
         total_count = count_result.scalar_one()
@@ -76,7 +75,7 @@ class UserRepository(BaseRepository[User, UserModel]):
         # 4. Execute
         result = await self.db.execute(query)
         users = result.scalars().all()
-        
+
         user_data = [self.schema.model_validate(user) for user in users]
 
         # 5. Determine next cursor (offset)

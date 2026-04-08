@@ -25,7 +25,26 @@
 }
 
 .admin-container {
-  background-color: #2e3031;
+  background-color: transparent !important;
   color: white;
   padding: 2rem 10rem 2rem 2rem;
+}
+
+::ng-deep mat-sidenav-container {
+  background-color: transparent !important;
+}
+
+::ng-deep .mat-drawer-content {
+  background-color: transparent !important;
+}
+
+::ng-deep .mat-checkbox-label,
+::ng-deep .mdc-label,
+::ng-deep mat-label,
+::ng-deep .mat-form-field-label {
+  color: #ffffff !important;
+}
+
+::ng-deep .mat-input-element {
+  color: #ffffff !important;
 }

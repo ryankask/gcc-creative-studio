@@ -18,6 +18,7 @@ export enum UserRolesEnum {
   ADMIN = 'admin',
   USER = 'user',
   CREATOR = 'creator',
+  WORKFLOWS = 'workflows',
 }
 
 export interface UserModel {

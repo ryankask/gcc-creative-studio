@@ -11,12 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Constants for audio services."""
+
 
 from enum import Enum
 
 
 class LanguageEnum(str, Enum):
     """Supported Languages for Chirp and Gemini TTS."""
+
     AR_XA = "ar-XA"
     BG_BG = "bg-BG"
     BN_IN = "bn-IN"
@@ -67,6 +70,7 @@ class LanguageEnum(str, Enum):
 
 class VoiceEnum(str, Enum):
     """Supported Prebuilt Voices for Gemini 2.5 Flash/Pro."""
+
     ACHERNAR = "Achernar"
     ACHIRD = "Achird"
     ALGENIB = "Algenib"

@@ -17,3 +17,4 @@ local/
 # ...but re-include the dev-infra-example directory and its content.
 !**/environments/dev-infra-example/
 
+genmedia-agent-demos

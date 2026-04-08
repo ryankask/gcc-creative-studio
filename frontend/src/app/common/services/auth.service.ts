@@ -344,6 +344,13 @@ export class AuthService {
     return user_role?.includes(UserRolesEnum.ADMIN) || false;
   }
 
+  isUserWorkflows() {
+    if (!isPlatformBrowser(this.platformId)) return false;
+
+    const user_role = this.userService.getUserDetails()?.roles;
+    return user_role?.includes(UserRolesEnum.WORKFLOWS) || false;
+  }
+
   getToken() {
     return this.firebaseIdToken;
   }

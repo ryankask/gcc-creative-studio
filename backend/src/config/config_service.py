@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Set
+from typing import Any
 
 import google.auth
 from google.auth.exceptions import DefaultCredentialsError
@@ -21,8 +21,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ConfigService(BaseSettings):
-    """
-    Manages application configuration using Pydantic.
+    """Manages application configuration using Pydantic.
     It automatically reads from environment variables, provides type safety,
     and fails fast if critical settings are missing.
     """
@@ -33,7 +32,10 @@ class ConfigService(BaseSettings):
     # system environment variables.
     # The path is relative to this file's location (src/config/).
     model_config = SettingsConfigDict(
-        case_sensitive=True, env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        case_sensitive=True,
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     # --- Core Project Settings ---
@@ -115,13 +117,12 @@ class ConfigService(BaseSettings):
     # <<< FIX 2: New validator to handle dependent default values >>>
     @model_validator(mode="after")
     def set_dependent_defaults(self) -> "ConfigService":
-        """
-        Sets default values for fields that depend on other fields (like PROJECT_ID),
+        """Sets default values for fields that depend on other fields (like PROJECT_ID),
         after the initial values have been loaded and validated.
         """
         if not self.PROJECT_ID:
             raise ValueError(
-                "PROJECT_ID could not be determined. Please set it via environment variable."
+                "PROJECT_ID could not be determined. Please set it via environment variable.",
             )
 
         # If these fields were not set by environment variables, set their default now.
@@ -133,7 +134,7 @@ class ConfigService(BaseSettings):
     # This computed field cleanly separates the raw string from the processed set.
     @computed_field
     @property
-    def ALLOWED_ORGS(self) -> Set[str]:
+    def ALLOWED_ORGS(self) -> set[str]:
         return set(
             org.strip()
             for org in self.ALLOWED_ORGS_STR.split(",")

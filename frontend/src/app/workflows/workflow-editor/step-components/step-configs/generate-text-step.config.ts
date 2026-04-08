@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
+import {MODEL_CONFIGS} from '../../../../common/config/model-config';
+import {StepConfig} from '../generic-step/step.model';
 
-import { MODEL_CONFIGS } from '../../../../common/config/model-config';
-import { StepConfig } from '../generic-step/step.model';
-
-const model_options = MODEL_CONFIGS
-  .filter(model => model.type === 'TEXT')
-  .map(model => ({
+const model_options = MODEL_CONFIGS.filter(model => model.type === 'TEXT').map(
+  model => ({
     value: model.value,
-    label: model.viewValue
-  }));
+    label: model.viewValue,
+  }),
+);
 
 export const GENERATE_TEXT_STEP_CONFIG: StepConfig = {
   type: 'generate-text',

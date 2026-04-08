@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
-
-from pydantic import BaseModel
 
 from src.common.base_dto import BaseDto
 from src.media_templates.schema.media_template_model import (
@@ -24,17 +21,16 @@ from src.media_templates.schema.media_template_model import (
 
 
 class UpdateTemplateDto(BaseDto):
-    """
-    Defines the fields that can be updated for a MediaTemplate.
+    """Defines the fields that can be updated for a MediaTemplate.
     All fields are optional.
     """
 
-    name: Optional[str] = None
-    description: Optional[str] = None
-    industry: Optional[IndustryEnum] = None
-    brand: Optional[str] = None
-    tags: Optional[List[str]] = None
-    gcs_uris: Optional[List[str]] = None
-    thumbnail_uris: Optional[List[str]] = None
-    source_assets: Optional[List[str]] = None
-    generation_parameters: Optional[GenerationParameters] = None
+    name: str | None = None
+    description: str | None = None
+    industry: IndustryEnum | None = None
+    brand: str | None = None
+    tags: list[str] | None = None
+    gcs_uris: list[str] | None = None
+    thumbnail_uris: list[str] | None = None
+    source_assets: list[str] | None = None
+    generation_parameters: GenerationParameters | None = None

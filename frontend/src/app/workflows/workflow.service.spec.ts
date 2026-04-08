@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { TestBed } from '@angular/core/testing';
+import {TestBed} from '@angular/core/testing';
 
-import { WorkflowService } from './workflow.service';
+import {WorkflowService} from './workflow.service';
 
 describe('WorkflowService', () => {
   let service: WorkflowService;

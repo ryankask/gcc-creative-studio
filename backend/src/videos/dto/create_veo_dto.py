@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from typing import Optional
+
+from typing import Annotated
 
 from fastapi import Query
-from google.genai import types
-from pydantic import Field, ValidationInfo, field_validator
-from typing_extensions import Annotated
+from pydantic import Field, field_validator, model_validator
 
 from src.common.base_dto import (
     AspectRatioEnum,
@@ -38,7 +36,7 @@ from src.common.schema.media_item_model import (
 
 class ReferenceImageDto(BaseDto):
     asset_id: int = Field(
-        description="The ID of the SourceAsset to use as a reference."
+        description="The ID of the SourceAsset to use as a reference.",
     )
     reference_type: ReferenceImageTypeEnum = Field(
         default=ReferenceImageTypeEnum.ASSET
@@ -46,19 +44,19 @@ class ReferenceImageDto(BaseDto):
 
 
 class CreateVeoDto(BaseDto):
-    """
-    The refactored request model. Defaults are defined here to make the API
+    """The refactored request model. Defaults are defined here to make the API
     contract explicit and self-documenting.
     """
 
     prompt: Annotated[str, Query(max_length=10000)] = Field(
-        description="Prompt term to be passed to the model"
+        description="Prompt term to be passed to the model",
     )
     workspace_id: int = Field(
-        ge=1, description="The ID of the workspace for this generation."
+        ge=1,
+        description="The ID of the workspace for this generation.",
     )
     generation_model: GenerationModelEnum = Field(
-        default=GenerationModelEnum.VEO_3_1_PREVIEW,
+        default=GenerationModelEnum.VEO_3_1_GENERATE_001,
         description="Model used for image generation.",
     )
     aspect_ratio: AspectRatioEnum = Field(
@@ -71,21 +69,24 @@ class CreateVeoDto(BaseDto):
         le=4,
         description="Number of videos to generate (between 1 and 4).",
     )
-    style: Optional[StyleEnum] = Field(
+    style: StyleEnum | None = Field(
         default=None, description="Style of the image."
     )
     negative_prompt: str = Field(
-        default="", description="Negative prompt for the image."
+        default="",
+        description="Negative prompt for the image.",
     )
-    color_and_tone: Optional[ColorAndToneEnum] = Field(
+    color_and_tone: ColorAndToneEnum | None = Field(
         default=None,
         description="The desired color and tone style for the image.",
     )
-    lighting: Optional[LightingEnum] = Field(
-        default=None, description="The desired lighting style for the image."
+    lighting: LightingEnum | None = Field(
+        default=None,
+        description="The desired lighting style for the image.",
     )
-    composition: Optional[CompositionEnum] = Field(
-        default=None, description="The desired lighting style for the image."
+    composition: CompositionEnum | None = Field(
+        default=None,
+        description="The desired lighting style for the image.",
     )
     generate_audio: bool = Field(
         default=False,
@@ -97,19 +98,19 @@ class CreateVeoDto(BaseDto):
         le=8,
         description="Duration in seconds for the videos to generate (between 1 and 8 secs).",
     )
-    start_image_asset_id: Optional[int] = Field(
+    start_image_asset_id: int | None = Field(
         default=None,
         description="The ID of the SourceAsset to use as the starting image.",
     )
-    end_image_asset_id: Optional[int] = Field(
+    end_image_asset_id: int | None = Field(
         default=None,
         description="The ID of the SourceAsset to use as the ending image.",
     )
-    source_video_asset_id: Optional[int] = Field(
+    source_video_asset_id: int | None = Field(
         default=None,
         description="The ID of the SourceAsset to use as the source video.",
     )
-    source_media_items: Optional[list[SourceMediaItemLink]] = Field(
+    source_media_items: list[SourceMediaItemLink] | None = Field(
         default=None,
         description="A list of previously generated media items (from the gallery) to be used as inputs (e.g., start/end frames).",
     )
@@ -117,31 +118,28 @@ class CreateVeoDto(BaseDto):
         default=False,
         description="Whether to prepend brand guidelines to the prompt.",
     )
-    reference_images: Optional[list[ReferenceImageDto]] = Field(
+    enhance_prompt: bool = Field(
+        default=False,
+        description="Whether to enhance the prompt using Gemini.",
+    )
+    reference_images: list[ReferenceImageDto] | None = Field(
         default=None,
         max_length=3,
         description="A list of reference images, each with an ID and a type (ASSET or STYLE).",
     )
 
-    @field_validator("source_media_items")
-    def validate_source_media_items(
-        cls, value: Optional[list[SourceMediaItemLink]], info: ValidationInfo
-    ) -> Optional[list[SourceMediaItemLink]]:
-        """
-        Performs several validations:
+    @model_validator(mode="after")
+    def validate_cross_fields(self) -> "CreateVeoDto":
+        """Performs several validations:
         1. Ensures that source_media_items have a valid role.
-        2. Ensures the total number of reference images does not exceed 3.
-        3. Ensures reference images (from any source) are not used with start/end frames or source videos.
-        4. Ensures reference image roles are only used with the correct model.
+        2. Ensures references are not used with start/end frames or source videos.
+        3. Ensures reference image roles are only used with correct model.
         """
-        # The `validate_source_media_items` validator handles all reference sources
-        # (source assets and media items) in one place.
-        # This validator is kept to ensure the field is processed, but the core logic is moved.
         conflicting_roles_present = False
         reference_roles_present = False
-        model = info.data.get("generation_model")
+        model = self.generation_model
 
-        if value:
+        if self.source_media_items:
             non_reference_roles = {
                 AssetRoleEnum.START_FRAME,
                 AssetRoleEnum.END_FRAME,
@@ -153,35 +151,38 @@ class CreateVeoDto(BaseDto):
             }
             valid_roles = non_reference_roles.union(reference_roles)
 
-            for item in value:
+            for item in self.source_media_items:
                 if item.role not in valid_roles:
                     raise ValueError(
-                        f"Invalid role '{item.role}' for source_media_item."
+                        f"Invalid role '{item.role}' for source_media_item.",
                     )
                 if item.role in non_reference_roles:
                     conflicting_roles_present = True
                 if item.role in reference_roles:
                     reference_roles_present = True
 
-        # The validator now correctly checks both `reference_images` and reference roles in `source_media_items`
-        has_asset_references = bool(info.data.get("reference_images"))
+        has_asset_references = bool(self.reference_images)
         has_any_references = has_asset_references or reference_roles_present
 
         if has_any_references:
-            # Enforce model compatibility for any reference image usage
             if (
                 model != GenerationModelEnum.VEO_2_GENERATE_EXP
                 and model != GenerationModelEnum.VEO_3_1_PREVIEW
+                and model != GenerationModelEnum.VEO_3_1_GENERATE_001
+                and model != GenerationModelEnum.VEO_3_1_LITE_GENERATE_001
+                and model != GenerationModelEnum.VEO_3_1_FAST_GENERATE_001
             ):
                 raise ValueError(
                     "Reference images are only supported by the "
-                    f"'{GenerationModelEnum.VEO_3_1_PREVIEW.value}' model."
+                    f"'{GenerationModelEnum.VEO_3_1_PREVIEW.value}' model, "
+                    f"'{GenerationModelEnum.VEO_3_1_GENERATE_001.value}' model, "
+                    f"'{GenerationModelEnum.VEO_3_1_LITE_GENERATE_001.value}' model, or "
+                    f"'{GenerationModelEnum.VEO_3_1_FAST_GENERATE_001.value}' model.",
                 )
 
-            # Check for other conflicting fields from the main DTO
-            start_image_present = bool(info.data.get("start_image_asset_id"))
-            end_image_present = bool(info.data.get("end_image_asset_id"))
-            source_video_present = bool(info.data.get("source_video_asset_id"))
+            start_image_present = bool(self.start_image_asset_id)
+            end_image_present = bool(self.end_image_asset_id)
+            source_video_present = bool(self.source_video_asset_id)
 
             if (
                 start_image_present
@@ -190,10 +191,10 @@ class CreateVeoDto(BaseDto):
                 or conflicting_roles_present
             ):
                 raise ValueError(
-                    "Reference images cannot be used at the same time as a start frame, end frame, or source video."
+                    "Reference images cannot be used at the same time as a start frame, end frame, or source video.",
                 )
 
-        return value
+        return self
 
     @field_validator("aspect_ratio")
     def validate_video_aspect_ratio(
@@ -206,17 +207,21 @@ class CreateVeoDto(BaseDto):
         ]
         if value not in valid_video_ratios:
             raise ValueError(
-                "Invalid aspect ratio for video. Only '16:9' and '9:16' are supported."
+                "Invalid aspect ratio for video. Only '16:9' and '9:16' are supported.",
             )
         return value
 
     @field_validator("generation_model")
     def validate_video_generation_model(
-        cls, value: GenerationModelEnum
+        cls,
+        value: GenerationModelEnum,
     ) -> GenerationModelEnum:
         """Ensures that only supported generation models for video are used."""
         valid_video_ratios = [
             GenerationModelEnum.VEO_3_1_PREVIEW,
+            GenerationModelEnum.VEO_3_1_GENERATE_001,
+            GenerationModelEnum.VEO_3_1_LITE_GENERATE_001,
+            GenerationModelEnum.VEO_3_1_FAST_GENERATE_001,
             GenerationModelEnum.VEO_3_FAST,
             GenerationModelEnum.VEO_3_QUALITY,
             GenerationModelEnum.VEO_3_FAST_PREVIEW,

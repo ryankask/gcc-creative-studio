@@ -19,17 +19,23 @@
     <h1 class="text-3xl font-semibold">User Management</h1>
   </div>
 
-  <!-- Filter Input -->
-  <mat-form-field appearance="outline" class="w-full mb-4">
-    <mat-label>Filter Users by Email</mat-label>
-    <input
-      matInput
-      (input)="applyFilter($event)"
-      placeholder="Search by email"
-      #input
-    />
-    <mat-icon matSuffix>search</mat-icon>
-  </mat-form-field>
+  <!-- Filter & Include Deleted -->
+  <div class="flex gap-4 items-center mb-4">
+    <mat-form-field appearance="outline" class="flex-grow !mb-0">
+      <mat-label>Filter Users by Email</mat-label>
+      <input
+        matInput
+        (input)="applyFilter($event)"
+        placeholder="Search by email"
+        #input
+      />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-checkbox (change)="onIncludeDeletedChange($event.checked)">
+      Include Deleted
+    </mat-checkbox>
+  </div>
 
   <!-- Loading Indicator -->
   <div *ngIf="isLoading" class="flex justify-center items-center py-10">
@@ -114,6 +120,7 @@
         </th>
         <td mat-cell *matCellDef="let user" class="text-right pr-2">
           <button
+            *ngIf="!user.deletedAt"
             mat-icon-button
             color="primary"
             (click)="openUserForm(user)"
@@ -122,12 +129,22 @@
             <mat-icon>edit</mat-icon>
           </button>
           <button
+            *ngIf="!user.deletedAt && user.id !== currentUserId"
             mat-icon-button
             color="warn"
             (click)="deleteUser(user.id!)"
             matTooltip="Delete User"
           >
             <mat-icon>delete</mat-icon>
+          </button>
+          <button
+            *ngIf="user.deletedAt"
+            mat-icon-button
+            color="accent"
+            (click)="restoreUser(user.id!)"
+            matTooltip="Restore User"
+          >
+            <mat-icon>restore_from_trash</mat-icon>
           </button>
         </td>
       </ng-container>
@@ -136,7 +153,8 @@
       <tr
         mat-row
         *matRowDef="let row; columns: displayedColumns"
-        class="hover:bg-blue-100 dark:hover:bg-gray-700 cursor-pointer"
+        [class.opacity-50]="row.deletedAt"
+        class="hover:bg-slate-800 cursor-pointer"
       ></tr>
 
       <!-- Row shown when there is no matching data. -->

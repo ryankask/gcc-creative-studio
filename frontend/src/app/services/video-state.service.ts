@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import {Injectable} from '@angular/core';
+import {BehaviorSubject} from 'rxjs';
 
 export interface VideoState {
   prompt: string;
@@ -30,17 +30,18 @@ export interface VideoState {
   generateAudio: boolean;
   negativePrompt: string;
   useBrandGuidelines: boolean;
+  enhancePrompt: boolean;
   mode: string;
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class VideoStateService {
   private initialState: VideoState = {
     prompt: '',
     aspectRatio: '16:9',
-    model: 'veo-3.1-generate-preview',
+    model: 'veo-3.1-generate-001',
     style: null,
     colorAndTone: null,
     lighting: null,
@@ -50,14 +51,15 @@ export class VideoStateService {
     generateAudio: true,
     negativePrompt: '',
     useBrandGuidelines: false,
-    mode: 'Text to Video'
+    enhancePrompt: false,
+    mode: 'Text to Video',
   };
 
   private state = new BehaviorSubject<VideoState>(this.initialState);
   state$ = this.state.asObservable();
 
   updateState(newState: Partial<VideoState>) {
-    this.state.next({ ...this.state.value, ...newState });
+    this.state.next({...this.state.value, ...newState});
   }
 
   getState(): VideoState {

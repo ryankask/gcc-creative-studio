@@ -50,12 +50,12 @@ async def create_template(
     service: MediaTemplateService = Depends(),
     current_user: UserModel = Depends(get_current_user),
 ):
-    """
-    Creates a new template by copying and enhancing data from an existing MediaItem.
+    """Creates a new template by copying and enhancing data from an existing MediaItem.
     (Admin role required)
     """
     template = await service.create_template_from_media_item(
-        media_item_id, current_user
+        media_item_id,
+        current_user,
     )
     if not template:
         raise HTTPException(
@@ -74,8 +74,7 @@ async def find_templates(
     search_params: TemplateSearchDto = Depends(),
     service: MediaTemplateService = Depends(),
 ):
-    """
-    Finds and retrieves a paginated list of media templates based on search criteria.
+    """Finds and retrieves a paginated list of media templates based on search criteria.
     (Any authenticated user)
     """
     return await service.find_all_templates(search_params)
@@ -91,8 +90,7 @@ async def get_template(
     template_id: int,
     service: MediaTemplateService = Depends(),
 ):
-    """
-    Retrieves a single media template by its unique ID.
+    """Retrieves a single media template by its unique ID.
     (Any authenticated user)
     """
     template = await service.get_template_by_id(template_id)
@@ -112,8 +110,7 @@ async def update_template(
     update_data: UpdateTemplateDto,
     service: MediaTemplateService = Depends(),
 ):
-    """
-    Updates the fields of an existing media template.
+    """Updates the fields of an existing media template.
     (Admin role required)
     """
     updated_template = await service.update_template(template_id, update_data)
@@ -132,10 +129,8 @@ async def delete_template(
     template_id: int,
     service: MediaTemplateService = Depends(),
 ):
-    """
-    Permanently deletes a media template.
+    """Permanently deletes a media template.
     (Admin role required)
     """
     if not await service.delete_template(template_id):
         raise HTTPException(status_code=404, detail="Template not found.")
-    return

@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from fastapi import Depends
 from sqlalchemy import func, select
@@ -31,12 +30,12 @@ class WorkflowRepository(BaseStringRepository[Workflow, WorkflowModel]):
         super().__init__(model=Workflow, schema=WorkflowModel, db=db)
 
     async def query(
-        self, user_id: int, search_dto: WorkflowSearchDto
+        self,
+        user_id: int,
+        search_dto: WorkflowSearchDto,
     ) -> PaginationResponseDto[WorkflowModel]:
         """Performs a paginated query for workflows."""
-        query = select(self.model).where(
-            self.model.user_id == user_id
-        )
+        query = select(self.model).where(self.model.user_id == user_id)
 
         if search_dto.name:
             # Case-insensitive search
@@ -49,10 +48,10 @@ class WorkflowRepository(BaseStringRepository[Workflow, WorkflowModel]):
 
         # Order and Pagination
         query = query.order_by(self.model.created_at.desc())
-        
+
         query = query.limit(search_dto.limit)
         query = query.offset(search_dto.offset)
-        
+
         result = await self.db.execute(query)
         workflows = result.scalars().all()
         workflow_data = [self.schema.model_validate(w) for w in workflows]
@@ -69,5 +68,3 @@ class WorkflowRepository(BaseStringRepository[Workflow, WorkflowModel]):
             total_pages=total_pages,
             data=workflow_data,
         )
-
-

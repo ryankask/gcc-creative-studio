@@ -12,16 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from fastapi import (
     APIRouter,
     Depends,
-    File,
-    Form,
     HTTPException,
     Request,
-    UploadFile,
     status,
 )
 
@@ -35,9 +31,8 @@ from src.brand_guidelines.dto.generate_upload_url_dto import (
     GenerateUploadUrlDto,
     GenerateUploadUrlResponseDto,
 )
-from src.workspaces.repository.workspace_repository import WorkspaceRepository
-from src.workspaces.workspace_auth_guard import WorkspaceAuth
 from src.users.user_model import UserModel, UserRoleEnum
+from src.workspaces.workspace_auth_guard import WorkspaceAuth
 
 MAX_UPLOAD_SIZE_BYTES = 500 * 1024 * 1024  # 500 MB
 
@@ -64,8 +59,7 @@ async def generate_upload_url(
     service: BrandGuidelineService = Depends(),
     workspace_auth: WorkspaceAuth = Depends(),
 ):
-    """
-    Generates a secure, short-lived URL that the client can use to upload a
+    """Generates a secure, short-lived URL that the client can use to upload a
     brand guideline PDF directly to Google Cloud Storage.
     """
     # If a workspace ID is provided, ensure the user has access to it.
@@ -83,11 +77,12 @@ async def generate_upload_url(
     if request_dto.size > MAX_UPLOAD_SIZE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File is too large. Maximum size is {MAX_UPLOAD_SIZE_BYTES // (1024*1024)}MB.",
+            detail=f"File is too large. Maximum size is {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)}MB.",
         )
 
     return await service.generate_signed_upload_url(
-        request_dto=request_dto, current_user=current_user
+        request_dto=request_dto,
+        current_user=current_user,
     )
 
 
@@ -103,8 +98,7 @@ async def finalize_upload_and_process(
     service: BrandGuidelineService = Depends(),
     current_user: UserModel = Depends(get_current_user),
 ):
-    """
-    This endpoint is called *after* the client has successfully uploaded the
+    """This endpoint is called *after* the client has successfully uploaded the
     PDF to the GCS signed URL.
 
     It creates the placeholder document in Firestore and triggers the
@@ -132,8 +126,7 @@ async def get_workspace_brand_guideline(
     current_user: UserModel = Depends(get_current_user),
     service: BrandGuidelineService = Depends(),
 ):
-    """
-    Retrieves the unique brand guideline associated with a specific workspace.
+    """Retrieves the unique brand guideline associated with a specific workspace.
 
     Returns a 404 error if no guideline has been created for the workspace yet.
     """
@@ -158,8 +151,7 @@ async def get_single_brand_guideline(
     current_user: UserModel = Depends(get_current_user),
     service: BrandGuidelineService = Depends(),
 ):
-    """
-    Retrieves a single brand guideline by its unique ID.
+    """Retrieves a single brand guideline by its unique ID.
 
     - Any authenticated user can view global guidelines.
     - Only members of a workspace can view its specific guidelines.
@@ -183,8 +175,7 @@ async def delete_single_brand_guideline(
     current_user: UserModel = Depends(get_current_user),
     service: BrandGuidelineService = Depends(),
 ):
-    """
-    Deletes a brand guideline and all of its associated assets (e.g., PDF chunks in GCS).
+    """Deletes a brand guideline and all of its associated assets (e.g., PDF chunks in GCS).
 
     - Only the workspace owner or a system admin can delete a workspace-specific guideline.
     - Only a system admin can delete a global guideline.
@@ -192,4 +183,3 @@ async def delete_single_brand_guideline(
     await service.delete_guideline(
         guideline_id=guideline_id, current_user=current_user
     )
-    return None

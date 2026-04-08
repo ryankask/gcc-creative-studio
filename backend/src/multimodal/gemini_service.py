@@ -16,12 +16,11 @@
 import json
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any
 
 from fastapi import Depends
-
 from google.genai import Client, types
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -38,7 +37,6 @@ from src.brand_guidelines.repository.brand_guideline_repository import (
 from src.brand_guidelines.schema.brand_guideline_model import (
     BrandGuidelineModel,
 )
-from src.common.base_dto import GenerationModelEnum
 from src.config.config_service import config_service
 from src.images.dto.create_imagen_dto import CreateImagenDto
 from src.multimodal.dto.create_prompt_imagen_dto import CreatePromptImageDto
@@ -69,19 +67,20 @@ class ResponseMimeTypeEnum(str, Enum):
 
 
 class GeminiService:
-    """
-    A dedicated service for interactions with Google's Gemini models.
+    """A dedicated service for interactions with Google's Gemini models.
     Handles client initialization, prompt rewriting, and error handling.
     """
 
-    def __init__(self, brand_guideline_repo: BrandGuidelineRepository = Depends()):
+    def __init__(
+        self, brand_guideline_repo: BrandGuidelineRepository = Depends()
+    ):
         """Initializes the Gemini client and configuration."""
         self.client: Client = GeminiModelSetup.init()
         self.cfg = config_service
         self.rewriter_model = self.cfg.GEMINI_MODEL_ID
         self.brand_guideline_repo = brand_guideline_repo
 
-    def _get_response_schema(self, target: PromptTargetEnum) -> Type[BaseModel]:
+    def _get_response_schema(self, target: PromptTargetEnum) -> type[BaseModel]:
         """Dynamically gets the Pydantic schema based on the target type."""
         if target is PromptTargetEnum.IMAGE:
             return CreatePromptImageDto
@@ -101,10 +100,9 @@ class GeminiService:
         target_type: PromptTargetEnum,
         prompt_template: str,
         response_mime_type: ResponseMimeTypeEnum = ResponseMimeTypeEnum.JSON,
-        response_schema: Type[BaseModel] | None = None,
+        response_schema: type[BaseModel] | None = None,
     ) -> str:
-        """
-        Rewrites a user prompt using Gemini into a structured JSON format.
+        """Rewrites a user prompt using Gemini into a structured JSON format.
 
         Args:
             original_prompt: The initial, unstructured prompt from the user.
@@ -113,6 +111,7 @@ class GeminiService:
 
         Returns:
             A dictionary parsed from Gemini's JSON response.
+
         """
         full_prompt = f"{prompt_template} {original_prompt}"
         response_schema = response_schema or self._get_response_schema(
@@ -135,7 +134,7 @@ class GeminiService:
                     model=self.rewriter_model,
                     contents=full_prompt,
                     config=types.GenerateContentConfig(
-                        response_mime_type=response_mime_type.value
+                        response_mime_type=response_mime_type.value,
                     ),
                 )
             else:
@@ -144,12 +143,14 @@ class GeminiService:
             return response.text or ""
         except Exception as e:
             logger.error(
-                f"Failed to generate structured prompt for '{original_prompt}': {e}"
+                f"Failed to generate structured prompt for '{original_prompt}': {e}",
             )
             raise
 
     def generate_random_or_rewrite_prompt(
-        self, target_type: PromptTargetEnum, original_prompt: str = ""
+        self,
+        target_type: PromptTargetEnum,
+        original_prompt: str = "",
     ) -> str:
         """Generates a completely new, random, and creative text prompt."""
         try:
@@ -175,12 +176,11 @@ class GeminiService:
             )
             return response
         except Exception as e:
-            logger.error(f"Failed to generate random prompt: {e}")
+            logger.error("Failed to generate random prompt: %s", e)
             raise
 
     def _convert_dto_to_string(self, dto: BaseModel) -> str:
-        """
-        Private helper to convert a DTO into a formatted string for prompting.
+        """Private helper to convert a DTO into a formatted string for prompting.
         This consolidates the repetitive logic from the original file.
         """
         # Use model_dump_json and then reload it to ensure all values, especially
@@ -206,12 +206,11 @@ class GeminiService:
 
     async def enhance_prompt_from_dto(
         self,
-        dto: Union[CreateImagenDto, CreateVeoDto],
+        dto: CreateImagenDto | CreateVeoDto,
         target_type: PromptTargetEnum,
         response_mime_type: ResponseMimeTypeEnum = ResponseMimeTypeEnum.JSON,
     ) -> str:
-        """
-        Enhances a partially filled DTO by converting it to a string,
+        """Enhances a partially filled DTO by converting it to a string,
         then asking Gemini to generate a complete, structured prompt.
 
         This single method replaces the four repetitive `rewrite_for_*` methods.
@@ -222,6 +221,7 @@ class GeminiService:
 
         Returns:
             A dictionary containing the complete, structured prompt data from Gemini.
+
         """
         if target_type not in [PromptTargetEnum.IMAGE, PromptTargetEnum.VIDEO]:
             raise ValueError("Invalid target_type. Must be IMAGE or VIDEO.")
@@ -275,29 +275,30 @@ class GeminiService:
                 workspace_id=dto.workspace_id, limit=1
             )
             guideline_response = await self.brand_guideline_repo.query(
-                search_dto, workspace_id=dto.workspace_id
+                search_dto,
+                workspace_id=dto.workspace_id,
             )
 
             if guideline_response and guideline_response.data:
                 guideline = guideline_response.data[0]
                 # Construct a prefix to guide the prompt rewriter.
                 prefix_parts = [
-                    "Based on the following brand guidelines, enhance the user's prompt."
+                    "Based on the following brand guidelines, enhance the user's prompt.",
                 ]
                 if guideline.visual_style_summary:
                     prefix_parts.append(
-                        f"**Visual Style:** {guideline.visual_style_summary}"
+                        f"**Visual Style:** {guideline.visual_style_summary}",
                     )
                 if guideline.tone_of_voice_summary:
                     prefix_parts.append(
-                        f"**Tone of Voice:** {guideline.tone_of_voice_summary}"
+                        f"**Tone of Voice:** {guideline.tone_of_voice_summary}",
                     )
                 prefix_parts.append("\n---")
                 brand_guideline_prefix = "\n".join(prefix_parts) + "\n\n"
                 dto.prompt = brand_guideline_prefix + dto.prompt
             else:
                 logger.info(
-                    f"No brand guidelines found for workspace '{dto.workspace_id}'."
+                    f"No brand guidelines found for workspace '{dto.workspace_id}'.",
                 )
 
         prompt_template = (
@@ -320,9 +321,8 @@ class GeminiService:
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    def generate_text(self, prompt: str, model_id: Optional[str] = None) -> str:
-        """
-        Generates plain text from a given prompt using a Gemini model.
+    def generate_text(self, prompt: str, model_id: str | None = None) -> str:
+        """Generates plain text from a given prompt using a Gemini model.
 
         This is a general-purpose method for simple text-in, text-out interactions.
 
@@ -335,11 +335,14 @@ class GeminiService:
 
         Raises:
             Exception: Propagates exceptions from the API call after retries.
+
         """
         # Use the provided model_id or fall back to the service's default rewriter model
         target_model = model_id or self.rewriter_model
 
-        logger.info(f"Sending text generation request to model: {target_model}")
+        logger.info(
+            "Sending text generation request to model: %s", target_model
+        )
         try:
             response = self.client.models.generate_content(
                 model=target_model,
@@ -355,13 +358,12 @@ class GeminiService:
         except Exception as e:
             # Log the error with part of the prompt for context
             logger.error(
-                f"Gemini text generation failed for prompt '{prompt[:100]}...': {e}"
+                f"Gemini text generation failed for prompt '{prompt[:100]}...': {e}",
             )
             raise
 
-    def extract_brand_info_from_pdf(self, pdf_gcs_uri: str) -> Dict[str, Any]:
-        """
-        Uses a multimodal model to analyze a PDF from GCS and extract structured
+    def extract_brand_info_from_pdf(self, pdf_gcs_uri: str) -> dict[str, Any]:
+        """Uses a multimodal model to analyze a PDF from GCS and extract structured
         brand guideline information.
 
         Args:
@@ -369,11 +371,13 @@ class GeminiService:
 
         Returns:
             A dictionary containing the extracted brand information.
+
         """
-        logger.info(f"Starting brand info extraction for PDF: {pdf_gcs_uri}")
+        logger.info("Starting brand info extraction for PDF: %s", pdf_gcs_uri)
 
         pdf_file = types.Part.from_uri(
-            file_uri=pdf_gcs_uri, mime_type="application/pdf"
+            file_uri=pdf_gcs_uri,
+            mime_type="application/pdf",
         )
 
         # This structured prompt instructs the model to return a JSON object,
@@ -407,10 +411,10 @@ class GeminiService:
             return {}
 
     def aggregate_brand_info(
-        self, partial_results: List[Dict[str, Any]]
-    ) -> Optional[BrandGuidelineModel]:
-        """
-        Aggregates multiple partial brand info extractions into a single,
+        self,
+        partial_results: list[dict[str, Any]],
+    ) -> BrandGuidelineModel | None:
+        """Aggregates multiple partial brand info extractions into a single,
         consolidated result using Gemini.
 
         Args:
@@ -419,6 +423,7 @@ class GeminiService:
 
         Returns:
             A BrandGuidelineModel object with the combined information, or None on failure.
+
         """
         if not partial_results:
             return None
@@ -426,14 +431,14 @@ class GeminiService:
             return BrandGuidelineModel(**partial_results[0])
 
         logger.info(
-            f"Aggregating {len(partial_results)} partial brand info results."
+            "Aggregating %s partial brand info results.", len(partial_results)
         )
 
         # --- Step 1: Deterministic Aggregation in Python ---
         # Combine color palettes and get unique hex codes, case-insensitively.
         all_colors = set()
         for result in partial_results:
-            if "colorPalette" in result and result["colorPalette"]:
+            if result.get("colorPalette"):
                 # Filter out potential non-string or empty values
                 valid_colors = [
                     c
@@ -492,6 +497,6 @@ class GeminiService:
             return BrandGuidelineModel(**aggregated_data)
         except Exception as e:
             logger.error(
-                f"Failed to aggregate brand info summaries with Gemini: {e}"
+                "Failed to aggregate brand info summaries with Gemini: %s", e
             )
             return None

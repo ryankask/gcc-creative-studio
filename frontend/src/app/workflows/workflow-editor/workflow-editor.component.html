@@ -59,23 +59,23 @@
 
         <!-- Primary Actions -->
         <div class="flex items-center gap-2">
-            <button
+            <studio-button variant="cta" size="medium"
               *ngIf="!isReadOnly"
               mat-raised-button
-              class="btn-cta"
+              
               (click)="run()"
               [disabled]="isLoading || stepsArray.length === 0"
             >
                 <mat-icon>play_arrow</mat-icon>
                 Run
-            </button>
-            <button
+            </studio-button>
+            <studio-button variant="primary" size="medium"
               *ngIf="!isReadOnly"
               mat-raised-button
-              class="btn-glass-primary"
+              
               (click)="save()"
               [disabled]="workflowForm.pristine || isLoading"
-            >Save</button>
+            >Save</studio-button>
         </div>
     </div>
   </header>
@@ -87,14 +87,14 @@
       <div class="p-4 border-b border-neutral-700 flex justify-between items-center">
         <h5 class="text-lg font-semibold">Workflow Graph</h5>
         <div class="flex items-center gap-2">
-          <button
+          <studio-button variant="primary" size="medium"
             *ngIf="!isReadOnly"
             mat-raised-button
-            class="btn-glass-primary"
+            
             (click)="openAddStepModal()">
             <mat-icon>add</mat-icon>
             Add Step
-          </button>
+          </studio-button>
         </div>
       </div>
       <div class="flex-grow p-4 overflow-auto" [formGroup]="workflowForm">

@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { ConfirmationDialogComponent } from './confirmation-dialog.component';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+} from '@angular/material/dialog';
+import {ConfirmationDialogComponent} from './confirmation-dialog.component';
 
 describe('ConfirmationDialogComponent', () => {
   let component: ConfirmationDialogComponent;
@@ -27,8 +31,8 @@ describe('ConfirmationDialogComponent', () => {
       declarations: [ConfirmationDialogComponent],
       imports: [MatDialogModule],
       providers: [
-        { provide: MatDialogRef, useValue: {} },
-        { provide: MAT_DIALOG_DATA, useValue: {} },
+        {provide: MatDialogRef, useValue: {}},
+        {provide: MAT_DIALOG_DATA, useValue: {}},
       ],
     }).compileComponents();
 

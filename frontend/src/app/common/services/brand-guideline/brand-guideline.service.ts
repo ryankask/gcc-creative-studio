@@ -98,7 +98,7 @@ export class BrandGuidelineService {
       file.type,
       file.size,
     ).pipe(
-      switchMap(({ uploadUrl, gcsUri }) => {
+      switchMap(({uploadUrl, gcsUri}) => {
         return this.uploadFileToGCS(uploadUrl, file).pipe(
           switchMap(() =>
             this.finalizeUpload(workspaceId, gcsUri, name, file.name),

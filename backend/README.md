@@ -88,3 +88,52 @@ To maintain code quality and consistency:
     ```bash
     python -m black . --line-length=80
     ```
+
+
+
+### 🛡️ Automatic Checks with Pre-commit
+
+To guarantee style standards compliance automatically on every commit, we use a fully containerized `pre-commit` setup. Please see the [Main README](../README.md#🛡️-automatic-checks-with-pre-commit-recommended) for installation instructions to link it to your `git commit` hooks.
+
+## 🧪 Running Tests
+
+We use `pytest` for testing and `pytest-cov` for coverage reporting. The project uses `uv` for package management, so tests should be executed within the virtual environment.
+
+> [!IMPORTANT]
+> **PR Requirement**: To create and merge Pull Requests, you must achieve at least **80% code coverage** across all `src/` files. The GitHub Actions CI will automatically reject PRs below this threshold.
+>
+> You can verify this condition locally before pushing by running:
+> ```bash
+> cd backend
+> uv run pytest tests -v --cov=src --cov-fail-under=80
+> ```
+
+
+### 1. Run All Tests
+To run all tests together with verbose output:
+```bash
+cd backend
+uv run pytest -v
+```
+
+### 2. Run with Coverage
+To run all tests and generate a coverage report for ALL files:
+```bash
+cd backend
+uv run pytest -v --cov=src tests/
+```
+To see a line-by-line missing report, add `--cov-report=term-missing`:
+```bash
+uv run pytest -v --cov=src tests/ --cov-report=term-missing
+```
+
+### 3. Run Specific Component
+To run tests for a single component:
+```bash
+cd backend
+uv run pytest tests/users -v
+```
+
+### 📋 Notes
+- **Async Support**: Async tests are implemented using `@pytest.mark.anyio`.
+- **Fixtures**: Global fixtures (e.g., API client, mock database session) are defined in `tests/conftest.py`.

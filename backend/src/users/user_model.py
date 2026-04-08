@@ -14,10 +14,9 @@
 
 import datetime
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import Field, field_validator
-from sqlalchemy import String, func, DateTime
+from sqlalchemy import DateTime, String, func
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,60 +25,65 @@ from src.database import Base
 
 
 class UserRoleEnum(str, Enum):
-    """
-    Defines the distinct roles a user can have within the application,
+    """Defines the distinct roles a user can have within the application,
     enabling role-based access control.
     """
 
     USER = "user"  # Basic access to browse and use public features.
     CREATOR = "creator"  # Can create and manage their own content.
     ADMIN = "admin"  # Has full administrative privileges, including user management.
+    WORKFLOWS = "workflows"  # Can interact with workflows.
 
 
 class User(Base):
-    """
-    SQLAlchemy model for the 'users' table.
-    """
+    """SQLAlchemy model for the 'users' table."""
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    roles: Mapped[List[str]] = mapped_column(ARRAY(String), default=[])
+    email: Mapped[str] = mapped_column(
+        String, unique=True, index=True, nullable=False
+    )
+    roles: Mapped[list[str]] = mapped_column(ARRAY(String), default=[])
     name: Mapped[str] = mapped_column(String, default="")
     picture: Mapped[str] = mapped_column(String, default="")
-    
+
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         insert_default=func.now(),
-        server_default=func.now()
+        server_default=func.now(),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         insert_default=func.now(),
         onupdate=func.now(),
-        server_default=func.now()
+        server_default=func.now(),
     )
+    deleted_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    deleted_by: Mapped[int | None] = mapped_column(nullable=True)
 
 
 class UserModel(BaseDocument):
-    """
-    Represents a user document (DTO) for the API.
-    """
+    """Represents a user document (DTO) for the API."""
 
     # ID is required for Read DTOs
     id: int
     email: str
-    roles: List[UserRoleEnum] = Field(default_factory=list)
+    roles: list[UserRoleEnum] = Field(default_factory=list)
     name: str
     picture: str = ""
+    deleted_at: datetime.datetime | None = None
+    deleted_by: int | None = None
 
     @field_validator("roles", mode="after")
     @classmethod
     def default_to_user_role(
-        cls, roles: List[UserRoleEnum]
-    ) -> List[UserRoleEnum]:
-        """
-        Ensures that if the 'roles' list is empty after initialization,
+        cls, roles: list[UserRoleEnum]
+    ) -> list[UserRoleEnum]:
+        """Ensures that if the 'roles' list is empty after initialization,
         it defaults to containing the 'USER' role.
         """
         if not roles:

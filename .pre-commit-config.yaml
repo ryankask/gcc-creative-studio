@@ -1,0 +1,54 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+repos:
+- repo: https://github.com/google/addlicense
+  rev: v1.2.0
+  hooks:
+  - id: addlicense
+    args: [ "-c", "Google LLC", "-l", "apache" ]
+    types: [file]
+    files: \.(py|ts|scss|html|css|js|sh)$
+
+- repo: local
+  hooks:
+  - id: gts-fix
+    name: gts-fix
+    entry: bash -c 'cd frontend && npx gts fix "${@#frontend/}"' _
+    language: system
+    files: ^frontend/src/.*\.ts$
+    pass_filenames: true
+
+  - id: gts
+    name: gts
+    entry: bash -c "cd frontend && npx gts lint"
+    language: system
+    files: ^frontend/
+    pass_filenames: false
+    stages: [manual]
+
+  - id: pylint
+    name: pylint
+    entry: pylint
+    args: [ "--rcfile=backend/pylintrc", "--fail-under=9.0" ]
+    language: system
+    files: ^backend/
+    stages: [manual]
+
+
+- repo: https://github.com/psf/black
+  rev: 24.10.0
+  hooks:
+  - id: black
+    files: ^backend/

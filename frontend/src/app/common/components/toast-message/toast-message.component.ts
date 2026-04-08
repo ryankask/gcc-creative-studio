@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import {Component, Inject, Input, Optional, Output, EventEmitter, ViewEncapsulation} from '@angular/core';
+import {
+  Component,
+  Inject,
+  Input,
+  Optional,
+  Output,
+  EventEmitter,
+  ViewEncapsulation,
+} from '@angular/core';
 import {MatSnackBar, MAT_SNACK_BAR_DATA} from '@angular/material/snack-bar';
 import {CommonModule} from '@angular/common';
 import {MatIconModule} from '@angular/material/icon';
@@ -28,9 +36,9 @@ import {MatIconModule} from '@angular/material/icon';
   encapsulation: ViewEncapsulation.None,
 })
 export class ToastMessageComponent {
-  @Input() text: string = '';
-  @Input() icon: string = '';
-  @Input() matIcon: string = '';
+  @Input() text = '';
+  @Input() icon = '';
+  @Input() matIcon = '';
   @Output() close = new EventEmitter<void>();
 
   constructor(

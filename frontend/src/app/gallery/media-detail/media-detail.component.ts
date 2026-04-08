@@ -14,22 +14,29 @@
  * limitations under the License.
  */
 
-import { Component, OnDestroy } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationExtras, Router } from '@angular/router';
-import { first, Subscription } from 'rxjs';
+import {Component, OnDestroy} from '@angular/core';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatDialog} from '@angular/material/dialog';
+import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
+import {ActivatedRoute, NavigationExtras, Router} from '@angular/router';
+import {first, Subscription} from 'rxjs';
 import {
   EnrichedSourceAsset,
   MediaItem,
 } from '../../common/models/media-item.model';
-import { CreatePromptMediaDto } from '../../common/models/prompt.model';
-import { SourceMediaItemLink } from '../../common/models/search.model';
-import { AuthService } from '../../common/services/auth.service';
-import { LoadingService } from '../../common/services/loading.service';
-import { MimeTypeEnum } from '../../fun-templates/media-template.model';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
-import { GalleryService } from '../gallery.service';
+import {GalleryItem} from '../../common/models/gallery-item.model';
+import {CreatePromptMediaDto} from '../../common/models/prompt.model';
+import {SourceMediaItemLink} from '../../common/models/search.model';
+import {AuthService} from '../../common/services/auth.service';
+import {LoadingService} from '../../common/services/loading.service';
+import {MimeTypeEnum} from '../../fun-templates/media-template.model';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../utils/handleMessageSnackbar';
+import {GalleryService} from '../gallery.service';
+import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
+import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
 
 @Component({
   selector: 'app-media-detail',
@@ -41,13 +48,102 @@ export class MediaDetailComponent implements OnDestroy {
   private mediaSub?: Subscription;
 
   public isLoading = true;
-  public mediaItem: MediaItem | undefined;
+  public mediaItem: GalleryItem | undefined;
   public isAdmin = false;
   public initialSlideIndex = 0;
-  promptJson: CreatePromptMediaDto | undefined;
+  promptJson: any | undefined;
   isPromptExpanded = false;
-  public selectedAssetForLightbox: MediaItem | null = null;
+  public isIdentityExpanded = false;
+  public selectedAssetForLightbox: GalleryItem | null = null;
   public lightboxInitialIndex = 0;
+
+  get identityFields(): {label: string; value: any; type: string}[] {
+    if (!this.mediaItem) return [];
+
+    const isAsset = this.mediaItem.itemType === 'source_asset';
+
+    const fields: {label: string; value: any; type: string}[] = [
+      {
+        label: 'Status',
+        value: this.mediaItem.status
+          ? this.mediaItem.status.toUpperCase()
+          : null,
+        type: 'status',
+      },
+      {label: 'Mime Type', value: this.mediaItem.mimeType, type: 'text'},
+      {label: 'Aspect Ratio', value: this.mediaItem.aspectRatio, type: 'text'},
+      {label: 'Resolution', value: this.mediaItem.resolution, type: 'text'},
+    ];
+
+    if (this.isIdentityExpanded) {
+      fields.push(
+        {label: 'Model', value: this.mediaItem.model, type: 'text'},
+        {label: 'Created At', value: this.mediaItem.createdAt, type: 'date'},
+        {label: 'Created By', value: this.mediaItem.userEmail, type: 'text'},
+        {
+          label: 'Generation Time',
+          value: this.mediaItem.generationTime
+            ? `${this.mediaItem.generationTime.toFixed(2)}s`
+            : undefined,
+          type: 'text',
+        },
+      );
+
+      if (!isAsset) {
+        fields.push(
+          {label: 'Voice', value: this.mediaItem.voiceName, type: 'text'},
+          {label: 'Language', value: this.mediaItem.languageCode, type: 'text'},
+          {label: 'Seed', value: this.mediaItem.seed, type: 'text'},
+          {label: 'Num Media', value: this.mediaItem.numMedia, type: 'text'},
+          {
+            label: 'Duration',
+            value: this.mediaItem.duration
+              ? `${this.mediaItem.duration}s`
+              : undefined,
+            type: 'text',
+          },
+          {
+            label: 'Google Search',
+            value:
+              this.mediaItem.googleSearch !== undefined
+                ? this.mediaItem.googleSearch
+                  ? 'Enabled'
+                  : 'Disabled'
+                : undefined,
+            type: 'text',
+          },
+        );
+
+        const originalPrompt =
+          this.mediaItem.originalPrompt ||
+          (this.promptJson ? this.formattedPrompt : this.mediaItem.prompt);
+        fields.push({
+          label: 'Original Prompt',
+          value: originalPrompt,
+          type: 'prompt',
+        });
+
+        if (
+          this.mediaItem.prompt &&
+          this.mediaItem.prompt !== this.mediaItem.originalPrompt
+        ) {
+          fields.push({
+            label: 'Prompt Used',
+            value: this.mediaItem.prompt,
+            type: 'prompt',
+          });
+        }
+      }
+    }
+
+    return fields.filter(
+      f =>
+        f.value !== null &&
+        f.value !== undefined &&
+        f.value !== '' &&
+        (Array.isArray(f.value) ? f.value.length > 0 : true),
+    );
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -57,31 +153,23 @@ export class MediaDetailComponent implements OnDestroy {
     private _snackBar: MatSnackBar,
     private authService: AuthService,
     private sanitizer: DomSanitizer,
+    private workspaceStateService: WorkspaceStateService,
+    public dialog: MatDialog,
   ) {
     // Check if user is admin
     this.isAdmin = this.authService.isUserAdmin() ?? false;
 
-    // Get the media item from the router state
-    this.mediaItem =
-      this.router.getCurrentNavigation()?.extras.state?.['mediaItem'];
-
-    if (this.mediaItem) {
-      // If we have the media item, we don't need to load it
-      this.loadingService.hide();
-      this.isLoading = false;
-      this.readInitialIndexFromUrl();
-      this.parsePrompt();
-    } else {
-      // If not, fetch the media item using the ID from the route params
-      this.fetchMediaItem();
-    }
+    // Always trigger fetch to get full source assets, metadata, etc.
+    this.fetchMediaItem();
   }
 
   fetchMediaItem() {
     this.routeSub = this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
-        this.fetchMediaDetails(Number(id));
+        // Check if we are on the asset-detail or gallery route
+        const isAsset = this.router.url.includes('/asset-detail');
+        this.fetchMediaDetails(Number(id), isAsset);
       }
     });
   }
@@ -91,9 +179,13 @@ export class MediaDetailComponent implements OnDestroy {
     this.mediaSub?.unsubscribe();
   }
 
-  fetchMediaDetails(id: number): void {
-    this.mediaSub = this.galleryService.getMedia(id).subscribe({
-      next: data => {
+  fetchMediaDetails(id: number, isAsset = false): void {
+    const fetchObs = isAsset
+      ? this.galleryService.getAsset(id)
+      : this.galleryService.getMedia(id);
+
+    this.mediaSub = fetchObs.subscribe({
+      next: (data: GalleryItem) => {
         this.mediaItem = data;
         this.isLoading = false;
         this.loadingService.hide();
@@ -105,24 +197,26 @@ export class MediaDetailComponent implements OnDestroy {
         console.error('Failed to fetch media details', err);
         this.isLoading = false;
         this.loadingService.hide();
+        handleErrorSnackbar(this._snackBar, err, 'Fetch details');
       },
     });
   }
 
   private parsePrompt(): void {
-    if (!this.mediaItem?.prompt) {
+    const rawToParse = this.mediaItem?.prompt || this.mediaItem?.originalPrompt;
+    if (!rawToParse) {
       this.promptJson = undefined;
       return;
     }
     try {
-      if (typeof this.mediaItem.prompt === 'string') {
-        const parsed = JSON.parse(this.mediaItem.prompt);
+      if (typeof rawToParse === 'string') {
+        const parsed = JSON.parse(rawToParse);
         if (parsed && typeof parsed === 'object') {
           this.promptJson = parsed;
         }
-      } else if (typeof this.mediaItem.prompt === 'object') {
+      } else if (typeof rawToParse === 'object') {
         // It's already an object, just cast it.
-        this.promptJson = this.mediaItem.prompt as CreatePromptMediaDto;
+        this.promptJson = rawToParse as CreatePromptMediaDto;
       }
     } catch (e) {
       // Not a valid JSON string.
@@ -149,7 +243,8 @@ export class MediaDetailComponent implements OnDestroy {
    * valid JSON object or stringified JSON. Otherwise, returns the original prompt.
    */
   get formattedPrompt(): string {
-    if (!this.mediaItem?.prompt) {
+    const rawPrompt = this.mediaItem?.prompt || this.mediaItem?.originalPrompt;
+    if (!rawPrompt) {
       return 'N/A';
     }
 
@@ -158,7 +253,7 @@ export class MediaDetailComponent implements OnDestroy {
     }
 
     // Return the original string if it's not an object or valid stringified JSON.
-    return this.mediaItem.prompt;
+    return rawPrompt;
   }
 
   /**
@@ -190,10 +285,13 @@ export class MediaDetailComponent implements OnDestroy {
       .createTemplateFromMediaItem(this.mediaItem.id)
       .pipe(first())
       .subscribe({
-        next: (newTemplate: { id: string }) => {
+        next: (newTemplate: {id: string}) => {
           this.loadingService.hide();
-          handleSuccessSnackbar(this._snackBar, 'Template created successfully!');
-          this.router.navigate(['/templates/edit', newTemplate.id]);
+          handleSuccessSnackbar(
+            this._snackBar,
+            'Template created successfully!',
+          );
+          void this.router.navigate(['/templates/edit', newTemplate.id]);
         },
         error: err => {
           this.loadingService.hide();
@@ -205,6 +303,10 @@ export class MediaDetailComponent implements OnDestroy {
 
   togglePromptExpansion(): void {
     this.isPromptExpanded = !this.isPromptExpanded;
+  }
+
+  toggleIdentityExpansion(): void {
+    this.isIdentityExpanded = !this.isIdentityExpanded;
   }
 
   generateWithThisImage(index: number): void {
@@ -222,15 +324,15 @@ export class MediaDetailComponent implements OnDestroy {
       state: {
         remixState: {
           sourceMediaItems: [sourceMediaItem],
-          prompt: this.mediaItem.originalPrompt,
+          prompt: this.mediaItem.prompt,
           previewUrl: this.mediaItem.presignedUrls?.[index],
         },
       },
     };
-    this.router.navigate(['/'], navigationExtras);
+    void this.router.navigate(['/'], navigationExtras);
   }
 
-  generateVideoWithImage(event: { role: 'start' | 'end'; index: number }): void {
+  generateVideoWithImage(event: {role: 'start' | 'end'; index: number}): void {
     if (!this.mediaItem) {
       return;
     }
@@ -242,7 +344,7 @@ export class MediaDetailComponent implements OnDestroy {
     };
 
     const remixState = {
-      prompt: this.mediaItem.originalPrompt,
+      prompt: this.mediaItem.prompt,
       sourceMediaItems: [sourceMediaItem],
       startImagePreviewUrl:
         event.role === 'start'
@@ -255,9 +357,9 @@ export class MediaDetailComponent implements OnDestroy {
     };
 
     const navigationExtras: NavigationExtras = {
-      state: { remixState },
+      state: {remixState},
     };
-    this.router.navigate(['/video'], navigationExtras);
+    void this.router.navigate(['/video'], navigationExtras);
   }
 
   sendToVto(index: number): void {
@@ -275,7 +377,7 @@ export class MediaDetailComponent implements OnDestroy {
         },
       },
     };
-    this.router.navigate(['/vto'], navigationExtras);
+    void this.router.navigate(['/vto'], navigationExtras);
   }
 
   handleExtendWithAi(event: {
@@ -293,7 +395,7 @@ export class MediaDetailComponent implements OnDestroy {
     };
 
     const remixState = {
-      prompt: this.mediaItem.originalPrompt,
+      prompt: this.mediaItem.prompt,
       sourceMediaItems: [sourceMediaItem],
       // Since it's a video, we can use the thumbnail as a preview.
       startImagePreviewUrl:
@@ -302,9 +404,9 @@ export class MediaDetailComponent implements OnDestroy {
     };
 
     const navigationExtras: NavigationExtras = {
-      state: { remixState },
+      state: {remixState},
     };
-    this.router.navigate(['/video'], navigationExtras);
+    void this.router.navigate(['/video'], navigationExtras);
   }
 
   handleConcatenate(event: {
@@ -328,7 +430,7 @@ export class MediaDetailComponent implements OnDestroy {
       startConcatenation: true,
     };
 
-    this.router.navigate(['/video'], { state: { remixState } });
+    void this.router.navigate(['/video'], {state: {remixState}});
   }
 
   public openSourceAssetInLightbox(
@@ -350,13 +452,20 @@ export class MediaDetailComponent implements OnDestroy {
 
     // Existing logic for images
     // Construct a MediaItem-like object for the lightbox
-    const mediaItem: MediaItem = {
+    // Construct a GalleryItem-like object for the lightbox
+    const mediaItem: GalleryItem = {
       id: Number(sourceAsset.sourceAssetId),
+      workspaceId: 0,
+      createdAt: new Date().toISOString(),
+      itemType: 'media_item',
+      status: 'COMPLETED',
       mimeType: MimeTypeEnum.IMAGE,
+      prompt: `Input: ${sourceAsset.role}`,
+      gcsUris: [sourceAsset.gcsUri],
+      thumbnailUris: [sourceAsset.presignedThumbnailUrl],
       presignedUrls: [sourceAsset.presignedUrl],
       presignedThumbnailUrls: [sourceAsset.presignedThumbnailUrl],
-      originalPrompt: `Input: ${sourceAsset.role}`,
-      gcsUris: [sourceAsset.gcsUri],
+      metadata: {},
     };
     this.selectedAssetForLightbox = mediaItem;
     this.lightboxInitialIndex = 0;
@@ -368,5 +477,50 @@ export class MediaDetailComponent implements OnDestroy {
 
   public getSafeHtml(html: string): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  public onTagsChanged(tags: any[]): void {
+    if (this.mediaItem) {
+      this.fetchMediaDetails(
+        this.mediaItem.id,
+        this.mediaItem.itemType === 'source_asset',
+      );
+    }
+  }
+
+  public deleteCurrentMedia(): void {
+    if (!this.mediaItem?.id) return;
+
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (workspaceId === null) return;
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: 'Delete Media',
+        message: 'Are you sure you want to delete this media item?',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.galleryService
+          .bulkDelete(
+            [{id: this.mediaItem!.id, type: this.mediaItem!.itemType}],
+            workspaceId,
+          )
+          .subscribe({
+            next: () => {
+              handleSuccessSnackbar(
+                this._snackBar,
+                'Media deleted successfully',
+              );
+              void this.router.navigate(['/gallery']);
+            },
+            error: err => {
+              handleErrorSnackbar(this._snackBar, err, 'Delete media');
+            },
+          });
+      }
+    });
   }
 }

@@ -115,12 +115,11 @@
             [mediaItem]="imagenDocuments"
             [initialIndex]="0"
             [showSeeMoreInfoButton]="true"
-            [showEditButton]="true"
-            [showGenerateVideoButton]="true"
-            [showVtoButton]="true"
+            [showDeleteButton]="true"
             (editClicked)="editResultImage($event)"
             (generateVideoClicked)="generateVideoWithImage($event)"
             (sendToVtoClicked)="sendToVto($event)"
+            (deleteClicked)="deleteGeneratedMedia()"
             style="max-height: 60vh"
           ></app-media-lightbox>
           <div #promptBoxTarget></div>
@@ -342,6 +341,21 @@
         </mat-slide-toggle>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           Brand Guidelines
+        </div>
+      </div>
+
+      <div
+        matTooltip="Enhance Prompt with AI"
+        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
+      >
+        <mat-slide-toggle
+          [(ngModel)]="searchRequest.enhancePrompt"
+          (ngModelChange)="saveState()"
+          class="!w-16 !h-16 !shadow-none text-center !flex justify-center items-center text-stone-300"
+        >
+        </mat-slide-toggle>
+        <div class="text-center justify-center text-neutral-200 text-base mt-2">
+          Enhance Prompt
         </div>
       </div>
       <!-- <div

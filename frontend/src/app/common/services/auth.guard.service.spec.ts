@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { Router } from '@angular/router';
+import {TestBed} from '@angular/core/testing';
+import {HttpClientTestingModule} from '@angular/common/http/testing';
+import {Router} from '@angular/router';
 
-import { AuthGuardService } from './auth.guard.service';
-import { AuthService } from './auth.service';
+import {AuthGuardService} from './auth.guard.service';
+import {AuthService} from './auth.service';
 
 describe('AuthGuardService', () => {
   let service: AuthGuardService;
@@ -29,8 +29,8 @@ describe('AuthGuardService', () => {
       imports: [HttpClientTestingModule],
       providers: [
         AuthGuardService,
-        { provide: AuthService, useValue: {} },
-        { provide: Router, useValue: {} },
+        {provide: AuthService, useValue: {}},
+        {provide: Router, useValue: {}},
       ],
     });
     service = TestBed.inject(AuthGuardService);

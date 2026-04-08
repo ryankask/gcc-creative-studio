@@ -35,6 +35,7 @@
   border-radius: 0.5rem;
   overflow: hidden;
   position: relative;
+  min-height: 50vh; // Ensure it doesn't collapse
 
   &.zoomable {
     cursor: zoom-in;
@@ -44,6 +45,10 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+  }
+
+  .video-wrapper {
+    cursor: pointer;
   }
 }
 
@@ -61,39 +66,6 @@
   margin: .5rem 0;
 }
 
-.action-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background-color: #3a3a3a;
-  color: #f0f0f0;
-  border: 1px solid #555;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
-
-  &:hover {
-    background-color: #4a4a4a;
-    border-color: #777;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    background-color: #555;
-    opacity: 0.7;
-  }
-
-  svg,
-  mat-icon {
-    width: 20px;
-    height: 20px;
-    font-size: 20px;
-  }
-}
 
 .thumbnails-container {
   display: flex;
@@ -293,10 +265,6 @@
   }
 }
 
-.menu-image-icon {
-  width: 24px;
-  height: 24px;
-}
 
 
 // --- AUDIO PLAYER STYLES (Imported from AudioComponent) ---
@@ -347,4 +315,63 @@
             .mdc-slider__thumb-knob { background-color: white !important; border-color: white !important; }
         }
     }
+}
+
+/* --- AUDIO STAGE LAYOUT --- */
+.audio-stage-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    width: 600px;
+    max-width: 90%;
+    margin-bottom: 2rem;
+    animation: fadeInStage 0.6s ease-out;
+
+    .audio-icon-container {
+        width: 140px;
+        height: 140px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+
+        .stage-icon {
+            font-size: 80px;
+            width: 80px;
+            height: 80px;
+            color: #a0c4ff;
+            filter: drop-shadow(0 0 15px rgba(160, 196, 255, 0.4));
+        }
+    }
+
+    .audio-metadata {
+        text-align: center;
+        
+        .audio-prompt {
+            font-size: 1.75rem;
+            font-weight: 500;
+            margin: 0 0 0.5rem 0;
+            color: #fff;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .audio-type {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+    }
+}
+
+@keyframes fadeInStage {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

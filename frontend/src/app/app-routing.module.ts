@@ -14,38 +14,41 @@
  * limitations under the License.
  */
 
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
-import { AdminAuthGuard } from './admin/admin-auth.guard';
-import { ArenaComponent } from './arena/arena.component';
-import { AudioComponent } from './audio/audio.component';
-import { AuthGuardService } from './common/services/auth.guard.service';
-import { FunTemplatesComponent } from './fun-templates/fun-templates.component';
-import { MediaDetailComponent } from './gallery/media-detail/media-detail.component';
-import { MediaGalleryComponent } from './gallery/media-gallery/media-gallery.component';
-import { HomeComponent } from './home/home.component';
-import { LoginComponent } from './login/login.component';
-import { VideoComponent } from './video/video.component';
-import { VtoComponent } from './vto/vto.component';
-import { ExecutionHistoryComponent } from './workflows/execution-history/execution-history.component';
-import { WorkflowEditorComponent } from './workflows/workflow-editor/workflow-editor.component';
-import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.component';
-import { WorkbenchComponent } from './workbench/workbench.component';
-import { UpscaleComponent } from './upscale/upscale.component';
+import {NgModule} from '@angular/core';
+import {RouterModule, Routes} from '@angular/router';
+import {AdminAuthGuard} from './admin/admin-auth.guard';
+import {AudioComponent} from './audio/audio.component';
+import {AuthGuardService} from './common/services/auth.guard.service';
+import {FunTemplatesComponent} from './fun-templates/fun-templates.component';
+import {MediaDetailComponent} from './gallery/media-detail/media-detail.component';
+import {MediaGalleryComponent} from './gallery/media-gallery/media-gallery.component';
+import {HomeComponent} from './home/home.component';
+import {LoginComponent} from './login/login.component';
+import {VideoComponent} from './video/video.component';
+import {VtoComponent} from './vto/vto.component';
+import {ExecutionHistoryComponent} from './workflows/execution-history/execution-history.component';
+import {WorkflowEditorComponent} from './workflows/workflow-editor/workflow-editor.component';
+import {WorkflowListComponent} from './workflows/workflow-list/workflow-list.component';
+import {WorkbenchComponent} from './workbench/workbench.component';
+import {UpscaleComponent} from './upscale/upscale.component';
+import {UserRolesEnum} from './common/models/user.model';
 
 const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: '', component: HomeComponent, canActivate: [AuthGuardService] },
+  {path: 'login', component: LoginComponent},
+  {path: '', component: HomeComponent, canActivate: [AuthGuardService]},
   {
     path: 'fun-templates',
     component: FunTemplatesComponent,
     canActivate: [AuthGuardService],
   },
   {path: 'video', component: VideoComponent, canActivate: [AuthGuardService]},
-  {path: 'arena', component: ArenaComponent, canActivate: [AuthGuardService]},
   {path: 'vto', component: VtoComponent, canActivate: [AuthGuardService]},
   {path: 'audio', component: AudioComponent, canActivate: [AuthGuardService]},
-  {path: 'workbench', component:WorkbenchComponent, canActivate: [AuthGuardService]},
+  {
+    path: 'workbench',
+    component: WorkbenchComponent,
+    canActivate: [AuthGuardService],
+  },
   // When a user goes to '/gallery', show the main feed.
   {
     path: 'gallery',
@@ -56,6 +59,12 @@ const routes: Routes = [
   {
     path: 'gallery/:id',
     component: MediaDetailComponent,
+    canActivate: [AuthGuardService],
+  },
+  {
+    path: 'asset-detail/:id',
+    component: MediaDetailComponent,
+    canActivate: [AuthGuardService],
   },
   // Optional: Redirect the base URL to the gallery
   {
@@ -71,19 +80,32 @@ const routes: Routes = [
   {
     path: 'workflows',
     canActivate: [AuthGuardService],
+    data: {requiredRoles: [UserRolesEnum.WORKFLOWS, UserRolesEnum.ADMIN]},
     children: [
-      { path: '', component: WorkflowListComponent, pathMatch: 'full' },
-      { path: 'new', component: WorkflowEditorComponent, canActivate: [AdminAuthGuard] },
+      {path: '', component: WorkflowListComponent, pathMatch: 'full'},
+      {
+        path: 'new',
+        component: WorkflowEditorComponent,
+        canActivate: [AuthGuardService],
+      },
       // Match the parameter names used in your WorkflowEditorComponent
-      { path: 'edit/:workflowId', component: WorkflowEditorComponent, canActivate: [AdminAuthGuard] },
-      { path: ':id/executions', component: ExecutionHistoryComponent },
+      {
+        path: 'edit/:workflowId',
+        component: WorkflowEditorComponent,
+        canActivate: [AuthGuardService],
+      },
+      {path: ':id/executions', component: ExecutionHistoryComponent},
     ],
   },
-  { path: 'imagen-upscale', component: UpscaleComponent, canActivate: [AuthGuardService] },
+  {
+    path: 'imagen-upscale',
+    component: UpscaleComponent,
+    canActivate: [AuthGuardService],
+  },
 ];
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}

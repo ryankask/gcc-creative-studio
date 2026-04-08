@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from pydantic import BaseModel
-from typing import List
 
 
 class GenerationOptionsResponse(BaseModel):
     """Defines the shape of the data for frontend dropdown options."""
 
-    generation_models: List[str]
-    aspect_ratios: List[str]
-    styles: List[str]
-    lightings: List[str]
-    colors_and_tones: List[str]
-    composition: List[str]
-    numbers_of_images: List[int]
+    generation_models: list[str]
+    aspect_ratios: list[str]
+    styles: list[str]
+    lightings: list[str]
+    colors_and_tones: list[str]
+    composition: list[str]
+    numbers_of_images: list[int]

@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from src.common.base_dto import MimeTypeEnum
 from src.media_templates.schema.media_template_model import IndustryEnum
 
 
@@ -37,14 +36,15 @@ class CreatePromptTemplateDto(BaseModel):
     ]
 
     # --- Categorization & Filtering Fields ---
-    industry: Optional[IndustryEnum] = Field(
-        default=None, description="The target industry for this template."
+    industry: IndustryEnum | None = Field(
+        default=None,
+        description="The target industry for this template.",
     )
-    brand: Optional[str] = Field(
+    brand: str | None = Field(
         default=None,
         description="The specific brand this template is inspired by, e.g., 'IKEA'.",
     )
-    tags: Optional[List[str]] = Field(
+    tags: list[str] | None = Field(
         default_factory=list,
         description="A list of searchable keywords for filtering, e.g., ['futuristic', 'vibrant'].",
     )

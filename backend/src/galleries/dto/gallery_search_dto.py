@@ -12,21 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+import datetime
 
 from pydantic import Field
 
-from src.common.base_dto import GenerationModelEnum, MimeTypeEnum, WildcardMimeTypeEnum
+from src.common.base_dto import (
+    GenerationModelEnum,
+    MimeTypeEnum,
+    WildcardMimeTypeEnum,
+)
 from src.common.dto.base_search_dto import BaseSearchDto
 from src.common.schema.media_item_model import JobStatusEnum
-from src.galleries.dto.gallery_response_dto import MediaItemResponse
 
 
 class GallerySearchDto(BaseSearchDto):
-    user_email: Optional[str] = None
-    mime_type: Optional[Union[MimeTypeEnum, WildcardMimeTypeEnum]] = None
-    model: Optional[GenerationModelEnum] = None
-    status: Optional[JobStatusEnum] = None
-    workspace_id: int = Field(
-        ge=1, description="The ID of the workspace to search within."
+    user_email: str | None = None
+    mime_type: MimeTypeEnum | WildcardMimeTypeEnum | None = None
+    model: GenerationModelEnum | None = None
+    status: JobStatusEnum | None = None
+    workspace_id: int | None = Field(
+        None,
+        ge=1,
+        description="The ID of the workspace to search within.",
     )
+    include_deleted: bool = False
+    start_date: datetime.datetime | None = None
+    end_date: datetime.datetime | None = None
+    item_type: str | None = None  # 'media_item' or 'source_asset'
+    query: str | None = None
+    tags: list[str] | None = None

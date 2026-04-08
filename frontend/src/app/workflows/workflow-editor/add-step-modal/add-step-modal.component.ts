@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Component } from '@angular/core';
-import { MatDialogRef } from '@angular/material/dialog';
+import {Component} from '@angular/core';
+import {MatDialogRef} from '@angular/material/dialog';
 
 // Defines the UI for each button in the palette
 interface StepTypeOption {
@@ -29,35 +29,34 @@ interface StepTypeOption {
 @Component({
   selector: 'app-add-step-modal',
   templateUrl: './add-step-modal.component.html',
-  styleUrls: ['./add-step-modal.component.scss']
+  styleUrls: ['./add-step-modal.component.scss'],
 })
 export class AddStepModalComponent {
-
   // This list drives the UI. Add/remove items here to change the palette.
   stepTypes: StepTypeOption[] = [
     {
       type: 'generate_text',
       label: 'Generate Text',
       description: 'Generates text content using a large language model.',
-      icon: 'description'
+      icon: 'description',
     },
     {
       type: 'generate_image',
       label: 'Generate Image',
       description: 'Generates an image from a text prompt.',
-      icon: 'image'
+      icon: 'image',
     },
     {
       type: 'edit_image',
       label: 'Edit Image',
       description: 'Modifies an image using an editing or inpainting model.',
-      icon: 'edit'
+      icon: 'edit',
     },
     {
       type: 'virtual_try_on',
       label: 'Virtual Try-On',
       description: 'Applies a garment to a model image.',
-      icon: 'checkroom'
+      icon: 'checkroom',
     },
     {
       type: 'generate_video',
@@ -70,12 +69,10 @@ export class AddStepModalComponent {
       label: 'Generate Audio',
       description: 'Generates audio (music or speech) from a text prompt.',
       icon: 'music_note',
-    }
+    },
   ];
 
-  constructor(
-    public dialogRef: MatDialogRef<AddStepModalComponent>
-  ) { }
+  constructor(public dialogRef: MatDialogRef<AddStepModalComponent>) {}
 
   /**
    * Closes the dialog and returns the selected step type (e.g., 'generate_image')

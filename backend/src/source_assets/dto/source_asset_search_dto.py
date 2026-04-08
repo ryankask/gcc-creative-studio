@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from src.common.dto.base_search_dto import BaseSearchDto
 from src.source_assets.schema.source_asset_model import (
@@ -22,13 +21,14 @@ from src.source_assets.schema.source_asset_model import (
 
 
 class SourceAssetSearchDto(BaseSearchDto):
-    """
-    Defines the query parameters for paginated search of user assets.
-    """
-    mime_type: Optional[str] = None
+    """Defines the query parameters for paginated search of user assets."""
+
+    mime_type: str | None = None
 
     # This fields will ONLY be used if the requester is an ADMIN
-    user_email: Optional[str] = None
-    scope: Optional[AssetScopeEnum] = None
-    asset_type: Optional[AssetTypeEnum] = None
-    original_filename: Optional[str] = None
+    user_email: str | None = None
+    scope: AssetScopeEnum | None = None
+    asset_type: AssetTypeEnum | None = None
+    original_filename: str | None = None
+    workspace_id: int | None = None
+    tags: list[str] | None = None

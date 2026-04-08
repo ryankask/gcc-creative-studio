@@ -14,19 +14,31 @@
  * limitations under the License.
  */
 
-import { Component, ElementRef, ViewChild } from '@angular/core';
-import { AudioService, CreateAudioDto, GenerationModelEnum } from '../services/audio/audio.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSelectChange } from '@angular/material/select';
-import { finalize } from 'rxjs';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { MediaItem } from '../common/models/media-item.model';
-import { AddVoiceDialogComponent } from '../components/add-voice-dialog/add-voice-dialog.component';
-import { MatIconRegistry } from '@angular/material/icon';
+import {Component, ElementRef, Inject, ViewChild} from '@angular/core';
+import {
+  AudioService,
+  CreateAudioDto,
+  GenerationModelEnum,
+} from '../services/audio/audio.service';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatDialog} from '@angular/material/dialog';
+import {OnInit} from '@angular/core';
+import {MatSelectChange} from '@angular/material/select';
+import {finalize} from 'rxjs';
+import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
+import {JobStatus, MediaItem} from '../common/models/media-item.model';
+import {AddVoiceDialogComponent} from '../components/add-voice-dialog/add-voice-dialog.component';
+import {MatIconRegistry} from '@angular/material/icon';
 import {LanguageEnum, VoiceEnum} from './audio.constants';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
+import {SearchService} from '../services/search/search.service';
+import {AudioStateService} from '../services/audio-state.service';
+import {GalleryService} from '../gallery/gallery.service';
+import {Observable} from 'rxjs';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../utils/handleMessageSnackbar';
 
 // UI Helper type
 type UiModelType = 'lyria' | 'chirp' | 'gemini-tts';
@@ -47,11 +59,16 @@ interface LanguageOption {
   templateUrl: './audio.component.html',
   styleUrls: ['./audio.component.scss'],
 })
-export class AudioComponent {
+export class AudioComponent implements OnInit {
   // UI State
   selectedModel: UiModelType = 'lyria';
   isLoading = false;
   audioUrl: SafeResourceUrl | null = null;
+
+  // Job Tracking
+  activeAudioJob$: Observable<MediaItem | null>;
+  public readonly JobStatus = JobStatus;
+  showErrorOverlay = true;
 
   // Lyria Specific Inputs
   prompt = '';
@@ -154,22 +171,53 @@ export class AudioComponent {
     {id: VoiceEnum.ZEPHYR, name: 'Zephyr (Female)', type: 'preset'},
     {id: VoiceEnum.ZUBENELGENUBI, name: 'Zubenelgenubi (Male)', type: 'preset'},
   ];
+  private path = '../../assets/images';
 
   constructor(
-    private audioService: AudioService,
+    private searchService: SearchService,
+    private audioStateService: AudioStateService,
     private snackBar: MatSnackBar,
     private workspaceStateService: WorkspaceStateService,
     private dialog: MatDialog,
     private sanitizer: DomSanitizer,
     public matIconRegistry: MatIconRegistry,
+    @Inject(GalleryService)
+    private galleryService: GalleryService,
   ) {
+    this.activeAudioJob$ = this.searchService.activeAudioJob$;
+
     this.matIconRegistry.addSvgIcon(
       'white-gemini-spark-icon',
       this.setPath(`${this.path}/white-gemini-spark-icon.svg`),
     );
   }
 
-  private path = '../../assets/images';
+  ngOnInit() {
+    this.restoreState();
+  }
+
+  saveState() {
+    this.audioStateService.updateState({
+      model: this.selectedModel,
+      prompt: this.prompt,
+      negativePrompt: this.negativePrompt,
+      seed: this.seed,
+      sampleCount: this.sampleCount,
+      selectedLanguage: this.selectedLanguage,
+      selectedVoice: this.selectedVoice,
+    });
+  }
+
+  private restoreState() {
+    const state = this.audioStateService.getState();
+    this.selectedModel = state.model as UiModelType;
+    this.prompt = state.prompt;
+    this.negativePrompt = state.negativePrompt;
+    this.seed = state.seed;
+    this.sampleCount = state.sampleCount;
+    this.selectedLanguage = state.selectedLanguage as LanguageEnum;
+    this.selectedVoice = state.selectedVoice as VoiceEnum;
+  }
 
   private setPath(url: string): SafeResourceUrl {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
@@ -210,7 +258,11 @@ export class AudioComponent {
 
     const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!activeWorkspaceId) {
-      handleErrorSnackbar(this.snackBar, { message: 'Please select a workspace first.' }, 'Workspace');
+      handleErrorSnackbar(
+        this.snackBar,
+        {message: 'Please select a workspace first.'},
+        'Workspace',
+      );
       return;
     }
 
@@ -246,29 +298,27 @@ export class AudioComponent {
           : undefined,
     };
 
-    this.isLoading = true;
+    this.saveState();
     this.audioUrl = null;
 
-    this.audioService
-      .generateAudio(request)
-      .pipe(finalize(() => (this.isLoading = false)))
-      .subscribe({
-        next: (response: MediaItem) => {
-          this.mediaItem = response;
-          // The Lightbox will handle displaying the first item automatically via inputs
-        },
-        error: (error: any) => {
-          handleErrorSnackbar(this.snackBar, error, 'Generation');
-          console.error('Generation failed:', error);
-        },
-      });
+    this.searchService.startAudioGeneration(request).subscribe({
+      error: (error: any) => {
+        handleErrorSnackbar(this.snackBar, error, 'Generation');
+        console.error('Generation failed:', error);
+      },
+    });
   }
 
   // --- Player Logic ---
+  closeErrorOverlay() {
+    this.showErrorOverlay = false;
+    this.searchService.clearActiveAudioJob();
+  }
+
   togglePlay() {
     const audio = this.audioPlayerRef.nativeElement;
     if (audio.paused) {
-      audio.play();
+      void audio.play();
       this.isPlaying = true;
     } else {
       audio.pause();
@@ -308,5 +358,30 @@ export class AudioComponent {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
+  deleteGeneratedMedia() {
+    if (!this.mediaItem?.id) return;
+
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (workspaceId === null) return;
+
+    const confirmDelete = confirm(
+      'Are you sure you want to delete this generation result?',
+    );
+    if (!confirmDelete) return;
+
+    this.galleryService
+      .bulkDelete([{id: this.mediaItem.id, type: 'media_item'}], workspaceId)
+      .subscribe({
+        next: () => {
+          handleSuccessSnackbar(this.snackBar, 'Audio deleted successfully');
+          this.mediaItem = null;
+          this.searchService.clearActiveAudioJob();
+        },
+        error: err => {
+          handleErrorSnackbar(this.snackBar, err, 'Delete result');
+        },
+      });
   }
 }

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from pydantic import Field
 
@@ -24,7 +23,7 @@ from src.brand_guidelines.schema.brand_guideline_model import (
 class BrandGuidelineResponseDto(BrandGuidelineModel):
     """Response DTO for a brand guideline, including presigned URLs."""
 
-    presigned_source_pdf_urls: List[str] = Field(
+    presigned_source_pdf_urls: list[str] = Field(
         default_factory=list,
         description="Presigned URLs for the source PDF chunks.",
     )

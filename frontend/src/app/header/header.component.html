@@ -175,6 +175,7 @@
         
         
         <div
+          *ngIf="authService.isUserAdmin() || authService.isUserWorkflows()"
           routerLink="/workflows"
           matTooltip="Workflows"
           matTooltipPosition="right"

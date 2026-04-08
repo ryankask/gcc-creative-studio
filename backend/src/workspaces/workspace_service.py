@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, status
 
@@ -30,9 +29,7 @@ from src.workspaces.schema.workspace_model import (
 
 
 class WorkspaceService:
-    """
-    Handles the business logic for workspace management.
-    """
+    """Handles the business logic for workspace management."""
 
     def __init__(
         self,
@@ -45,12 +42,16 @@ class WorkspaceService:
         self.email_service = email_service
 
     async def create_workspace(
-        self, user: UserModel, create_dto: CreateWorkspaceDto
+        self,
+        user: UserModel,
+        create_dto: CreateWorkspaceDto,
     ) -> WorkspaceModel:
         """Creates a new workspace with the creator as the owner."""
         # 1. Create the owner as the first member of the workspace
         owner_as_member = WorkspaceMember(
-            user_id=user.id, email=user.email, role=WorkspaceRoleEnum.OWNER
+            user_id=user.id,
+            email=user.email,
+            role=WorkspaceRoleEnum.OWNER,
         )
 
         # 2. Create the new Workspace model instance
@@ -58,16 +59,18 @@ class WorkspaceService:
             name=create_dto.name,
             owner_id=user.id,
         )
-        return await self.workspace_repo.create(new_workspace, initial_members=[owner_as_member])
+        return await self.workspace_repo.create(
+            new_workspace,
+            initial_members=[owner_as_member],
+        )
 
     async def invite_user_to_workspace(
         self,
         workspace_id: int,
         invite_dto: InviteUserDto,
         current_user: UserModel,
-    ) -> Optional[WorkspaceModel]:
-        """
-        Invites a user to a workspace by adding them to the members list.
+    ) -> WorkspaceModel | None:
+        """Invites a user to a workspace by adding them to the members list.
         This action is restricted to the workspace owner or a system admin.
         """
         # 1. Authorization Check: Verify the inviting user has permission.
@@ -100,7 +103,9 @@ class WorkspaceService:
             role=invite_dto.role,
         )
         updated_workspace = await self.workspace_repo.add_member_to_workspace(
-            workspace_id, new_member, invited_user.id
+            workspace_id,
+            new_member,
+            invited_user.id,
         )
 
         # 4. Send an invitation email to the user.
@@ -113,17 +118,22 @@ class WorkspaceService:
             )
         return updated_workspace
 
-    async def list_workspaces_for_user(self, user: UserModel) -> List[WorkspaceModel]:
-        """
-        Retrieves all workspaces a user has access to. This includes:
+    async def list_workspaces_for_user(
+        self, user: UserModel
+    ) -> list[WorkspaceModel]:
+        """Retrieves all workspaces a user has access to. This includes:
         1. All public workspaces.
         2. All private workspaces where the user is a member.
         """
         # 1. Fetch all workspaces where the user is explicitly a member.
-        private_workspaces = await self.workspace_repo.find_by_member_id(user.id)
+        private_workspaces = await self.workspace_repo.find_by_member_id(
+            user.id
+        )
 
         # 2. Fetch all public workspaces.
-        public_workspaces = await self.workspace_repo.get_all_public_workspaces()
+        public_workspaces = (
+            await self.workspace_repo.get_all_public_workspaces()
+        )
 
         # 3. Combine the lists and remove duplicates.
         # A dictionary is used to ensure uniqueness based on workspace ID.

@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
 
 from fastapi import Depends
-from sqlalchemy import func, select, or_, and_
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.base_repository import BaseRepository
@@ -37,14 +36,16 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
         super().__init__(model=SourceAsset, schema=SourceAssetModel, db=db)
 
     async def find_by_hash(
-        self, user_id: int, file_hash: str
-    ) -> Optional[SourceAssetModel]:
+        self,
+        user_id: int,
+        file_hash: str,
+    ) -> SourceAssetModel | None:
         """Finds a user asset by its file hash to prevent duplicates."""
         result = await self.db.execute(
             select(self.model)
             .where(self.model.user_id == user_id)
             .where(self.model.file_hash == file_hash)
-            .limit(1)
+            .limit(1),
         )
         asset = result.scalar_one_or_none()
         if not asset:
@@ -54,11 +55,9 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
     async def query(
         self,
         search_dto: SourceAssetSearchDto,
-        target_user_id: Optional[int] = None,
+        target_user_id: int | None = None,
     ) -> PaginationResponseDto[SourceAssetModel]:
-        """
-        Performs a paginated query for assets.
-        """
+        """Performs a paginated query for assets."""
         query = select(self.model)
 
         # Apply filters
@@ -74,22 +73,46 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
                 query = query.where(self.model.mime_type.like("audio/%"))
             else:
                 # Exact match for specific mime types like "image/png"
-                query = query.where(self.model.mime_type == search_dto.mime_type)
-        
+                query = query.where(
+                    self.model.mime_type == search_dto.mime_type
+                )
+
         if target_user_id:
             query = query.where(self.model.user_id == target_user_id)
-        
+
         if search_dto.scope:
             query = query.where(self.model.scope == search_dto.scope.value)
-        
+
         if search_dto.asset_type:
-            query = query.where(self.model.asset_type == search_dto.asset_type.value)
-        
+            query = query.where(
+                self.model.asset_type == search_dto.asset_type.value
+            )
+
         if search_dto.original_filename:
             # Prefix search
             query = query.where(
-                self.model.original_filename.like(f"{search_dto.original_filename}%")
+                self.model.original_filename.like(
+                    f"{search_dto.original_filename}%"
+                ),
             )
+
+        if hasattr(search_dto, "workspace_id") and search_dto.workspace_id:
+            query = query.where(
+                self.model.workspace_id == search_dto.workspace_id
+            )
+
+        if hasattr(search_dto, "tags") and search_dto.tags:
+            from sqlalchemy import exists
+            from src.tags.schema.tags_model import source_asset_tags, Tag
+
+            for tag_name in search_dto.tags:
+                query = query.where(
+                    select(source_asset_tags.c.source_asset_id)
+                    .join(Tag, Tag.id == source_asset_tags.c.tag_id)
+                    .where(source_asset_tags.c.source_asset_id == self.model.id)
+                    .where(Tag.name == tag_name)
+                    .exists()
+                )
 
         # Count
         count_query = select(func.count()).select_from(query.subquery())
@@ -99,11 +122,11 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
         # Order and Pagination
         query = query.order_by(self.model.created_at.desc())
         query = query.limit(search_dto.limit)
-        
+
         # Execute
         result = await self.db.execute(query)
         assets = result.scalars().all()
-        
+
         asset_data = [self.schema.model_validate(asset) for asset in assets]
 
         # Calculate pagination metadata
@@ -120,28 +143,28 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
         )
 
     async def find_by_scope_and_types(
-        self, scope: AssetScopeEnum, asset_types: List[AssetTypeEnum]
-    ) -> List[SourceAssetModel]:
-        """
-        Finds all assets matching a specific scope and a list of asset types.
-        """
+        self,
+        scope: AssetScopeEnum,
+        asset_types: list[AssetTypeEnum],
+    ) -> list[SourceAssetModel]:
+        """Finds all assets matching a specific scope and a list of asset types."""
         if not asset_types:
             return []
 
         result = await self.db.execute(
             select(self.model)
             .where(self.model.scope == scope.value)
-            .where(self.model.asset_type.in_([t.value for t in asset_types]))
+            .where(self.model.asset_type.in_([t.value for t in asset_types])),
         )
         assets = result.scalars().all()
         return [self.schema.model_validate(asset) for asset in assets]
 
     async def find_private_by_user_and_types(
-        self, user_id: int, asset_types: List[AssetTypeEnum]
-    ) -> List[SourceAssetModel]:
-        """
-        Finds all private assets for a specific user that match a list of asset types.
-        """
+        self,
+        user_id: int,
+        asset_types: list[AssetTypeEnum],
+    ) -> list[SourceAssetModel]:
+        """Finds all private assets for a specific user that match a list of asset types."""
         if not asset_types:
             return []
 
@@ -149,15 +172,15 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
             select(self.model)
             .where(self.model.user_id == user_id)
             .where(self.model.scope == AssetScopeEnum.PRIVATE.value)
-            .where(self.model.asset_type.in_([t.value for t in asset_types]))
+            .where(self.model.asset_type.in_([t.value for t in asset_types])),
         )
         assets = result.scalars().all()
         return [self.schema.model_validate(asset) for asset in assets]
 
-    async def get_by_gcs_uri(self, gcs_uri: str) -> Optional[SourceAssetModel]:
+    async def get_by_gcs_uri(self, gcs_uri: str) -> SourceAssetModel | None:
         """Finds an asset by its GCS URI."""
         result = await self.db.execute(
-            select(self.model).where(self.model.gcs_uri == gcs_uri).limit(1)
+            select(self.model).where(self.model.gcs_uri == gcs_uri).limit(1),
         )
         asset = result.scalar_one_or_none()
         if not asset:
@@ -165,10 +188,11 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
         return self.schema.model_validate(asset)
 
     async def find_system_and_private_assets_by_types(
-        self, user_id: int, asset_types: List[AssetTypeEnum]
-    ) -> List[SourceAssetModel]:
-        """
-        Finds all system assets AND private assets for a specific user that match a list of asset types.
+        self,
+        user_id: int,
+        asset_types: list[AssetTypeEnum],
+    ) -> list[SourceAssetModel]:
+        """Finds all system assets AND private assets for a specific user that match a list of asset types.
         This combines two queries into one using OR logic.
         """
         if not asset_types:
@@ -183,9 +207,9 @@ class SourceAssetRepository(BaseRepository[SourceAsset, SourceAssetModel]):
                         self.model.user_id == user_id,
                         self.model.scope == AssetScopeEnum.PRIVATE.value,
                     ),
-                )
+                ),
             )
-            .where(self.model.asset_type.in_([t.value for t in asset_types]))
+            .where(self.model.asset_type.in_([t.value for t in asset_types])),
         )
         assets = result.scalars().all()
         return [self.schema.model_validate(asset) for asset in assets]

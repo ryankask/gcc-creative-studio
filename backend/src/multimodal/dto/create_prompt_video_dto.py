@@ -12,22 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+
+from typing import Annotated
+
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import Annotated
 
 
 class Metadata(BaseModel):
     """High-level administrative data for the prompt."""
 
     prompt_name: Annotated[
-        str, Field(description="A descriptive name for your video project.")
+        str,
+        Field(description="A descriptive name for your video project."),
     ]
     version: float = Field(
         default=1.0, description="Version of the prompt structure."
     )
     target_model: str = Field(
-        default="Veo", description="The target video generation model."
+        default="Veo",
+        description="The target video generation model.",
     )
     core_concept: Annotated[
         str,
@@ -41,16 +44,16 @@ class SceneSetup(BaseModel):
     environment: Annotated[
         str,
         Field(
-            description="Describe the overall setting, e.g., 'A futuristic cityscape at night'."
+            description="Describe the overall setting, e.g., 'A futuristic cityscape at night'.",
         ),
     ]
     mood: Annotated[
         str,
         Field(
-            description="Comma-separated list of keywords describing the feeling, e.g., 'Cyberpunk, noir, tense'."
+            description="Comma-separated list of keywords describing the feeling, e.g., 'Cyberpunk, noir, tense'.",
         ),
     ]
-    key_objects: List[str] = Field(
+    key_objects: list[str] = Field(
         default_factory=list,
         description="Crucial objects present in the scene.",
     )
@@ -66,14 +69,14 @@ class Subject(BaseModel):
     main_subject: Annotated[
         str,
         Field(
-            description="The primary character, object, or focus of the video. E.g., 'A golden retriever puppy', 'A vintage sports car'."
+            description="The primary character, object, or focus of the video. E.g., 'A golden retriever puppy', 'A vintage sports car'.",
         ),
     ]
-    character_details: Optional[str] = Field(
+    character_details: str | None = Field(
         default=None,
         description="Personality, appearance, or specific features if the subject is a character.",
     )
-    key_objects: List[str] = Field(
+    key_objects: list[str] = Field(
         default_factory=list,
         description="Other crucial objects that are part of the subject or interact with it.",
     )
@@ -85,13 +88,13 @@ class VisualStyle(BaseModel):
     aesthetic: Annotated[
         str,
         Field(
-            description="Comma-separated list of visual keywords, e.g., 'Cinematic, hyper-realistic'."
+            description="Comma-separated list of visual keywords, e.g., 'Cinematic, hyper-realistic'.",
         ),
     ]
     color_palette: Annotated[
         str,
         Field(
-            description="Describe the dominant colors or lighting, e.g., 'Neon blues and deep blacks'."
+            description="Describe the dominant colors or lighting, e.g., 'Neon blues and deep blacks'.",
         ),
     ]
     resolution_and_format: str = Field(
@@ -104,18 +107,18 @@ class CameraDirectives(BaseModel):
     """Specifies the technical cinematography details, including camera angles, movements, and lens effects."""
 
     camera_angles: Annotated[
-        List[str],
+        list[str],
         Field(
-            description="List of desired camera angles. E.g., ['low-angle', 'top-down', 'dutch angle']."
+            description="List of desired camera angles. E.g., ['low-angle', 'top-down', 'dutch angle'].",
         ),
     ]
     camera_movements: Annotated[
-        List[str],
+        list[str],
         Field(
-            description="List of camera movements. E.g., ['static shot', 'slow dolly-in', 'crane shot', 'slow motion']."
+            description="List of camera movements. E.g., ['static shot', 'slow dolly-in', 'crane shot', 'slow motion'].",
         ),
     ]
-    lens_and_optical_effects: Optional[str] = Field(
+    lens_and_optical_effects: str | None = Field(
         default=None,
         description="Describes lens choice and effects. E.g., '85mm macro lens with a shallow depth of field', 'Anamorphic lens flare'.",
     )
@@ -125,7 +128,8 @@ class TimelineEvent(BaseModel):
     """Represents a single, sequential event in the video's timeline."""
 
     sequence_id: Annotated[
-        int, Field(description="The order of this event in the timeline.")
+        int,
+        Field(description="The order of this event in the timeline."),
     ]
     timestamp: Annotated[
         str,
@@ -138,22 +142,23 @@ class TimelineEvent(BaseModel):
         ),
     ]
     camera_instruction: str = Field(
-        default="", description="Specific camera movement for this sequence."
+        default="",
+        description="Specific camera movement for this sequence.",
     )
 
 
 class AudioDesign(BaseModel):
     """Describes the overall soundscape of the video."""
 
-    music_style: Optional[str] = Field(
+    music_style: str | None = Field(
         default=None,
         description="Style of background music. E.g., 'Epic orchestral score', 'Minimalist ambient synth'.",
     )
-    key_sound_effects: Optional[str] = Field(
+    key_sound_effects: str | None = Field(
         default=None,
         description="Important SFX. E.g., 'The crisp sound of footsteps on gravel', 'Magical chimes'.",
     )
-    dialogue_or_narration: Optional[str] = Field(
+    dialogue_or_narration: str | None = Field(
         default=None,
         description="Description of any spoken words. E.g., 'Calm, female narrator', 'No dialogue'.",
     )
@@ -166,7 +171,7 @@ class AudioDesign(BaseModel):
 class Constraints(BaseModel):
     """Specifies what to explicitly exclude from the generation."""
 
-    negative_prompts: List[str] = Field(
+    negative_prompts: list[str] = Field(
         default_factory=list,
         description="List of elements to explicitly avoid.",
     )
@@ -181,23 +186,24 @@ class CreatePromptVideoDto(BaseModel):
     visual_style: VisualStyle
     camera_directives: CameraDirectives
     audio: AudioDesign
-    timeline: Annotated[List[TimelineEvent], Field(min_length=1)]
+    timeline: Annotated[list[TimelineEvent], Field(min_length=1)]
     constraints: Constraints
     final_summary_prompt: Annotated[
         str,
         Field(
-            description="A condensed paragraph combining all key elements. Serves as a summary for the AI."
+            description="A condensed paragraph combining all key elements. Serves as a summary for the AI.",
         ),
     ]
 
     @field_validator("timeline")
     def timeline_must_be_ordered(
-        cls, value: List[TimelineEvent]
-    ) -> List[TimelineEvent]:
+        cls,
+        value: list[TimelineEvent],
+    ) -> list[TimelineEvent]:
         """Ensures that timeline events are provided in a correct, sequential order."""
         ids = [event.sequence_id for event in value]
         if sorted(ids) != list(range(1, len(ids) + 1)):
             raise ValueError(
-                "Timeline sequence_id values must be unique and sequential, starting from 1."
+                "Timeline sequence_id values must be unique and sequential, starting from 1.",
             )
         return value

@@ -16,7 +16,6 @@ import asyncio
 import logging
 import mimetypes
 import os
-from typing import Dict, List, Optional
 
 # --- Setup Logging Globally First ---
 from src.config.logger_config import setup_logging
@@ -32,7 +31,7 @@ from src.common.base_dto import AspectRatioEnum
 from src.common.schema.media_item_model import AssetRoleEnum
 from src.common.storage_service import GcsService
 from src.config.config_service import config_service
-from src.database import AsyncSessionLocal, cleanup_connector
+from src.database import async_session_local, cleanup_connector
 from src.media_templates.repository.media_template_repository import (
     MediaTemplateRepository,
 )
@@ -71,9 +70,8 @@ def get_admin_email() -> str:
     return config_service.ADMIN_USER_EMAIL
 
 
-async def ensure_admin_user_exists(db: AsyncSession) -> Optional[UserModel]:
-    """
-    Ensures a user document exists for the admin running the script.
+async def ensure_admin_user_exists(db: AsyncSession) -> UserModel | None:
+    """Ensures a user document exists for the admin running the script.
     Returns the admin user model.
     """
     logger.info("--- Ensuring Admin User Exists ---")
@@ -92,28 +90,29 @@ async def ensure_admin_user_exists(db: AsyncSession) -> Optional[UserModel]:
         existing_user = await user_repo.get_by_email(admin_email)
 
         if existing_user:
-            logger.info(f"User document for '{admin_email}' already exists. ID: {existing_user.id}")
-            return existing_user
-        else:
-            logger.warning(
-                f"No user document found for email '{admin_email}'. Creating one."
-            )
-            name = admin_email.split("@")[0]
-            logger.info(f"Setting user's default name to '{name}'.")
-
-            # Use UserCreateDto or dict for creation
-            new_user_dto = UserCreateDto(
-                email=admin_email,
-                name=name,
-            )
-            user_data = new_user_dto.model_dump()
-            user_data["roles"] = [UserRoleEnum.USER, UserRoleEnum.ADMIN]
-            
-            created_user = await user_repo.create(user_data)
             logger.info(
-                f"Successfully created admin user document for '{admin_email}'. ID: {created_user.id}"
+                f"User document for '{admin_email}' already exists. ID: {existing_user.id}",
             )
-            return created_user
+            return existing_user
+        logger.warning(
+            f"No user document found for email '{admin_email}'. Creating one.",
+        )
+        name = admin_email.split("@")[0]
+        logger.info(f"Setting user's default name to '{name}'.")
+
+        # Use UserCreateDto or dict for creation
+        new_user_dto = UserCreateDto(
+            email=admin_email,
+            name=name,
+        )
+        user_data = new_user_dto.model_dump()
+        user_data["roles"] = [UserRoleEnum.USER, UserRoleEnum.ADMIN]
+
+        created_user = await user_repo.create(user_data)
+        logger.info(
+            f"Successfully created admin user document for '{admin_email}'. ID: {created_user.id}",
+        )
+        return created_user
 
     except Exception as e:
         logger.error(
@@ -123,10 +122,11 @@ async def ensure_admin_user_exists(db: AsyncSession) -> Optional[UserModel]:
         return None
 
 
-async def ensure_default_workspace_exists(db: AsyncSession, admin_user: Optional[UserModel]):
-    """
-    Checks if a public workspace exists and creates one if it doesn't.
-    """
+async def ensure_default_workspace_exists(
+    db: AsyncSession,
+    admin_user: UserModel | None,
+):
+    """Checks if a public workspace exists and creates one if it doesn't."""
     try:
         logger.info("Checking for default public workspace...")
         workspace_repo = WorkspaceRepository(db)
@@ -141,7 +141,9 @@ async def ensure_default_workspace_exists(db: AsyncSession, admin_user: Optional
             # We need an owner_id. If admin_user is None (e.g. system), we might have an issue.
             # But for now we assume admin_user is present if we are running this.
             if not admin_user:
-                logger.error("Cannot create default workspace without an admin user.")
+                logger.error(
+                    "Cannot create default workspace without an admin user."
+                )
                 return
 
             default_workspace = WorkspaceModel(
@@ -162,10 +164,8 @@ async def ensure_default_workspace_exists(db: AsyncSession, admin_user: Optional
 
 def upload_assets_from_folder(
     local_folder: str, gcs_prefix: str
-) -> Dict[str, str]:
-    """
-    Uploads all files from a local folder to a GCS path and returns a mapping.
-    """
+) -> dict[str, str]:
+    """Uploads all files from a local folder to a GCS path and returns a mapping."""
     gcs_service = GcsService()
     uri_map = {}
     logger.info(f"Uploading assets from '{local_folder}' to GCS...")
@@ -173,7 +173,7 @@ def upload_assets_from_folder(
     # Construct an absolute path to the assets folder
     abs_local_folder = os.path.join(SCRIPT_DIR, "assets", local_folder)
     logger.info(
-        f"Uploading assets from '{abs_local_folder}' to GCS prefix '{gcs_prefix}'..."
+        f"Uploading assets from '{abs_local_folder}' to GCS prefix '{gcs_prefix}'...",
     )
 
     if not os.path.isdir(abs_local_folder):
@@ -201,15 +201,15 @@ def upload_assets_from_folder(
 
 
 def upload_specific_assets(
-    local_filenames: set[str], local_folder: str, gcs_prefix: str
-) -> Dict[str, str]:
-    """
-    Uploads a specific list of files from a local folder to a GCS path.
-    """
+    local_filenames: set[str],
+    local_folder: str,
+    gcs_prefix: str,
+) -> dict[str, str]:
+    """Uploads a specific list of files from a local folder to a GCS path."""
     gcs_service = GcsService()
     uri_map = {}
     logger.info(
-        f"Uploading {len(local_filenames)} specific assets from '{local_folder}' to GCS..."
+        f"Uploading {len(local_filenames)} specific assets from '{local_folder}' to GCS...",
     )
 
     abs_local_folder = os.path.join(SCRIPT_DIR, "assets", local_folder)
@@ -232,10 +232,8 @@ def upload_specific_assets(
     return uri_map
 
 
-async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]):
-    """
-    Uploads media template assets and seeds the media_templates collection.
-    """
+async def seed_media_templates(db: AsyncSession, admin_user: UserModel | None):
+    """Uploads media template assets and seeds the media_templates collection."""
     logger.info("--- Starting Media Template Seeding ---")
     template_repo = MediaTemplateRepository(db)
     asset_repo = SourceAssetRepository(db)
@@ -271,7 +269,9 @@ async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]
     # 3. Upload only the required assets
     # Note: GCS upload is synchronous
     uri_map = upload_specific_assets(
-        required_filenames, "media-template", "media_template_assets"
+        required_filenames,
+        "media-template",
+        "media_template_assets",
     )
 
     # 4. Iterate through the new templates and create documents
@@ -294,14 +294,14 @@ async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]
 
         if not gcs_uris and template_data.get("local_uris"):
             logger.warning(
-                f"  - No assets found/uploaded for template '{template_name}'. Skipping."
+                f"  - No assets found/uploaded for template '{template_name}'. Skipping.",
             )
             continue
 
         public_workspace = await workspace_repo.get_public_workspace()
         if not public_workspace:
             logger.error(
-                "Public workspace not found. Cannot create system assets for templates."
+                "Public workspace not found. Cannot create system assets for templates.",
             )
             return
 
@@ -320,7 +320,7 @@ async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]
 
             if not local_uri or not mime_type:
                 logger.warning(
-                    f"  - Skipping invalid input asset data in '{template_name}': {asset_data}"
+                    f"  - Skipping invalid input asset data in '{template_name}': {asset_data}",
                 )
                 continue
 
@@ -338,7 +338,7 @@ async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]
                 # If asset already exists, get its ID to link it.
                 asset_id_to_link = existing_asset.id
                 logger.info(
-                    f"  - Found existing asset for '{local_uri}'. Re-using ID: {asset_id_to_link}"
+                    f"  - Found existing asset for '{local_uri}'. Re-using ID: {asset_id_to_link}",
                 )
             else:
                 # If asset does not exist, create it and get the new ID.
@@ -357,7 +357,7 @@ async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]
 
             if asset_id_to_link:
                 new_source_asset_links.append(
-                    {"asset_id": asset_id_to_link, "role": role}
+                    {"asset_id": asset_id_to_link, "role": role},
                 )
 
         # Create the Pydantic models
@@ -367,7 +367,7 @@ async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]
         # ID is auto-generated by DB, so we don't pass 'id' from template_data unless we want to force it (not recommended for Serial)
         # But template_data has "id" (string). We should probably ignore it or use it as name/slug if needed.
         # For now, we ignore the string ID from seed data and let DB generate int ID.
-        
+
         new_template = MediaTemplateModel(
             name=template_name,
             description=template_data["description"],
@@ -389,10 +389,8 @@ async def seed_media_templates(db: AsyncSession, admin_user: Optional[UserModel]
         logger.info(f"  - Successfully saved template '{template_name}'.")
 
 
-async def seed_vto_assets(db: AsyncSession, admin_user: Optional[UserModel]):
-    """
-    Uploads system-level VTO assets (garments, models) for the VTO feature.
-    """
+async def seed_vto_assets(db: AsyncSession, admin_user: UserModel | None):
+    """Uploads system-level VTO assets (garments, models) for the VTO feature."""
     logger.info("--- Starting VTO System Asset Seeding ---")
     asset_repo = SourceAssetRepository(db)
     workspace_repo = WorkspaceRepository(db)
@@ -436,11 +434,11 @@ async def seed_vto_assets(db: AsyncSession, admin_user: Optional[UserModel]):
                 # Convert the string to an AssetType enum member
                 asset_type = AssetType(type_string)
                 logger.info(
-                    f"  - Detected asset type as '{asset_type.value}' for {filename}"
+                    f"  - Detected asset type as '{asset_type.value}' for {filename}",
                 )
             except (ValueError, IndexError):
                 logger.warning(
-                    f"  - Could not determine asset type for '{filename}' from its name. Skipping."
+                    f"  - Could not determine asset type for '{filename}' from its name. Skipping.",
                 )
                 continue
 
@@ -464,9 +462,10 @@ async def main():
     try:
         # Run Database Migrations before seeding
         from src.database_migrations import run_pending_migrations
+
         await run_pending_migrations()
 
-        async with AsyncSessionLocal() as db:
+        async with async_session_local() as db:
             admin_user = await ensure_admin_user_exists(db)
             await ensure_default_workspace_exists(db, admin_user)
             await seed_vto_assets(db, admin_user)

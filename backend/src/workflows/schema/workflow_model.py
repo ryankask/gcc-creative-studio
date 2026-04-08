@@ -17,23 +17,20 @@ from enum import Enum
 from typing import (
     Annotated,
     Any,
-    Dict,
     Generic,
-    List,
     Literal,
-    Optional,
     TypeVar,
     Union,
 )
 
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from src.common.base_dto import BaseDto
-from src.common.base_repository import BaseDocument, BaseStringDocument
+from src.common.base_repository import BaseStringDocument
 from src.database import Base
-from sqlalchemy import JSON, Integer, String, func, ForeignKey, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import JSONB
 
 
 class NodeTypes(str, Enum):
@@ -62,11 +59,13 @@ class SourceMediaItemLink(BaseModel):
 
 class ReferenceMediaOrAsset(BaseModel):
     previewUrl: str
-    sourceAssetId: Optional[int] = None
-    sourceMediaItem: Optional[SourceMediaItemLink] = None
+    sourceAssetId: int | None = None
+    sourceMediaItem: SourceMediaItemLink | None = None
+
 
 class StepOutputReference(BaseModel):
     """Reference to an output from a previous step."""
+
     step: str
     output: str
 
@@ -94,8 +93,7 @@ class StepStatusEnum(str, Enum):
 
 
 class BaseStep(BaseDto, Generic[InputT, SettingsT]):
-    """
-    Abstract-like base step.
+    """Abstract-like base step.
     It defines that every step MUST have 'inputs' and 'settings',
     but their exact types (InputT, SettingsT) are determined by the subclass.
     """
@@ -105,11 +103,11 @@ class BaseStep(BaseDto, Generic[InputT, SettingsT]):
     # --- Execution State ---
     # These fields are populated during a Workflow Run.
     status: StepStatusEnum = Field(default=StepStatusEnum.IDLE)
-    error: Optional[str] = None  # To store error messages if status == FAILED
-    started_at: Optional[datetime.datetime] = None
-    completed_at: Optional[datetime.datetime] = None
+    error: str | None = None  # To store error messages if status == FAILED
+    started_at: datetime.datetime | None = None
+    completed_at: datetime.datetime | None = None
 
-    outputs: Dict[str, Any] = Field(default_factory=dict)
+    outputs: dict[str, Any] = Field(default_factory=dict)
 
     # --- Definition ---
     inputs: InputT
@@ -121,8 +119,13 @@ class BaseStep(BaseDto, Generic[InputT, SettingsT]):
 # =========================================
 
 
+WorkflowInputItem = Union[
+    StepOutputReference,
+    ReferenceMediaOrAsset,
+    int,
+    list[StepOutputReference | ReferenceMediaOrAsset | int],
+]
 
-WorkflowInputItem = Union[StepOutputReference, ReferenceMediaOrAsset, int, List[Union[StepOutputReference, ReferenceMediaOrAsset, int]]]
 
 # --- User Input ---
 class UserInputInputs(BaseModel):
@@ -142,9 +145,9 @@ class UserInputStep(BaseStep[UserInputInputs, UserInputSettings]):
 
 # --- Generate Text ---
 class GenerateTextInputs(BaseModel):
-    prompt: Union[StepOutputReference, str]
-    input_images: Optional[WorkflowInputItem] = None
-    input_videos: Optional[WorkflowInputItem] = None
+    prompt: StepOutputReference | str
+    input_images: WorkflowInputItem | None = None
+    input_videos: WorkflowInputItem | None = None
 
 
 class GenerateTextSettings(BaseModel):
@@ -161,7 +164,7 @@ class GenerateTextStep(BaseStep[GenerateTextInputs, GenerateTextSettings]):
 
 # --- Generate Image ---
 class GenerateImageInputs(BaseModel):
-    prompt: Union[StepOutputReference, str]
+    prompt: StepOutputReference | str
 
 
 class GenerateImageSettings(BaseModel):
@@ -179,7 +182,7 @@ class GenerateImageStep(BaseStep[GenerateImageInputs, GenerateImageSettings]):
 # --- Edit Image ---
 class EditImageInputs(BaseModel):
     input_images: WorkflowInputItem
-    prompt: Union[StepOutputReference, str]
+    prompt: StepOutputReference | str
 
 
 class EditImageSettings(BaseModel):
@@ -196,17 +199,17 @@ class EditImageStep(BaseStep[EditImageInputs, EditImageSettings]):
 
 # --- Generate Video ---
 class GenerateVideoInputs(BaseModel):
-    prompt: Union[StepOutputReference, str]
-    input_images: Optional[WorkflowInputItem] = None
-    start_frame: Optional[WorkflowInputItem] = None
-    end_frame: Optional[WorkflowInputItem] = None
+    prompt: StepOutputReference | str
+    input_images: WorkflowInputItem | None = None
+    start_frame: WorkflowInputItem | None = None
+    end_frame: WorkflowInputItem | None = None
 
 
 class GenerateVideoSettings(BaseModel):
     model: str
     brand_guidelines: bool
     aspect_ratio: str
-    input_mode: Optional[str] = None
+    input_mode: str | None = None
 
 
 class GenerateVideoStep(BaseStep[GenerateVideoInputs, GenerateVideoSettings]):
@@ -218,10 +221,10 @@ class GenerateVideoStep(BaseStep[GenerateVideoInputs, GenerateVideoSettings]):
 # --- Virtual Try-On ---
 class VirtualTryOnInputs(BaseModel):
     model_image: WorkflowInputItem
-    top_image: Optional[WorkflowInputItem] = None
-    bottom_image: Optional[WorkflowInputItem] = None
-    dress_image: Optional[WorkflowInputItem] = None
-    shoes_image: Optional[WorkflowInputItem] = None
+    top_image: WorkflowInputItem | None = None
+    bottom_image: WorkflowInputItem | None = None
+    dress_image: WorkflowInputItem | None = None
+    shoes_image: WorkflowInputItem | None = None
 
 
 class VirtualTryOnSettings(BaseModel):
@@ -236,19 +239,19 @@ class VirtualTryOnStep(BaseStep[VirtualTryOnInputs, VirtualTryOnSettings]):
 
 # --- Generate Audio ---
 class GenerateAudioInputs(BaseModel):
-    prompt: Union[StepOutputReference, str]
+    prompt: StepOutputReference | str
 
 
 class GenerateAudioSettings(BaseModel):
     model: str
-    voice_name: Optional[str] = None
-    language_code: Optional[str] = None
-    negative_prompt: Optional[str] = None
-    seed: Optional[int] = None
+    voice_name: str | None = None
+    language_code: str | None = None
+    negative_prompt: str | None = None
+    seed: int | None = None
 
     @field_validator("seed", mode="before")
     @classmethod
-    def empty_string_to_none(cls, v: Any) -> Optional[int]:
+    def empty_string_to_none(cls, v: Any) -> int | None:
         if v == "":
             return None
         return v
@@ -294,48 +297,47 @@ class WorkflowRunStatusEnum(str, Enum):
 
 
 class Workflow(Base):
-    """
-    SQLAlchemy model for the 'workflows' table.
-    """
+    """SQLAlchemy model for the 'workflows' table."""
+
     __tablename__ = "workflows"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(nullable=True)
-    steps: Mapped[List[Dict[str, Any]]] = mapped_column(JSONB, nullable=False)
-    
+    description: Mapped[str | None] = mapped_column(nullable=True)
+    steps: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         insert_default=func.now(),
-        server_default=func.now()
+        server_default=func.now(),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         insert_default=func.now(),
         onupdate=func.now(),
-        server_default=func.now()
+        server_default=func.now(),
     )
 
 
 class WorkflowBase(BaseModel):
     """Base model with fields common to both creating and representing a workflow."""
+
     name: str
-    description: Optional[str] = None
-    steps: List[WorkflowStep]
+    description: str | None = None
+    steps: list[WorkflowStep]
 
 
 class WorkflowModel(BaseStringDocument, WorkflowBase):
-    """
-    The editable workflow *definition* (template).
+    """The editable workflow *definition* (template).
     This is what the user edits in the UI.
     """
+
     user_id: int
 
 
 class WorkflowCreateDto(WorkflowBase, BaseDto):
     """DTO for creating a new workflow. Inherits fields from WorkflowBase."""
-    pass
 
 
 class WorkflowExecuteDto(BaseModel):
@@ -343,8 +345,7 @@ class WorkflowExecuteDto(BaseModel):
 
 
 class WorkflowRunModel(BaseStringDocument):
-    """
-    A record of a single, immutable workflow *execution*.
+    """A record of a single, immutable workflow *execution*.
     This is the "history" item.
     """
 
@@ -356,9 +357,9 @@ class WorkflowRunModel(BaseStringDocument):
     # --- Execution Status ---
     status: WorkflowRunStatusEnum = Field(default=WorkflowRunStatusEnum.RUNNING)
     started_at: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+        default_factory=lambda: datetime.datetime.now(datetime.UTC),
     )
-    completed_at: Optional[datetime.datetime] = None
+    completed_at: datetime.datetime | None = None
 
     # --- THE SNAPSHOT ---
     # A copy of the WorkflowBase at the time of the run.

@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from src.common.dto.base_search_dto import BaseSearchDto
-from pydantic import Field
 
 
 class WorkflowSearchDto(BaseSearchDto):
     """Data Transfer Object for searching and filtering workflows."""
 
-    name: Optional[str] = None
+    name: str | None = None

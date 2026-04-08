@@ -20,7 +20,6 @@ import mimetypes
 import os
 import shutil
 import uuid
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, UploadFile, status
 from PIL import Image as PILImage
@@ -44,11 +43,13 @@ from src.source_assets.dto.vto_assets_response_dto import VtoAssetsResponseDto
 from src.source_assets.repository.source_asset_repository import (
     SourceAssetRepository,
 )
+from src.tags.repository.tags_repository import TagsRepository
 from src.source_assets.schema.source_asset_model import (
     AssetScopeEnum,
     AssetTypeEnum,
     SourceAssetModel,
 )
+from src.users.repository.user_repository import UserRepository
 from src.users.user_model import UserModel, UserRoleEnum
 
 logger = logging.getLogger(__name__)
@@ -59,35 +60,39 @@ class SourceAssetService:
 
     def __init__(
         self,
-        repo: SourceAssetRepository= Depends(),
+        repo: SourceAssetRepository = Depends(),
+        user_repo: UserRepository = Depends(),
         gcs_service: GcsService = Depends(),
         iam_signer: IamSignerCredentials = Depends(),
         imagen_service: ImagenService = Depends(),
+        tags_repo: TagsRepository = Depends(),
     ):
         self.repo = repo
+        self.user_repo = user_repo
         self.gcs_service = gcs_service
         self.iam_signer = iam_signer
         self.imagen_service = imagen_service  # Service to perform the upscale
+        self.tags_repo = tags_repo
 
     async def _get_and_validate_aspect_ratio(
         self,
         contents: bytes,
         is_video: bool,
-        temp_video_path: Optional[str] = None,
-        provided_aspect_ratio: Optional[str] = None,
+        temp_video_path: str | None = None,
+        provided_aspect_ratio: str | None = None,
     ) -> AspectRatioEnum:
-        """
-        Validates a provided aspect ratio or deduces it from the file.
+        """Validates a provided aspect ratio or deduces it from the file.
         Rejects files that do not match a supported AspectRatioEnum value.
         """
         # For videos, we ALWAYS deduce the aspect ratio and ignore any provided one.
         if is_video:
             if not temp_video_path:
                 raise Exception(
-                    "Temp video path is required to deduce video aspect ratio."
+                    "Temp video path is required to deduce video aspect ratio.",
                 )
             width, height = await asyncio.to_thread(
-                get_video_dimensions, temp_video_path
+                get_video_dimensions,
+                temp_video_path,
             )
 
         # For images, we first check if a valid ratio was provided.
@@ -117,6 +122,7 @@ class SourceAssetService:
         supported_ratios = {
             e: float(e.value.split(":")[0]) / float(e.value.split(":")[1])
             for e in AspectRatioEnum
+            if ":" in e.value
         }
 
         closest_enum = min(
@@ -126,22 +132,24 @@ class SourceAssetService:
 
         # Check if the closest match is within a small tolerance (e.g., 2%)
         if abs(supported_ratios[closest_enum] - actual_ratio) > 0.02:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                f"Uploaded file has an unsupported aspect ratio (approx. {width}x{height}). Please use a supported format.",
+            logger.info(
+                f"Falling back to 'OTHER' ratio for {width}x{height} (actual ratio: {actual_ratio:.3f})",
             )
+            return AspectRatioEnum.OTHER
 
-        logger.info(f"Deduced aspect ratio as {closest_enum.value}")
+        logger.info("Deduced aspect ratio as %s", closest_enum.value)
         return closest_enum
 
     async def _create_asset_response(
-        self, asset: SourceAssetModel
+        self,
+        asset: SourceAssetModel,
+        user_email: str | None = None,
     ) -> SourceAssetResponseDto:
         """Generates presigned URLs for the asset and its thumbnail."""
         tasks = [
             asyncio.to_thread(
                 self.iam_signer.generate_presigned_url, asset.gcs_uri
-            )
+            ),
         ]
 
         if asset.original_gcs_uri:
@@ -149,7 +157,7 @@ class SourceAssetService:
                 asyncio.to_thread(
                     self.iam_signer.generate_presigned_url,
                     asset.original_gcs_uri,
-                )
+                ),
             )
 
         if asset.thumbnail_gcs_uri:
@@ -157,7 +165,7 @@ class SourceAssetService:
                 asyncio.to_thread(
                     self.iam_signer.generate_presigned_url,
                     asset.thumbnail_gcs_uri,
-                )
+                ),
             )
 
         results = await asyncio.gather(*tasks)
@@ -178,9 +186,9 @@ class SourceAssetService:
             presigned_url=presigned_url,
             presigned_original_url=presigned_original_url,
             presigned_thumbnail_url=presigned_thumbnail_url,
+            user_email=user_email,
         )
 
-    
     async def upload_asset(
         self,
         user: UserModel,
@@ -188,20 +196,19 @@ class SourceAssetService:
         filename: str,
         workspace_id: int,
         mime_type: str,
-        scope: Optional[AssetScopeEnum] = None,
-        asset_type: Optional[AssetTypeEnum] = None,
-        aspect_ratio: Optional[AspectRatioEnum] = None,
-        upscale_factor: Optional[str] = None,
-        enhance_input_image: Optional[bool] = None,
-        image_preservation_factor: Optional[float] = None,
+        scope: AssetScopeEnum | None = None,
+        asset_type: AssetTypeEnum | None = None,
+        aspect_ratio: AspectRatioEnum | None = None,
+        upscale_factor: str | None = None,
+        enhance_input_image: bool | None = None,
+        image_preservation_factor: float | None = None,
     ) -> SourceAssetResponseDto:
-        """
-        Handles uploading, de-duplicating, upscaling, and saving a new user asset.
-        """
+        """Handles uploading, de-duplicating, upscaling, and saving a new user asset."""
         contents = file_bytes
         if not contents:
             raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, "Cannot upload an empty file."
+                status.HTTP_400_BAD_REQUEST,
+                "Cannot upload an empty file.",
             )
 
         file_hash = hashlib.sha256(contents).hexdigest()
@@ -210,19 +217,17 @@ class SourceAssetService:
         existing_asset = await self.repo.find_by_hash(user.id, file_hash)
         if existing_asset:
             logger.info(
-                f"Duplicate asset found for user {user.email} with hash {file_hash[:8]}. Returning existing."
+                f"Duplicate asset found for user {user.email} with hash {file_hash[:8]}. Returning existing.",
             )
             return await self._create_asset_response(existing_asset)
 
         # 2. Handle file processing based on type (image vs. video vs. audio)
-        is_video: bool = bool(
-            mime_type and "video" in mime_type
-        )
-        is_audio: bool = bool(
-            mime_type and "audio" in mime_type
-        )
-        final_gcs_uri: Optional[str] = None
-        thumbnail_gcs_uri: Optional[str] = None
+        is_video: bool = bool(mime_type and "video" in mime_type)
+        is_audio: bool = bool(mime_type and "audio" in mime_type)
+        final_gcs_uri: str | None = None
+        thumbnail_gcs_uri: str | None = None
+        original_gcs_uri: str | None = None
+
         temp_dir = f"temp/source_assets/{uuid.uuid4()}"
         final_aspect_ratio: AspectRatioEnum
 
@@ -262,11 +267,13 @@ class SourceAssetService:
                 # --- Audio Upload Logic ---
                 # Audio files don't need image processing or aspect ratio
                 final_aspect_ratio = aspect_ratio or AspectRatioEnum.RATIO_1_1
-                
+
                 # Determine audio mime type
                 audio_mime = mime_type or "audio/mpeg"
-                file_extension = os.path.splitext(filename or "audio.mp3")[1] or ".mp3"
-                
+                file_extension = (
+                    os.path.splitext(filename or "audio.mp3")[1] or ".mp3"
+                )
+
                 # Upload the audio file directly
                 final_gcs_uri = self.gcs_service.store_to_gcs(
                     folder=f"source_assets/{user.id}/audio",
@@ -301,10 +308,12 @@ class SourceAssetService:
 
                 # If the image is already high-resolution, we skip upscaling.
                 # Validate resolution for upscaling
-                MAX_OUTPUT_PIXELS = 17 * 1024 * 1024 # ~17MP limit for Imagen 4 Upscale
+                MAX_OUTPUT_PIXELS = (
+                    17 * 1024 * 1024
+                )  # ~17MP limit for Imagen 4 Upscale
 
                 current_pixels = pil_image.width * pil_image.height
-                
+
                 # --- Upscale Conditional Logic ---
                 if upscale_factor:
                     factor_int = 2
@@ -313,14 +322,16 @@ class SourceAssetService:
                     elif upscale_factor == "x3":
                         factor_int = 3
 
-                    projected_pixels = current_pixels * (factor_int * factor_int)
+                    projected_pixels = current_pixels * (
+                        factor_int * factor_int
+                    )
 
                     if projected_pixels > MAX_OUTPUT_PIXELS:
-                         raise HTTPException(
+                        raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Image is too large for upscaling to {upscale_factor} times. Max output is ~17MP. Your image would result in ~{projected_pixels / 1000000:.1f}MP."
+                            detail=f"Image is too large for upscaling to {upscale_factor} times. Max output is ~17MP. Your image would result in ~{projected_pixels / 1000000:.1f}MP.",
                         )
-                
+
                 # --- Store Original ---
                 original_gcs_uri = self.gcs_service.store_to_gcs(
                     folder=f"source_assets/{user.id}/originals",
@@ -347,7 +358,9 @@ class SourceAssetService:
                             image_preservation_factor=image_preservation_factor,
                         )
                         upscaled_result = (
-                            await self.imagen_service.upscale_image(upscale_dto)
+                            await self.imagen_service.upscale_image(
+                                upscale_dto,
+                            )
                         )
 
                         if (
@@ -361,8 +374,8 @@ class SourceAssetService:
                         else:
                             final_gcs_uri = upscaled_result.image.gcs_uri
                             logger.info(
-                                    f"Upscaling complete. Final asset at {final_gcs_uri}"
-                                )
+                                f"Upscaling complete. Final asset at {final_gcs_uri}",
+                            )
                     except Exception as e:
                         logger.error(
                             f"Failed to upscale asset for user {user.email}: {e}",
@@ -418,18 +431,17 @@ class SourceAssetService:
         if is_admin:
             # Admins can set scope and type freely.
             final_scope = scope or AssetScopeEnum.PRIVATE
-        else:
-            # Non-admins cannot set system-level scope.
-            if scope and scope != AssetScopeEnum.PRIVATE:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only administrators can set a non-private scope.",
-                )
+        # Non-admins cannot set system-level scope.
+        elif scope and scope != AssetScopeEnum.PRIVATE:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only administrators can set a non-private scope.",
+            )
         original_asset = SourceAssetModel(
             workspace_id=workspace_id,
             user_id=user.id,
             aspect_ratio=final_aspect_ratio,
-            gcs_uri = original_gcs_uri,
+            gcs_uri=original_gcs_uri or final_gcs_uri,
             thumbnail_gcs_uri=thumbnail_gcs_uri,
             original_filename=filename or "untitled",
             mime_type=mime_type,
@@ -442,8 +454,8 @@ class SourceAssetService:
             workspace_id=workspace_id,
             user_id=user.id,
             aspect_ratio=final_aspect_ratio,
-            original_gcs_uri = original_gcs_uri,
-            gcs_uri = final_gcs_uri,
+            original_gcs_uri=original_gcs_uri,
+            gcs_uri=final_gcs_uri,
             thumbnail_gcs_uri=thumbnail_gcs_uri,
             original_filename=filename or "untitled",
             mime_type=mime_type,
@@ -451,22 +463,19 @@ class SourceAssetService:
             scope=final_scope,
             asset_type=final_asset_type,
         )
-        created_asset = await self.repo.create(original_asset)
+        created_asset = await self.repo.create(new_asset)
         new_asset.id = created_asset.id
 
         return await self._create_asset_response(new_asset)
-    
-
 
     async def convert_to_png(self, file: UploadFile) -> bytes:
-        """
-        Converts an uploaded image file to PNG format in memory.
-        """
+        """Converts an uploaded image file to PNG format in memory."""
         try:
             contents = await file.read()
             if not contents:
                 raise HTTPException(
-                    status.HTTP_400_BAD_REQUEST, "Cannot convert an empty file."
+                    status.HTTP_400_BAD_REQUEST,
+                    "Cannot convert an empty file.",
                 )
 
             pil_image = PILImage.open(io.BytesIO(contents))
@@ -475,7 +484,7 @@ class SourceAssetService:
             # (e.g., GIFs with palettes, CMYK) gracefully, preserving transparency.
             if pil_image.mode not in ["RGB", "RGBA"]:
                 pil_image = pil_image.convert(
-                    "RGBA" if "A" in pil_image.getbands() else "RGB"
+                    "RGBA" if "A" in pil_image.getbands() else "RGB",
                 )
 
             # Save the converted image to an in-memory buffer
@@ -489,50 +498,42 @@ class SourceAssetService:
                 detail=f"Failed to process image: {e}",
             )
 
-    async def delete_asset(self, asset_id: int) -> bool:
-        """
-        Deletes an asset from Firestore and its corresponding file from GCS.
+    async def delete_asset(
+        self,
+        asset_id: int,
+        current_user_id: int | None = None,
+    ) -> bool:
+        """Deletes an asset from Firestore and its corresponding file from GCS.
         This is an admin-only operation.
 
         Returns:
             bool: True if deletion was successful, False if the asset was not found.
+
         """
         # 1. Get the asset document from Firestore
         asset_to_delete = await self.repo.get_by_id(asset_id)
         if not asset_to_delete:
             logger.warning(
-                f"Attempted to delete non-existent asset with ID: {asset_id}"
+                f"Attempted to delete non-existent asset with ID: {asset_id}",
             )
             return False
 
-        # 2. Delete the file from GCS. We wrap this in a try/except block
-        # to ensure that even if the GCS file is already gone, we still
-        # attempt to delete the database record.
-        try:
-            logger.info(
-                f"Deleting asset file from GCS: {asset_to_delete.gcs_uri}"
-            )
-            self.gcs_service.delete_blob_from_uri(asset_to_delete.gcs_uri)
-        except Exception as e:
-            logger.error(
-                f"Could not delete asset from GCS at {asset_to_delete.gcs_uri}, but proceeding to delete from database. Error: {e}",
-                exc_info=True,
-            )
+        # 2. Skip deleting the file from GCS for soft delete
+        # This allows for potential restoration of the asset in the future.
+        # logger.info("Skipping GCS file deletion for soft delete: %s", asset_to_delete.gcs_uri)
 
-        # 3. Delete the document from Firestore
+        # 3. Mark the document as deleted in the database
         logger.info(
-            f"Deleting asset document from Firestore with ID: {asset_id}"
+            f"Soft deleting asset document from database with ID: {asset_id} by user: {current_user_id}",
         )
-        return await self.repo.delete(asset_id)
+        return await self.repo.soft_delete(asset_id, deleted_by=current_user_id)
 
     async def list_assets_for_user(
         self,
         search_dto: SourceAssetSearchDto,
-        target_user_id: Optional[int] = None,
+        target_user_id: int | None = None,
     ) -> PaginationResponseDto[SourceAssetResponseDto]:
-        """
-        Performs a paginated search, scoped to a target_user_id if provided.
-        """
+        """Performs a paginated search, scoped to a target_user_id if provided."""
         assets_query_result = await self.repo.query(search_dto, target_user_id)
         assets = assets_query_result.data or []
 
@@ -550,12 +551,11 @@ class SourceAssetService:
         )
 
     async def get_all_vto_assets(self, user: UserModel) -> VtoAssetsResponseDto:
-        """
-        Fetches all system-level VTO assets and categorizes them.
+        """Fetches all system-level VTO assets and categorizes them.
 
         This is used to populate the VTO selection UI for users or admins.
         """
-        vto_asset_types: List[AssetTypeEnum] = [
+        vto_asset_types: list[AssetTypeEnum] = [
             AssetTypeEnum.VTO_PERSON_MALE,
             AssetTypeEnum.VTO_PERSON_FEMALE,
             AssetTypeEnum.VTO_TOP,
@@ -566,7 +566,8 @@ class SourceAssetService:
 
         # Query for both system assets and the user's private assets in a single DB call.
         all_assets = await self.repo.find_system_and_private_assets_by_types(
-            user.id, vto_asset_types
+            user.id,
+            vto_asset_types,
         )
 
         # Create presigned URLs for all assets in parallel
@@ -593,11 +594,11 @@ class SourceAssetService:
         return categorized_assets
 
     async def get_asset_by_id(
-        self, asset_id: int, user: UserModel
-    ) -> Optional[SourceAssetResponseDto]:
-        """
-        Retrieves a single source asset by ID, ensuring the user has access.
-        """
+        self,
+        asset_id: int,
+        user: UserModel,
+    ) -> SourceAssetResponseDto | None:
+        """Retrieves a single source asset by ID, ensuring the user has access."""
         asset = await self.repo.get_by_id(asset_id)
         if not asset:
             return None
@@ -612,7 +613,17 @@ class SourceAssetService:
         if not (is_admin or is_owner or is_system):
             return None
 
-        return await self._create_asset_response(asset)
+        # Fetch the owner's email to display in the frontend
+        owner_email = None
+        owner = await self.user_repo.get_by_id(asset.user_id)
+        if owner:
+            owner_email = owner.email
+
+        response = await self._create_asset_response(
+            asset, user_email=owner_email
+        )
+        response.tags = await self.tags_repo.get_tags_for_source_asset(asset_id)
+        return response
 
     async def create_from_gcs_uri(
         self,
@@ -620,13 +631,13 @@ class SourceAssetService:
         workspace_id: int,
         gcs_uri: str,
     ) -> SourceAssetResponseDto:
-        """
-        Creates a source asset from a GCS URI.
+        """Creates a source asset from a GCS URI.
         Downloads the file, validates it, and re-uploads it to the system bucket.
         """
         # 1. Download bytes
         contents = await asyncio.to_thread(
-            self.gcs_service.download_bytes_from_gcs, gcs_uri
+            self.gcs_service.download_bytes_from_gcs,
+            gcs_uri,
         )
         if not contents:
             raise ValueError(f"Could not read file from {gcs_uri}")
@@ -638,25 +649,25 @@ class SourceAssetService:
         existing_asset = await self.repo.find_by_hash(user.id, file_hash)
         if existing_asset:
             logger.info(
-                f"Duplicate asset found for user {user.email} with hash {file_hash[:8]}. Returning existing."
+                f"Duplicate asset found for user {user.email} with hash {file_hash[:8]}. Returning existing.",
             )
             return await self._create_asset_response(existing_asset)
 
         # 4. Determine details
-        filename = gcs_uri.split("/")[-1]
+        filename = gcs_uri.rsplit("/", maxsplit=1)[-1]
         mime_type_guess, _ = mimetypes.guess_type(filename)
         is_video = mime_type_guess and "video" in mime_type_guess
-        
+
         # Fallback if mimetype is unknown? assume boolean based on extension?
         if not mime_type_guess:
-             # Basic extension check
-             if filename.lower().endswith(('.mp4', '.mov', '.avi')):
-                 is_video = True
-             else:
-                 is_video = False
+            # Basic extension check
+            if filename.lower().endswith((".mp4", ".mov", ".avi")):
+                is_video = True
+            else:
+                is_video = False
 
-        final_gcs_uri: Optional[str] = None
-        thumbnail_gcs_uri: Optional[str] = None
+        final_gcs_uri: str | None = None
+        thumbnail_gcs_uri: str | None = None
         temp_dir = f"temp/source_assets/{uuid.uuid4()}"
         final_aspect_ratio: AspectRatioEnum
 
@@ -694,22 +705,10 @@ class SourceAssetService:
             else:
                 # --- Image Upload & Upscale Logic ---
                 # Skip strict aspect ratio validation here for batch processing.
-                # We will auto-crop to 1:1 (Square) so we can enforce that ratio.
+                # We allow any aspect ratio, falling back to 'other' if needed.
 
                 # Convert image to PNG for standardization before storing.
                 pil_image = PILImage.open(io.BytesIO(contents))
-                
-                # Auto-crop to square (1:1) if needed, as requested for batch inputs.
-                if pil_image.width != pil_image.height:
-                     logger.info(f"Auto-cropping batch image from {pil_image.width}x{pil_image.height} to square.")
-                     min_dim = min(pil_image.width, pil_image.height)
-                     # crop((left, top, right, bottom))
-                     left = (pil_image.width - min_dim) / 2
-                     top = (pil_image.height - min_dim) / 2
-                     right = (pil_image.width + min_dim) / 2
-                     bottom = (pil_image.height + min_dim) / 2
-                     pil_image = pil_image.crop((left, top, right, bottom))
-
                 png_contents: bytes
 
                 if pil_image.format != "PNG":
@@ -722,7 +721,7 @@ class SourceAssetService:
                 else:
                     png_contents = contents
 
-                # Check aspect ratio is correct after the crop
+                # Determine aspect ratio (fallback to 'other' if non-standard)
                 final_aspect_ratio = await self._get_and_validate_aspect_ratio(
                     contents=png_contents,
                     is_video=is_video,
@@ -741,7 +740,7 @@ class SourceAssetService:
 
         except Exception as e:
             logger.error(f"Batch asset processing failed: {e}", exc_info=True)
-            raise ValueError(f"Failed to process asset from GCS: {str(e)}")
+            raise ValueError(f"Failed to process asset from GCS: {e!s}")
         finally:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
@@ -754,7 +753,9 @@ class SourceAssetService:
             gcs_uri=final_gcs_uri,
             thumbnail_gcs_uri=thumbnail_gcs_uri,
             original_filename=filename,
-            mime_type=MimeTypeEnum.VIDEO_MP4 if is_video else MimeTypeEnum.IMAGE_PNG,
+            mime_type=(
+                MimeTypeEnum.VIDEO_MP4 if is_video else MimeTypeEnum.IMAGE_PNG
+            ),
             file_hash=file_hash,
             scope=AssetScopeEnum.PRIVATE,
             asset_type=AssetTypeEnum.GENERIC_IMAGE,

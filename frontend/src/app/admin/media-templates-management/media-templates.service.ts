@@ -42,7 +42,10 @@ export class MediaTemplatesService {
       .pipe(catchError(this.handleError));
   }
 
-  updateMediaTemplate(id: number, payload: Omit<MediaTemplate, 'id' | 'mimeType'>): Observable<MediaTemplate> {
+  updateMediaTemplate(
+    id: number,
+    payload: Omit<MediaTemplate, 'id' | 'mimeType'>,
+  ): Observable<MediaTemplate> {
     const url = `${this.apiUrl}/${id}`;
     return this.http
       .put<MediaTemplate>(url, payload)
