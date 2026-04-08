@@ -22,7 +22,7 @@
   (mouseleave)="onMouseLeave()"
 >
   <a
-    [routerLink]="getRoute()"
+    [routerLink]="(isSelectionMode || anyItemSelected) ? null : getRoute()"
     [state]="{mediaItem: item}"
     (click)="onCardClick($event)"
     class="card-link"
