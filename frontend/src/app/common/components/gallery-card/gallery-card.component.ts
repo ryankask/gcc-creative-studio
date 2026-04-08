@@ -250,6 +250,7 @@ export class GalleryCardComponent implements OnDestroy {
       tagsToDisplay = this.item.tags.filter(tag =>
         this.filteredTags.includes(tag.name),
       );
+    }
 
     let totalLength = 0;
     const maxChars = 20; // Heuristic for card width

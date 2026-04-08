@@ -139,7 +139,12 @@ class TestBulkAssign:
         result = await tags_service.bulk_assign(dto, user_id=1)
 
         assert result is True
-        assert mock_tags_repo.assign_tag_to_media_item.call_count == 4
+        mock_tags_repo.clear_tags_for_items.assert_called_once_with(
+            [1, 2], "media_item"
+        )
+        mock_tags_repo.assign_tags_to_items.assert_called_once_with(
+            [1, 2], [10, 20], "media_item"
+        )
 
     @pytest.mark.anyio
     async def test_bulk_assign_source_asset(self, tags_service, mock_tags_repo):
@@ -157,7 +162,12 @@ class TestBulkAssign:
         result = await tags_service.bulk_assign(dto, user_id=1)
 
         assert result is True
-        mock_tags_repo.assign_tag_to_source_asset.assert_called_once_with(1, 10)
+        mock_tags_repo.clear_tags_for_items.assert_called_once_with(
+            [1], "source_asset"
+        )
+        mock_tags_repo.assign_tags_to_items.assert_called_once_with(
+            [1], [10], "source_asset"
+        )
 
     @pytest.mark.anyio
     async def test_bulk_assign_invalid_type(self, tags_service):

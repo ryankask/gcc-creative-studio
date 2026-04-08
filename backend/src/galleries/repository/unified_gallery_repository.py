@@ -122,9 +122,18 @@ class UnifiedGalleryRepository(
         if hasattr(search_dto, "query") and search_dto.query:
             search_pattern = f"%{search_dto.query}%"
             query = query.where(
-                self.model.metadata_["prompt"].astext.ilike(search_pattern)
-                | self.model.metadata_["file_name"].astext.ilike(search_pattern)
-                | self.model.metadata_["model"].astext.ilike(search_pattern)
+                func.coalesce(self.model.metadata_["prompt"].astext, "").ilike(
+                    search_pattern
+                )
+                | func.coalesce(
+                    self.model.metadata_["file_name"].astext, ""
+                ).ilike(search_pattern)
+                | func.coalesce(self.model.metadata_["model"].astext, "").ilike(
+                    search_pattern
+                )
+                | func.coalesce(
+                    self.model.metadata_["original_filename"].astext, ""
+                ).ilike(search_pattern)
             )
 
         # 2. Get total count

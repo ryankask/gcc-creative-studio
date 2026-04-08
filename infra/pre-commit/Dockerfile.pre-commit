@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
 
 # Install Node.js (for gts)
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
+    && apt-get install -y nodejs \
+    && npm install -g gts@6.0.2
 
 # Install Go (for addlicense)
 RUN curl -sSL https://golang.org/dl/go1.21.0.linux-amd64.tar.gz | tar -C /usr/local -xzf -

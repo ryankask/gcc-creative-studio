@@ -40,27 +40,20 @@ export interface DropdownOption {
   styleUrls: ['./studio-dropdown.component.scss'],
   animations: [
     trigger('dropdownAnimation', [
-      state(
-        'closed',
-        style({
-          height: '0px',
-          opacity: 0,
-          overflow: 'hidden',
-          paddingTop: '0',
-          paddingBottom: '0',
-        }),
-      ),
-      state(
-        'open',
-        style({
-          height: '*',
-          opacity: 1,
-        }),
-      ),
-      transition(
-        'closed <=> open',
-        animate('250ms cubic-bezier(0.4, 0, 0.2, 1)'),
-      ),
+      transition(':enter', [
+        style({height: '0px', opacity: 0, overflow: 'hidden'}),
+        animate(
+          '250ms cubic-bezier(0.4, 0, 0.2, 1)',
+          style({height: '*', opacity: 1}),
+        ),
+      ]),
+      transition(':leave', [
+        style({height: '*', opacity: 1, overflow: 'hidden'}),
+        animate(
+          '250ms cubic-bezier(0.4, 0, 0.2, 1)',
+          style({height: '0px', opacity: 0}),
+        ),
+      ]),
     ]),
   ],
 })

@@ -25,14 +25,14 @@ repos:
   hooks:
   - id: gts-fix
     name: gts-fix
-    entry: bash -c 'cd frontend && npm install --no-save gts && npx gts@6.0.2 fix "${@#frontend/}"' _
+    entry: bash -c 'cd frontend && npx gts fix "${@#frontend/}"' _
     language: system
     files: ^frontend/src/.*\.ts$
     pass_filenames: true
 
   - id: gts
     name: gts
-    entry: bash -c "cd frontend && npm install --no-save gts && npx gts@6.0.2 lint"
+    entry: bash -c "cd frontend && npx gts lint"
     language: system
     files: ^frontend/
     pass_filenames: false

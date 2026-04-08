@@ -171,6 +171,45 @@ class TagsRepository(BaseRepository[Tag, TagModel]):
         )
         await self.db.commit()
 
+    async def clear_tags_for_items(self, item_ids: list[int], item_type: str):
+        """Removes all tags from multiple items."""
+        table = (
+            media_item_tags if item_type == "media_item" else source_asset_tags
+        )
+        id_col = (
+            table.c.media_item_id
+            if item_type == "media_item"
+            else table.c.source_asset_id
+        )
+        await self.db.execute(delete(table).where(id_col.in_(item_ids)))
+
+    async def assign_tags_to_items(
+        self, item_ids: list[int], tag_ids: list[int], item_type: str
+    ):
+        """Links multiple tags to multiple items."""
+        table = (
+            media_item_tags if item_type == "media_item" else source_asset_tags
+        )
+        id_col_name = (
+            "media_item_id" if item_type == "media_item" else "source_asset_id"
+        )
+
+        values = []
+        for item_id in item_ids:
+            for tag_id in tag_ids:
+                values.append({id_col_name: item_id, "tag_id": tag_id})
+
+        if values:
+            await self.db.execute(
+                pg_insert(table).values(values).on_conflict_do_nothing()
+            )
+
+            await self.db.execute(
+                update(self.model)
+                .where(self.model.id.in_(tag_ids))
+                .values(updated_at=func.now())
+            )
+
     async def update_tag(
         self, id: int, name: str | None = None, color: str | None = None
     ) -> TagModel | None:

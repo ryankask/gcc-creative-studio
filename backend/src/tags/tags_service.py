@@ -157,20 +157,21 @@ class TagsService:
                 )
             tag_ids.append(tag.id)
 
-        for item_id in dto.item_ids:
-            if dto.item_type == "media_item":
-                await self.repo.clear_tags_for_media_item(item_id)
-            elif dto.item_type == "source_asset":
-                await self.repo.clear_tags_for_source_asset(item_id)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid item_type: {dto.item_type}",
-                )
+        if dto.item_type == "media_item":
+            await self.repo.clear_tags_for_items(dto.item_ids, "media_item")
+            await self.repo.assign_tags_to_items(
+                dto.item_ids, tag_ids, "media_item"
+            )
+        elif dto.item_type == "source_asset":
+            await self.repo.clear_tags_for_items(dto.item_ids, "source_asset")
+            await self.repo.assign_tags_to_items(
+                dto.item_ids, tag_ids, "source_asset"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid item_type: {dto.item_type}",
+            )
 
-            for tag_id in tag_ids:
-                if dto.item_type == "media_item":
-                    await self.repo.assign_tag_to_media_item(item_id, tag_id)
-                elif dto.item_type == "source_asset":
-                    await self.repo.assign_tag_to_source_asset(item_id, tag_id)
+        await self.repo.db.commit()
         return True
