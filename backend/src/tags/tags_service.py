@@ -121,7 +121,9 @@ class TagsService:
         updated = await self.repo.update_tag(id, dto.name, dto.color)
         return updated
 
-    async def delete_tag(self, id: int, user_id: int, is_admin: bool, tag: TagModel | None = None) -> bool:
+    async def delete_tag(
+        self, id: int, user_id: int, is_admin: bool, tag: TagModel | None = None
+    ) -> bool:
         """Deletes a tag by its ID."""
         if not tag:
             tag = await self.repo.get_by_id(id)

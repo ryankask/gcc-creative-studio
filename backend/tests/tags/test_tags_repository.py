@@ -148,7 +148,9 @@ async def test_assign_tags_to_items_no_commit():
     mock_db = AsyncMock()
     repo = TagsRepository(db=mock_db)
 
-    await repo.assign_tags_to_items([1, 2], [10, 20], "media_item", commit=False)
+    await repo.assign_tags_to_items(
+        [1, 2], [10, 20], "media_item", commit=False
+    )
 
     assert mock_db.execute.call_count == 2
     mock_db.commit.assert_not_called()
