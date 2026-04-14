@@ -38,6 +38,7 @@ import {
 import {MatDialog} from '@angular/material/dialog';
 import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
 import {MODEL_CONFIGS} from '../../common/config/model-config';
+import {AdminDashboardService} from '../../services/admin/admin-dashboard.service';
 
 @Component({
   selector: 'app-media-gallery-management',
@@ -94,6 +95,7 @@ export class MediaGalleryManagementComponent implements OnInit {
     private snackBar: MatSnackBar,
     private router: Router,
     private dialog: MatDialog,
+    private adminDashboardService: AdminDashboardService,
   ) {}
 
   ngOnInit(): void {
@@ -244,6 +246,38 @@ export class MediaGalleryManagementComponent implements OnInit {
         } catch (err) {
           console.error(`Error deleting item ${item.id}:`, err);
           handleErrorSnackbar(this.snackBar, err, 'Delete item');
+        } finally {
+          this.isLoading = false;
+        }
+      }
+    });
+  }
+
+  async cleanupStuckJobs() {
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Confirm Cleanup',
+        message:
+          'Are you sure you want to clear stuck jobs older than 1 hour? This will mark them as stopped.',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result) {
+        this.isLoading = true;
+        try {
+          const response = await firstValueFrom(
+            this.adminDashboardService.cleanupStuckJobs(),
+          );
+          handleSuccessSnackbar(
+            this.snackBar,
+            response.message || 'Stuck jobs cleared successfully!',
+          );
+          this.resetPaginationAndFetch();
+        } catch (err) {
+          console.error('Error cleaning up stuck jobs:', err);
+          handleErrorSnackbar(this.snackBar, err, 'Clear stuck jobs');
         } finally {
           this.isLoading = false;
         }

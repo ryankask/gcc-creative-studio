@@ -13,8 +13,6 @@
 # limitations under the License.
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.database import get_db
 from src.auth.auth_guard import RoleChecker
 from src.users.user_model import UserRoleEnum
 from src.admin.admin_service import AdminService
@@ -38,10 +36,9 @@ router = APIRouter(
 async def get_overview_stats(
     start_date: str | None = None,
     end_date: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    admin_service: AdminService = Depends(),
 ):
-    service = AdminService(db)
-    return await service.get_overview_stats(
+    return await admin_service.get_overview_stats(
         start_date=start_date, end_date=end_date
     )
 
@@ -50,10 +47,9 @@ async def get_overview_stats(
 async def get_media_over_time(
     start_date: str | None = None,
     end_date: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    admin_service: AdminService = Depends(),
 ):
-    service = AdminService(db)
-    return await service.get_media_over_time(
+    return await admin_service.get_media_over_time(
         start_date=start_date, end_date=end_date
     )
 
@@ -62,10 +58,9 @@ async def get_media_over_time(
 async def get_workspace_stats(
     start_date: str | None = None,
     end_date: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    admin_service: AdminService = Depends(),
 ):
-    service = AdminService(db)
-    return await service.get_workspace_stats(
+    return await admin_service.get_workspace_stats(
         start_date=start_date, end_date=end_date
     )
 
@@ -74,10 +69,9 @@ async def get_workspace_stats(
 async def get_active_roles(
     start_date: str | None = None,
     end_date: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    admin_service: AdminService = Depends(),
 ):
-    service = AdminService(db)
-    return await service.get_active_roles(
+    return await admin_service.get_active_roles(
         start_date=start_date, end_date=end_date
     )
 
@@ -86,10 +80,9 @@ async def get_active_roles(
 async def get_generation_health(
     start_date: str | None = None,
     end_date: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    admin_service: AdminService = Depends(),
 ):
-    service = AdminService(db)
-    return await service.get_generation_health(
+    return await admin_service.get_generation_health(
         start_date=start_date, end_date=end_date
     )
 
@@ -100,9 +93,14 @@ async def get_generation_health(
 async def get_active_users_monthly(
     start_date: str | None = None,
     end_date: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    admin_service: AdminService = Depends(),
 ):
-    service = AdminService(db)
-    return await service.get_active_users_monthly(
+    return await admin_service.get_active_users_monthly(
         start_date=start_date, end_date=end_date
     )
+
+
+@router.post("/cleanup-stuck-jobs")
+async def cleanup_stuck_jobs(admin_service: AdminService = Depends()):
+    count = await admin_service.cleanup_stuck_jobs()
+    return {"message": f"Cleaned up {count} stuck jobs", "count": count}

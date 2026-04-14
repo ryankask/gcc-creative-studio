@@ -15,39 +15,33 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from src.admin.admin_service import AdminService
+from src.admin.dto.admin_response_dto import (
+    AdminOverviewStats,
+    AdminMediaOverTime,
+    AdminWorkspaceStats,
+    AdminActiveRole,
+    AdminGenerationHealth,
+    AdminMonthlyActiveUsers,
+)
 
 
 @pytest.mark.asyncio
 async def test_get_overview_stats():
-    db = MagicMock()
-
-    # side_effect for async execute calls (total users, total workspaces, media counts)
-    mock_users_result = MagicMock()
-    mock_users_result.scalar_one.return_value = 10
-
-    mock_workspaces_result = MagicMock()
-    mock_workspaces_result.scalar_one.return_value = 5
-
-    mock_media_result = MagicMock()
-    media_counts = MagicMock()
-    media_counts.images = 100
-    media_counts.videos = 50
-    media_counts.audios = 25
-    mock_media_result.first.return_value = media_counts
-
-    mock_uploaded_result = MagicMock()
-    mock_uploaded_result.scalar_one.return_value = 2
-
-    db.execute = AsyncMock(
-        side_effect=[
-            mock_users_result,
-            mock_workspaces_result,
-            mock_uploaded_result,
-            mock_media_result,
-        ]
+    mock_repo = MagicMock()
+    mock_repo.get_overview_stats = AsyncMock(
+        return_value=AdminOverviewStats(
+            total_users=10,
+            total_workspaces=5,
+            images_generated=100,
+            videos_generated=50,
+            audios_generated=25,
+            total_media=175,
+            user_uploaded_media=2,
+            overall_total_media=177,
+        )
     )
 
-    service = AdminService(db)
+    service = AdminService(admin_repo=mock_repo)
     result = await service.get_overview_stats()
 
     assert result.total_users == 10
@@ -60,18 +54,16 @@ async def test_get_overview_stats():
 
 @pytest.mark.asyncio
 async def test_get_media_over_time():
-    db = MagicMock()
-    mock_result = MagicMock()
-    mock_row = MagicMock()
-    mock_row.date = "2026-04"
-    mock_row.count = 10
-    mock_row.images = 5
-    mock_row.videos = 3
-    mock_row.audios = 2
-    mock_result.all.return_value = [mock_row]
-    db.execute = AsyncMock(return_value=mock_result)
+    mock_repo = MagicMock()
+    mock_repo.get_media_over_time = AsyncMock(
+        return_value=[
+            AdminMediaOverTime(
+                date="2026-04", total_generated=10, images=5, videos=3, audios=2
+            )
+        ]
+    )
 
-    service = AdminService(db)
+    service = AdminService(admin_repo=mock_repo)
     result = await service.get_media_over_time()
     assert len(result) == 1
     assert result[0].date == "2026-04"
@@ -80,19 +72,21 @@ async def test_get_media_over_time():
 
 @pytest.mark.asyncio
 async def test_get_workspace_stats():
-    db = MagicMock()
-    mock_result = MagicMock()
-    mock_row = MagicMock()
-    mock_row.workspace_id = 1
-    mock_row.workspace_name = "Test Workspace"
-    mock_row.count = 10
-    mock_row.images = 5
-    mock_row.videos = 3
-    mock_row.audios = 2
-    mock_result.all.return_value = [mock_row]
-    db.execute = AsyncMock(return_value=mock_result)
+    mock_repo = MagicMock()
+    mock_repo.get_workspace_stats = AsyncMock(
+        return_value=[
+            AdminWorkspaceStats(
+                workspace_id=1,
+                workspace_name="Test Workspace",
+                total_media=10,
+                images=5,
+                videos=3,
+                audios=2,
+            )
+        ]
+    )
 
-    service = AdminService(db)
+    service = AdminService(admin_repo=mock_repo)
     result = await service.get_workspace_stats()
     assert len(result) == 1
     assert result[0].workspace_id == 1
@@ -101,15 +95,12 @@ async def test_get_workspace_stats():
 
 @pytest.mark.asyncio
 async def test_get_active_roles():
-    db = MagicMock()
-    mock_result = MagicMock()
-    mock_row = MagicMock()
-    mock_row.role = "ADMIN"
-    mock_row.count = 2
-    mock_result.all.return_value = [mock_row]
-    db.execute = AsyncMock(return_value=mock_result)
+    mock_repo = MagicMock()
+    mock_repo.get_active_roles = AsyncMock(
+        return_value=[AdminActiveRole(role="ADMIN", count=2)]
+    )
 
-    service = AdminService(db)
+    service = AdminService(admin_repo=mock_repo)
     result = await service.get_active_roles()
     assert len(result) == 1
     assert result[0].role == "ADMIN"
@@ -118,15 +109,12 @@ async def test_get_active_roles():
 
 @pytest.mark.asyncio
 async def test_get_generation_health():
-    db = MagicMock()
-    mock_result = MagicMock()
-    mock_row = MagicMock()
-    mock_row.status = "COMPLETED"
-    mock_row.count = 8
-    mock_result.all.return_value = [mock_row]
-    db.execute = AsyncMock(return_value=mock_result)
+    mock_repo = MagicMock()
+    mock_repo.get_generation_health = AsyncMock(
+        return_value=[AdminGenerationHealth(status="COMPLETED", count=8)]
+    )
 
-    service = AdminService(db)
+    service = AdminService(admin_repo=mock_repo)
     result = await service.get_generation_health()
     assert len(result) == 1
     assert result[0].status == "COMPLETED"
@@ -135,14 +123,21 @@ async def test_get_generation_health():
 
 @pytest.mark.asyncio
 async def test_get_active_users_monthly():
-    db = MagicMock()
-    mock_result = MagicMock()
-    mock_row = MagicMock()
-    mock_row.month = "2026-04"
-    mock_row.count = 3
-    mock_result.all.return_value = [mock_row]
-    db.execute = AsyncMock(return_value=mock_result)
+    mock_repo = MagicMock()
+    mock_repo.get_active_users_monthly_counts = AsyncMock(
+        return_value={"2026-04": 3}
+    )
 
-    service = AdminService(db)
+    service = AdminService(admin_repo=mock_repo)
     result = await service.get_active_users_monthly()
-    assert len(result) == 7
+    assert len(result) == 7  # Default 180 days should yield 7 months
+
+
+@pytest.mark.asyncio
+async def test_cleanup_stuck_jobs():
+    mock_repo = MagicMock()
+    mock_repo.cleanup_stuck_jobs = AsyncMock(return_value=5)
+
+    service = AdminService(admin_repo=mock_repo)
+    result = await service.cleanup_stuck_jobs()
+    assert result == 5

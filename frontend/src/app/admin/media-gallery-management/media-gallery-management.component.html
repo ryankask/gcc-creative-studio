@@ -17,6 +17,10 @@
 <div class="p-6">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-3xl font-semibold">Media Gallery Management</h1>
+    <button mat-raised-button color="warn" (click)="cleanupStuckJobs()" matTooltip="Clear jobs in processing for more than 1 hour">
+      <mat-icon>cleaning_services</mat-icon>
+      <span>Clear Stuck Jobs</span>
+    </button>
   </div>
 
   <!-- Filter & Include Deleted -->

@@ -50,6 +50,7 @@ class JobStatusEnum(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    STOPPED = "stopped"
 
 
 class AssetRoleEnum(str, Enum):
