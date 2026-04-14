@@ -65,6 +65,7 @@ $creative-studio-theme: mat.define-theme(
   --gem-sys-color--brand-transition-blue-1:#346BF1;
   --gem-sys-color--brand-transition-blue-2:#4FA0FF;
   --Greeting-gradient:linear-gradient(77deg, var(--gem-sys-color--brand-blue) 6.99%, var(--gem-sys-color--brand-transition-blue-1) 45.46%, var(--gem-sys-color--brand-transition-blue-2) 88.2%);
+  --z-index-notification: 99999;
 
 }
 

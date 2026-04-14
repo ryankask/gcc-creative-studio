@@ -49,3 +49,4 @@ class MediaItemResponse(MediaItemModel):
     enriched_source_assets: list[SourceAssetLinkResponse] | None = None
     enriched_source_media_items: list[SourceMediaItemLinkResponse] | None = None
     tags: list[TagModel] | None = None
+    user_picture: str | None = None

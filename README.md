@@ -65,6 +65,10 @@ To redeploy the latest changes to Creative Studio, simply sync your forked repos
 
 The Cloud Build triggers will automatically detect the new code changes and start the process to redeploy the application (taking approximately 5 minutes).
 
+![](./screenshots/github-sync-with-main.png)
+
+*💡 Tip: If your fork is behind the upstream repository, you will see a **"Sync fork"** or **"Update branch"** button in this section that allows you to pull latest changes automatically with one click.*
+
 In case there are infrastructure changes (e.g., new cloud resources or configuration), you may need to redeploy Creative Studio by running Terraform manually. However, that is usually not the case, and if required, a note will be added to the version release documentation.
 
 <video controls autoplay loop width="100%" style="max-width: 1200px;">

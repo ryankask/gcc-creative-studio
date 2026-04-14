@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import datetime
+from src.workspaces.schema.workspace_model import Workspace
+from src.users.user_model import User
 
 
 from fastapi import Depends
@@ -152,9 +154,12 @@ class UnifiedGalleryRepository(
 
         # 4. Execute
         result = await self.db.execute(query)
-        items = result.scalars().all()
+        rows = result.scalars().all()
 
-        data = [self.schema.model_validate(item) for item in items]
+        data = []
+        for item in rows:
+            item_data = self.schema.model_validate(item)
+            data.append(item_data)
 
         # 5. Determine next cursor (offset)
         page = (search_dto.offset // search_dto.limit) + 1

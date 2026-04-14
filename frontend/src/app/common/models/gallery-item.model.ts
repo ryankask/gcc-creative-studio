@@ -49,6 +49,8 @@ export interface BaseGalleryItem {
   enrichedSourceMediaItems?: any[];
   model?: string;
   userEmail?: string;
+  userPicture?: string;
+
   generationTime?: number;
   voiceName?: string;
   languageCode?: string;

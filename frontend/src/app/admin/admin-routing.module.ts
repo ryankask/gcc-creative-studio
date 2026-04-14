@@ -22,13 +22,15 @@ import {MediaTemplatesManagementComponent} from './media-templates-management/me
 import {SourceAssetsManagementComponent} from './source-assets-management/source-assets-management.component';
 import {MediaGalleryManagementComponent} from './media-gallery-management/media-gallery-management.component';
 import {TagsManagementComponent} from './tags-management/tags-management.component';
+import {AdminHomeComponent} from './admin-home/admin-home.component';
 
 const routes: Routes = [
   {
     path: '', // This will be '/admin' because of the main app routing
     component: AdminLayoutComponent,
     children: [
-      {path: '', redirectTo: 'users', pathMatch: 'full'}, // Default child route
+      {path: '', redirectTo: 'dashboard', pathMatch: 'full'}, // Default child route
+      {path: 'dashboard', component: AdminHomeComponent},
       {path: 'users', component: UsersManagementComponent},
       {path: 'source-assets', component: SourceAssetsManagementComponent},
       {path: 'media-templates', component: MediaTemplatesManagementComponent},

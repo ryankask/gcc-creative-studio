@@ -52,6 +52,9 @@ class UnifiedGalleryView(Base):
         primary_key=True,
     )  # 'media_item' or 'source_asset'
     status: Mapped[str | None] = mapped_column(String)
+    workspace_name: Mapped[str | None] = mapped_column(String)
+    user_picture: Mapped[str | None] = mapped_column(String)
+    user_email: Mapped[str | None] = mapped_column(String)
 
     # Unified arrays for display
     gcs_uris: Mapped[list[str]] = mapped_column(ARRAY(String))

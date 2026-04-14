@@ -518,3 +518,79 @@ async def test_restore_item_unsupported_type(service):
     with pytest.raises(HTTPException) as exc:
         await service.restore_item(1, "unknown_type", admin_user)
     assert exc.value.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_get_media_by_id_with_both_source_references(service):
+    from src.common.schema.media_item_model import SourceMediaItemLink
+
+    current_user = UserModel(
+        id=1,
+        email="user@test.com",
+        name="User",
+        roles=[UserRoleEnum.USER],
+    )
+
+    item = MediaItemModel(
+        workspace_id=99,
+        user_email="user@test.com",
+        mime_type=MimeTypeEnum.IMAGE_PNG,
+        model=GenerationModelEnum.IMAGEN_3_001,
+        aspect_ratio=AspectRatioEnum.RATIO_1_1,
+        gcs_uris=["gs://bucket/img.jpg"],
+        source_assets=[
+            SourceAssetLink(
+                asset_id=123,
+                role=AssetRoleEnum.INPUT,
+            )
+        ],
+        source_media_items=[
+            SourceMediaItemLink(
+                media_item_id=456,
+                media_index=0,
+                role=AssetRoleEnum.INPUT,
+            ),
+        ],
+    )
+
+    parent_sourced = MediaItemModel(
+        id=456,
+        workspace_id=99,
+        user_email="u",
+        mime_type=MimeTypeEnum.IMAGE_PNG,
+        model=GenerationModelEnum.IMAGEN_3_001,
+        aspect_ratio=AspectRatioEnum.RATIO_1_1,
+        gcs_uris=["gs://bucket/parent.jpg"],
+    )
+
+    source_asset = MagicMock()
+    source_asset.gcs_uri = "gs://bucket/asset.jpg"
+    source_asset.thumbnail_gcs_uri = "gs://bucket/thumb.jpg"
+
+    def get_by_id_side_effect(id, **kwargs):
+        if id == 123:
+            return item
+        if id == 456:
+            return parent_sourced
+        return None
+
+    service.mock_media_repo.get_by_id.side_effect = get_by_id_side_effect
+    service.mock_source_asset_repo.get_by_id.return_value = source_asset
+
+    service.mock_workspace_repo.get_by_id.return_value = MagicMock()
+    service.mock_iam_signer.generate_presigned_url.return_value = (
+        "https://signed.url"
+    )
+
+    result = await service.get_media_by_id(123, current_user)
+
+    assert result is not None
+    assert len(result.enriched_source_media_items) == 1
+    assert (
+        result.enriched_source_media_items[0].presigned_url
+        == "https://signed.url"
+    )
+    assert len(result.enriched_source_assets) == 1
+    assert (
+        result.enriched_source_assets[0].presigned_url == "https://signed.url"
+    )

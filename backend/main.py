@@ -31,6 +31,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.admin.admin_controller import router as admin_router
 from src.audios.audio_controller import router as audio_router
 from src.brand_guidelines.brand_guideline_controller import (
     router as brand_guideline_router,
@@ -165,6 +166,7 @@ def version():
 configure_cors(app)
 
 app.include_router(imagen_router)
+app.include_router(admin_router)
 app.include_router(audio_router)
 app.include_router(video_router)
 app.include_router(gallery_router)

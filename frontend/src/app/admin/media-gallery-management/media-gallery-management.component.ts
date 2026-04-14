@@ -49,7 +49,8 @@ export class MediaGalleryManagementComponent implements OnInit {
 
   displayedColumns: string[] = [
     'thumbnail',
-    'userEmail',
+    'workspaceName',
+    'userAvatar',
     'model',
     'status',
     'createdAt',

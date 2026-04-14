@@ -61,18 +61,28 @@
           <div class="py-4 space-y-6">
             <!-- Parameters Section -->
             <section class="space-y-3">
-              <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Parameters</h3>
-              <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <h3 class="text-lg font-semibold border-b border-gray-700">Parameters</h3>
+              <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              
+                <div class="col-span-2 flex items-center gap-3 text-sm py-2 border-b border-white/10 mb-2">
+                  <div matTooltip="Created by {{ mediaItem.userEmail ? mediaItem.userEmail.split('@')[0] : 'Unknown User' }}"
+                    class="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0 cursor-pointer">
+              
+                    <img *ngIf="mediaItem.userPicture" [src]="mediaItem.userPicture" alt="Avatar" class="w-full h-full object-cover">
+                    <mat-icon *ngIf="!mediaItem.userPicture"
+                      class="text-gray-400 !text-sm flex items-center justify-center w-4 h-4">person</mat-icon>
+                  </div>
+              
+                  <p class="break-all text-white font-medium self-center !m-0">
+                    {{ mediaItem.userEmail || 'N/A' }}
+                  </p>
+                </div>
 
                 <strong class="font-semibold text-gray-400">Model:</strong>
                 <p class="text-right break-all">
                   {{ mediaItem.model || 'N/A' }}
                 </p>
 
-                <strong class="font-semibold text-gray-400">Creator:</strong>
-                <p class="text-right break-all">
-                  {{ mediaItem.userEmail || 'N/A' }}
-                </p>
 
                 <strong class="font-semibold text-gray-400">Created At:</strong>
                 <p class="text-right">
@@ -130,7 +140,7 @@
 
             <!-- Tags Section -->
             <section class="space-y-3" *ngIf="(mediaItem.tags?.length ?? 0) > 0">
-              <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Tags</h3>
+              <h3 class="text-lg font-semibold border-b border-gray-700">Tags</h3>
               <mat-chip-listbox aria-label="Media tags">
                 <mat-chip-option *ngFor="let tag of mediaItem.tags" class="!bg-white/10 !text-white !backdrop-blur-md">
                   {{ tag.name }}
@@ -174,7 +184,7 @@
             
             <!-- Prompt Section -->
             <section class="space-y-3" *ngIf="mediaItem.prompt">
-              <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">
+              <h3 class="text-lg font-semibold border-b border-gray-700">
                 Prompt
               </h3>
               <div>
@@ -202,12 +212,12 @@
                               mediaItem.enrichedSourceAssets?.length ||
                               mediaItem.enrichedSourceMediaItems?.length
                             ">
-                <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">
-                  Source Assets
+                <h3 class="text-lg font-semibold border-b border-gray-700">
+                  Referenced Assets
                 </h3>
                 <div class="flex flex-wrap gap-2">
                   <!-- From uploaded assets -->
-                  <a *ngFor="let asset of mediaItem.enrichedSourceAssets" href="#" (click)="openSourceAssetInLightbox(asset, $event)"
+                  <a *ngFor="let asset of mediaItem.enrichedSourceAssets" [routerLink]="['/asset-detail', asset.assetId]" target="_blank" rel="noopener noreferrer"
                     class="block w-20 h-20 rounded-md overflow-hidden hover:opacity-80 transition-opacity cursor-pointer">
                     <img [src]="asset?.presignedThumbnailUrl || asset.presignedUrl" alt="Source Asset"
                       class="w-full h-full object-cover" />

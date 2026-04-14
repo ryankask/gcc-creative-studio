@@ -276,6 +276,8 @@ export class GalleryService implements OnDestroy {
         item.user_email ||
         metadata.userEmail ||
         metadata.user_email,
+      userPicture: item.userPicture || item.user_picture,
+
       generationTime:
         item.generationTime ||
         metadata.generationTime ||

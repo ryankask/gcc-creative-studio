@@ -125,10 +125,28 @@
         </td>
       </ng-container>
 
-      <!-- User Email Column -->
-      <ng-container matColumnDef="userEmail">
+      <!-- Workspace Name Column -->
+      <ng-container matColumnDef="workspaceName">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Workspace</th>
+        <td mat-cell *matCellDef="let item">{{ item.metadata?.workspaceName || item.workspaceName || 'ID ' + item.workspaceId
+          || 'N/A' }}</td>
+      </ng-container>
+      
+      <!-- User Avatar Column -->
+      <ng-container matColumnDef="userAvatar">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
-        <td mat-cell *matCellDef="let item">{{ item.metadata?.userEmail || item.userEmail || 'N/A' }}</td>
+        <td mat-cell *matCellDef="let item">
+          <div class="w-8 h-8 rounded-full overflow-hidden border border-zinc-600 flex items-center justify-center bg-zinc-700"
+            [matTooltip]="item.metadata?.userEmail || item.userEmail || 'N/A'">
+            <img *ngIf="item.metadata?.userPictureUrl || item.userPictureUrl || item.metadata?.userPicture || item.userPicture"
+              [src]="item.metadata?.userPictureUrl || item.userPictureUrl || item.metadata?.userPicture || item.userPicture"
+              class="w-full h-full object-cover" />
+            <mat-icon
+              *ngIf="!(item.metadata?.userPictureUrl || item.userPictureUrl || item.metadata?.userPicture || item.userPicture)"
+              class="text-sm text-zinc-400 flex justify-center items-center"
+              style="font-size: 16px; width: 16px; height: 16px;">person</mat-icon>
+          </div>
+        </td>
       </ng-container>
 
       <!-- Model Column -->
