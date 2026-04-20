@@ -60,7 +60,11 @@ class UserRepository(BaseRepository[User, UserModel]):
             )
 
         # Count total documents matching filters
-        count_query = select(func.count()).select_from(query.subquery())
+        count_query = (
+            select(func.count())
+            .select_from(query.subquery())
+            .execution_options(include_deleted=search_dto.include_deleted)
+        )
         count_result = await self.db.execute(count_query)
         total_count = count_result.scalar_one()
 

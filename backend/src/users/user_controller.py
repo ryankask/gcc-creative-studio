@@ -60,19 +60,10 @@ async def get_my_profile(
 async def list_all_users(
     search_params: UserSearchDto = Depends(),
     user_service: UserService = Depends(),
-    current_user: UserModel = Depends(get_current_user),
 ):
     """Retrieves a paginated list of all users in the system.
     This functionality is restricted to administrators.
     """
-    if (
-        search_params.include_deleted
-        and UserRoleEnum.ADMIN not in current_user.roles
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can include deleted users.",
-        )
     return await user_service.find_all_users(search_params)
 
 
