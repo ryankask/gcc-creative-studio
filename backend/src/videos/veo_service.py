@@ -371,13 +371,9 @@ def _process_video_in_background(
                         ):
                             return
 
-                        print("DEBUG VEO: REACHED LINE 342")
                         # Download the generated video and create thumbnail
                         thumbnail_path = ""
 
-                        final_source_media_items = (
-                            request_dto.source_media_items
-                        )
                         permanent_thumbnail_gcs_uris = []
 
                         for (
@@ -462,14 +458,6 @@ def _process_video_in_background(
                             "thumbnail_uris": permanent_thumbnail_gcs_uris,
                             "generation_time": generation_time,
                             "num_media": len(permanent_gcs_uris),
-                            "source_media_items": (
-                                [
-                                    item.model_dump()
-                                    for item in final_source_media_items
-                                ]
-                                if final_source_media_items
-                                else None
-                            ),
                         }
                         await media_repo.update(media_item_id, update_data)
                         worker_logger.info(
