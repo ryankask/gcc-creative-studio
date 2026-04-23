@@ -164,8 +164,7 @@ def _process_audio_in_background(
                                         wav_file.setframerate(24000)
                                         wav_file.writeframes(pcm_bytes)
                                     final_wav_bytes = wav_buffer.getvalue()
-                                    timestamp = int(time.time())
-                                    file_name = f"gemini_audio_{request_dto.model.value}_{timestamp}_{uid_short}_{index}.wav"
+                                    file_name = f"gemini_audio_{request_dto.model.value}_{media_item_id}_{uid_short}_{index}.wav"
                                     return gcs_service.store_to_gcs(
                                         folder="gemini_audio",
                                         file_name=file_name,
@@ -228,8 +227,7 @@ def _process_audio_in_background(
                                         voice=voice_params,
                                         audio_config=audio_config,
                                     )
-                                    timestamp = int(time.time())
-                                    file_name = f"tts_{request_dto.model.value}_{timestamp}_{uid_short}_{index}.wav"
+                                    file_name = f"tts_{request_dto.model.value}_{media_item_id}_{uid_short}_{index}.wav"
                                     return gcs_service.store_to_gcs(
                                         folder="tts_audio",
                                         file_name=file_name,
@@ -298,8 +296,7 @@ def _process_audio_in_background(
                                     if not audio_b64:
                                         return None
 
-                                    timestamp = int(time.time())
-                                    file_name = f"lyria_music_{timestamp}_{uid_short}_{index}.wav"
+                                    file_name = f"lyria_music_{media_item_id}_{uid_short}_{index}.wav"
                                     return gcs_service.store_to_gcs(
                                         folder="lyria_audio",
                                         file_name=file_name,
